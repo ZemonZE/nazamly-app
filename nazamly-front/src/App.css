@@ -1,0 +1,47 @@
+@import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap");
+
+/* ── Variables ── */
+:root {
+  --bg-deep: #061a10;
+  --green-700: #0d7a44;
+  --green-500: #16a85e;
+  --green-400: #22c874;
+  --green-300: #5ee09a;
+  --green-glow: rgba(34, 200, 116, 0.25);
+  --glass-bg: rgba(10, 36, 22, 0.72);
+  --glass-border: rgba(34, 200, 116, 0.18);
+  --glass-strong: rgba(34, 200, 116, 0.08);
+  --text-primary: #e8f9f0;
+  --text-secondary: #a3c9b4;
+  --text-muted: #5a8a6e;
+  --error: #f87171;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --transition: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Body & Background ── */
+html,
+body {
+  min-height: 100vh;
+  font-family: "Tajawal", sans-serif;
+  direction: rtl;
+}
+
+body {
+  background: var(--bg-deep);
+  background-image:
+    radial-gradient(
+      ellipse 80% 60% at 20% 10%,
+      rgba(13, 122, 68, 0.22) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 80% at 80% 90%,
+      rgba(6, 78, 43, 0.3) 0%,
+      transparent 60%
+    ),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23166534' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  overflow-x: hidden;
+}

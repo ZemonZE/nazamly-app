@@ -1,0 +1,32 @@
+/* ── Signup specific ── */
+.terms-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.terms-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--green-500);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.terms-row label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.terms-row label a {
+  color: var(--green-400);
+  text-decoration: none;
+}
+
+.terms-row label a:hover {
+  text-decoration: underline;
+  color: var(--green-300);
+}
