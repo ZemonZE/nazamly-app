@@ -3,20 +3,20 @@ const { Schema, model } = mongoose;
 
 const gpaRecordSchema = new Schema({
   gpaRecordId: {
-    type: String,
+    type: Schema.Types.ObjectId,
     required: true,
     unique: true,
     index: true
   },
   semesterId: {
-    type: String,
+    type: Schema.Types.ObjectId,
     required: true,
     unique: true,
     index: true,
     ref: 'Semester'
   },
   userId: {
-    type: String,
+    type: Schema.Types.ObjectId,
     required: true,
     index: true,
     ref: 'User'

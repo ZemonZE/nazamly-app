@@ -3,19 +3,19 @@ const { Schema, model } = mongoose;
 
 const courseGradeSchema = new Schema({
   courseGradeId: {
-    type: String,
+    type: Schema.Types.ObjectId,
     required: true,
     unique: true,
     index: true
   },
   gpaRecordId: {
-    type: String,
+    type: Schema.Types.ObjectId,
     required: true,
     index: true,
     ref: 'GPARecord'
   },
   courseId: {
-    type: String,
+    type: Schema.Types.ObjectId,
     required: true,
     index: true,
     ref: 'Course'

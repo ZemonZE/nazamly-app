@@ -4,9 +4,10 @@ const { Schema, model } = mongoose;
 
 const semesterSchema = new Schema({
   userId: {
-    type: String,
+    type: Schema.Types.ObjectId,
     required: true,
-    ref: 'User'
+    ref: 'User',
+    index: true
   },
   semesterNumber: {
     type: Number,
@@ -33,15 +34,7 @@ const semesterSchema = new Schema({
   }
 }, {
   timestamps: true,
-  collection: 'semesters',
-  _id: false
-});
-
-semesterSchema.pre('validate', function (next) {
-    if (!this._id) {
-        this._id = `${this.userId}_${this.semesterNumber}`;
-    }
-    next();
+  collection: 'semesters'
 });
 
 semesterSchema.index({ userId: 1, semesterNumber: 1 }, { unique: true });

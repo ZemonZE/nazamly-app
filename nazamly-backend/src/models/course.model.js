@@ -3,7 +3,7 @@ const { Schema, model } = mongoose;
 
 const courseSchema = new Schema({
   courseId: {
-    type: String,
+    type: Schema.Types.ObjectId,
     required: true,
     unique: true,
     index: true
