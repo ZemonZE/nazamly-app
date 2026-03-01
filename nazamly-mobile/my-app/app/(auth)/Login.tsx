@@ -23,13 +23,15 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     try {
+      
       Alert.alert("Success", "Login successfully");
       router.replace("/(tabs)");
     } catch (error) {
       Alert.alert("Failed", "Failed to login, check your data");
       console.log(error);
     }
-  };
+  };  
+
 
   const notRegistered = () => {
     router.push("/(auth)/Register");
@@ -72,6 +74,7 @@ export default function LoginScreen() {
         <Text style={styles.orText}>Or Continue With</Text>
       </View>
       <Google_pressable />
+
 
       <View style={styles.footer}>
         <Text>{"Don't have an account?  "}</Text>

@@ -9,13 +9,13 @@ export default function Email_input({ email, setEmail }: Email_inputProps) {
     <View>
       <TextInput
         style={styles.input}
-        placeholder="البريد الإلكتروني"
+        placeholder="البريد الالكتروني"
         value={email}
         onChangeText={setEmail}
         keyboardType="email-address"
         autoComplete="email"
         autoCapitalize="none"
-      />
+        />
     </View>
   );
 }
