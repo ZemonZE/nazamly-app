@@ -3,7 +3,6 @@
 
 # Sensitive files
 getToken.js
-*.json
 
 # Dependencies
 node_modules/
