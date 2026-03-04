@@ -1,6 +1,6 @@
 const admin = require("firebase-admin");
 // اللي فوق ديه الباكج اللي بنستخدمها عشان نتعامل مع الفايربيز من خلال السيرفر
-const serviceAccount = require("../../nazamly-c242c-firebase-adminsdk-fbsvc-4269b3e825.json");
+const serviceAccount = require("../../FireBase-Service-Key.json");
 // الملف اللي فيه بيانات الاتصال بين السيرفر والفايربيز
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
