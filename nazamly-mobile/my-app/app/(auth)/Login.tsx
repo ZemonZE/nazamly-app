@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   TouchableOpacity,
   ScrollView,
@@ -14,20 +14,81 @@ import Password_input from "@/components/ui/Password_input";
 import Google_pressable from "@/components/ui/Google_pressable";
 import Show_toggle from "@/components/ui/Show_toggle";
 import Header from "@/components/ui/Header";
+import { signInWithEmailAndPassword, signInWithCredential, GoogleAuthProvider } from "firebase/auth";
+import { auth, API_URL, GOOGLE_WEB_CLIENT_ID } from "@/firebase";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+
+WebBrowser.maybeCompleteAuthSession();
+
+// SDK 55 removed makeRedirectUri proxy support; auth.expo.io proxy still works at runtime
+const redirectUri = "https://auth.expo.io/@ZemonZE/my-app";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: GOOGLE_WEB_CLIENT_ID,
+    redirectUri,
+  });
+
+  useEffect(() => {
+    if (request) {
+      console.log("[Login] Google OAuth redirectUri:", request.redirectUri);
+    }
+  }, [request]);
+
+  const syncWithBackend = async (user: any) => {
+    const token = await user.getIdToken();
+    const res = await fetch(`${API_URL}/api/auth/sync`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      console.error("[Login] /api/auth/sync failed:", res.status, body);
+    }
+    return body;
+  };
+
+  useEffect(() => {
+    console.log("[Login] AuthSession response:", JSON.stringify(response, null, 2));
+    if (response?.type === "success") {
+      const { id_token } = response.params;
+      console.log("[Login] id_token received:", id_token ? "yes" : "no");
+      const credential = GoogleAuthProvider.credential(id_token);
+      setLoading(true);
+      signInWithCredential(auth, credential)
+        .then(async (result) => {
+          await syncWithBackend(result.user);
+          Alert.alert("Success", "Login successfully");
+          router.replace("/(tabs)");
+        })
+        .catch((error: any) => {
+          console.error("[Login] Firebase signIn error:", error.code, error.message);
+          Alert.alert("Failed", error.message || "Google sign-in failed");
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [response]);
 
   const handleLogin = async () => {
+    setLoading(true);
     try {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      await syncWithBackend(result.user);
       Alert.alert("Success", "Login successfully");
       router.replace("/(tabs)");
-    } catch (error) {
-      Alert.alert("Failed", "Failed to login, check your data");
-      console.log(error);
+    } catch (error: any) {
+      Alert.alert("Failed", error.message || "Failed to login, check your data");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -39,16 +100,9 @@ export default function LoginScreen() {
     <ScrollView contentContainerStyle={styles.scrollContent}>
       <Header />
 
-      <View
-        style={{
-          justifyContent: "center",
-          alignItems: "center",
-          marginBottom: 10,
-          marginTop: 10,
-        }}
-      >
-        <Text style={styles.brandName}> Nazamly </Text>
-        <Text style={{ color: "#999999", fontSize: 12 }}>Login </Text>
+      <View style={{ alignItems: "center", marginBottom: 20, marginTop: 4 }}>
+        <Text style={styles.brandName}>Nazamly</Text>
+        <Text style={styles.pageLabel}>Login</Text>
       </View>
 
       <Email_input email={email} setEmail={setEmail} />
@@ -64,17 +118,25 @@ export default function LoginScreen() {
         setShowPassword={setShowPassword}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+      <TouchableOpacity
+        style={[styles.button, styles.buttonGradientBg]}
+        onPress={handleLogin}
+        disabled={loading}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.buttonText}>{loading ? "Loading..." : "Login"}</Text>
       </TouchableOpacity>
 
-      <View>
-        <Text style={styles.orText}>Or Continue With</Text>
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} />
+        <Text style={{ color: "#5a8a6e", fontSize: 13 }}>Or Continue With</Text>
+        <View style={styles.dividerLine} />
       </View>
-      <Google_pressable />
+
+      <Google_pressable onPress={() => promptAsync()} />
 
       <View style={styles.footer}>
-        <Text>{"Don't have an account?  "}</Text>
+        <Text style={styles.footerText}>{"Don't have an account?  "}</Text>
         <Pressable onPress={notRegistered}>
           <Text style={styles.link}>Register</Text>
         </Pressable>

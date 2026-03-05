@@ -7,6 +7,9 @@ node_modules/
 # Ignore specific sensitive scripts
 getToken.js
 
+# Dependencies
+node_modules/
+
 # Ignore Firebase private keys (Matches any name format just to be safe)
 *firebase-adminsdk*.json
 firebase-adminsdk.json
