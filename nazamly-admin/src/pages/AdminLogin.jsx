@@ -13,6 +13,19 @@ function AdminLogin({ onLoginSuccess }) {
   const [cooldownTime, setCooldownTime] = useState(0);
   const [failedAttempts, setFailedAttempts] = useState(0);
 
+  const ALLOWED_ADMIN_EMAILS = [
+    'FakeWaleed@nazamly.com',
+    'MostafaEid@nazamly.com',
+    'AmrMahmoud@nazamly.com',
+    'AbdoOsama@nazamly.com',
+    'TeamDealer@nazamly.com',
+    'AImanNage@nazamly.com'
+  ];
+
+  const isAuthorizedAdmin = (email) => {
+    return ALLOWED_ADMIN_EMAILS.includes(email);
+  };
+
   useEffect(() => {
     if (cooldownTime > 0) {
       const timer = setTimeout(() => {
@@ -81,6 +94,14 @@ function AdminLogin({ onLoginSuccess }) {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+
+      if (!isAuthorizedAdmin(user.email)) {
+        await auth.signOut();
+        setError('Access denied. This account is not authorized as an admin');
+        setLoading(false);
+        return;
+      }
+
       const token = await user.getIdToken();
 
       setFailedAttempts(0);
@@ -98,7 +119,12 @@ function AdminLogin({ onLoginSuccess }) {
       onLoginSuccess(userData);
     } catch (err) {
       console.error('Google login error:', err);
-      setError(getErrorMessage(err.code));
+      
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        setError('Sign-in cancelled');
+      } else {
+        setError(getErrorMessage(err.code));
+      }
     } finally {
       setLoading(false);
     }
