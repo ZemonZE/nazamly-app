@@ -7,8 +7,8 @@ const {
 } = require('../utils/gpaCalculator');
 
 // Importing actual database models
-const Course = require('../models/course.model');
-const User = require('../models/user.model'); 
+const Course = require('../models/academic/course.model');
+const User = require('../models/user/user.model'); 
 
 const calculateCurrentTerm = async (req, res) => {
     try {
