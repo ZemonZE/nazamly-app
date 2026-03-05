@@ -38,8 +38,8 @@ const courseSchema = new Schema({
     type: String,
     trim: true,
     default: 'General'
-  }
-  
+  },
+
    difficulty: { type: Number, min: 1, max: 5, default: 3 },
   department: {
     type: String,
