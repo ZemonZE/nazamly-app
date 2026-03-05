@@ -25,3 +25,7 @@ yarn-error.log*
 # Build
 dist/
 build/
+
+*.md
+*.pdf
+

@@ -40,6 +40,12 @@ const courseSchema = new Schema({
     default: 'General'
   }
   
+   difficulty: { type: Number, min: 1, max: 5, default: 3 },
+  department: {
+    type: String,
+    trim: true,
+    default: 'General'
+  },
   // 🌟 Key addition: support cross-department courses (NoSQL array)
   // Replaced string with array of ObjectIDs referencing departments
   departments: [{
