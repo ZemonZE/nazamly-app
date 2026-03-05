@@ -1,4 +1,4 @@
-const User = require("../models/user.model");
+const { User } = require("../models");
 
 const syncUser = async (req, res) => {
   const { uid, email, name, picture } = req.user;
