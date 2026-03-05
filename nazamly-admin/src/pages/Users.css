@@ -433,3 +433,79 @@
   color: #5a8a6e;
   border-color: rgba(163, 201, 180, 0.2);
 }
+
+/* Textarea styling */
+.modal-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(6, 78, 59, 0.4);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  border-radius: 10px;
+  font-size: 14px;
+  color: #e8f9f0;
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.modal-textarea:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+/* Delete Confirmation Modal */
+.delete-confirm-modal {
+  max-width: 450px;
+}
+
+.delete-warning {
+  text-align: center;
+  padding: 20px;
+}
+
+.delete-warning svg {
+  width: 64px;
+  height: 64px;
+  stroke: #fca5a5;
+  margin: 0 auto 20px;
+  display: block;
+}
+
+.delete-warning p {
+  color: #a3c9b4;
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.delete-warning strong {
+  color: #6ee7b7;
+  font-size: 18px;
+  display: block;
+  margin: 12px 0;
+}
+
+.warning-text {
+  color: #fca5a5 !important;
+  font-weight: 500;
+  margin-top: 16px !important;
+}
+
+.delete-confirm-btn {
+  padding: 10px 20px;
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.delete-confirm-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
