@@ -35,16 +35,17 @@ const timeTableEntrySchema = new Schema({
         match: [/^([01]\d|2[0-3]):([0-5]\d)$/, 'End time must be in "HH:mm" format (24-hour)'],
         
         // Custom validator to ensure end time is after start time
-        validate: {
-            validator: function (value) {
-                const [startHour, startMin] = this.startTime.split(':').map(Number);
-                const [endHour, endMin] = value.split(':').map(Number);
-                const startMinutes = startHour * 60 + startMin;
-                const endMinutes = endHour * 60 + endMin;
-                return endMinutes > startMinutes;
-            },
-            message: 'End time must be after start time'
-        }
+        validator: function (value) {
+          if (!this.startTime || !value) {
+            return true;
+          }
+          const toMinutes = (time) => {
+            const [h, m] = time.split(":").map(Number);
+            return h * 60 + m;
+          };
+          return toMinutes(value) > toMinutes(this.startTime);
+        },
+        message: "End time must be after start time",
     },
     location: {
         type: String,

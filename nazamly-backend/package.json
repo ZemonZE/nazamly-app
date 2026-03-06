@@ -2,9 +2,10 @@
   "name": "nazamly-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
@@ -15,7 +16,8 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "firebase": "^12.9.0",
-    "firebase-admin": "^13.6.1",
-    "mongoose": "^9.2.1"
+    "firebase-admin": "^13.7.0",
+    "joi": "^18.0.2",
+    "mongoose": "^9.2.4"
   }
 }
