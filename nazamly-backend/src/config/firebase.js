@@ -3,7 +3,7 @@ const admin = require('firebase-admin');
 
 try {
     // Attempt to load the hidden Firebase key file
-    const serviceAccount = require('../../firebase-adminsdk.json');
+    const serviceAccount = require('../../nazamly-c242c-firebase-adminsdk-fbsvc-4269b3e825.json');
     
     // If the file exists, initialize Firebase normally (Production)
     if (!admin.apps.length) {
