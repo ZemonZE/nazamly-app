@@ -12,4 +12,14 @@ node_modules/
 
 # Ignore Firebase private keys (Matches any name format just to be safe)
 *firebase-adminsdk*.json
+
+# IDE and editor files
+.vscode/
+.idea/
+
+# Expo generated files
+.expo/
+
+# Root package-lock (not a real project root)
+/package-lock.json
 firebase-adminsdk.json
