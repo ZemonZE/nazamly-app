@@ -14,10 +14,10 @@ const timeTableSchema = new Schema({
         required: [true, 'Semester is required'],
         index: true
     },
-    sessions: [
+    entries: [
       {
         type: Schema.Types.ObjectId,
-        ref: "Session",
+        ref: "TimeTableEntry",
       },
     ],
     title: {
