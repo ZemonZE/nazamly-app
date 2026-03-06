@@ -1,5 +1,5 @@
 const Base_Repo = require("./Base_Repo");
-const Schedule = require("../models/timeTable.model");
+const Schedule = require("../models/schedule/timeTable.model");
 
 /**
  * الحقول المسموح تعديلها في الـ Schedule

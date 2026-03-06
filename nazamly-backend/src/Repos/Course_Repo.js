@@ -1,5 +1,5 @@
 const Base_Repo = require("./Base_Repo");
-const Course = require("../models/course.model");
+const Course = require("../models/academic/course.model");
 
 /**
  * الحقول المسموح تعديلها في الـ Course

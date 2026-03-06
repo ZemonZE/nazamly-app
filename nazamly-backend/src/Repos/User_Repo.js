@@ -1,6 +1,6 @@
 const Base_Repo = require("./Base_Repo");
-const User = require("../models/user.model");
-const Schedule = require("../models/schedule.model");
+const User = require("../models/user/user.model");
+const Schedule = require("../models/schedule/timeTable.model");
 
 /**
  * الحقول المسموح تعديلها - أي حقل مش هنا مش هيتعدل

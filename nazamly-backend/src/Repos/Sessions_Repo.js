@@ -1,5 +1,5 @@
 const Base_Repo = require("./Base_Repo");
-const Session = require("../models/timeTableEntry.model");
+const Session = require("../models/schedule/timeTableEntry.model");
 
 /**
  * الحقول المسموح تعديلها في الـ Session
