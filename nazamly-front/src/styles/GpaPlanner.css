@@ -1,0 +1,1105 @@
+/* ══════════════════════════════════════
+   SMART GPA PLANNER — Nazamly
+══════════════════════════════════════ */
+
+/* ── Onboarding Screen ── */
+.planner-onboard-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.planner-onboard-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 48px 40px;
+  max-width: 480px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(37, 99, 235, 0.08);
+}
+
+.planner-onboard-icon {
+  font-size: 3.2rem;
+  margin-bottom: 4px;
+}
+
+.planner-onboard-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--blue-300), var(--blue-400));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
+}
+
+.planner-onboard-sub {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.planner-onboard-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 8px;
+}
+
+/* ── Shared Field ── */
+.planner-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: right;
+}
+
+.planner-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.planner-input-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.planner-input {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--input-bg);
+  border: 1.5px solid rgba(37, 99, 235, 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: "Tajawal", sans-serif;
+  font-size: 0.92rem;
+  outline: none;
+  transition:
+    border-color 0.3s var(--transition),
+    box-shadow 0.3s var(--transition),
+    background 0.3s var(--transition);
+  box-sizing: border-box;
+}
+
+.planner-input:focus {
+  border-color: var(--blue-500);
+  background: var(--input-bg-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.planner-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.planner-input-lg {
+  padding: 14px 18px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+/* ── Buttons ── */
+.planner-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, var(--blue-300), var(--blue-500));
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: "Tajawal", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.2s var(--transition),
+    box-shadow 0.2s var(--transition),
+    filter 0.2s var(--transition);
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.25);
+}
+
+.planner-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(37, 99, 235, 0.35);
+  filter: brightness(1.05);
+}
+
+.planner-btn-primary:active {
+  transform: translateY(0);
+}
+
+.planner-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  background: transparent;
+  color: var(--blue-400);
+  border: 1.5px solid var(--blue-400);
+  border-radius: var(--radius-sm);
+  font-family: "Tajawal", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s var(--transition),
+    color 0.2s var(--transition);
+  flex-shrink: 0;
+}
+
+.planner-btn-outline:hover {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+/* ── Alert inline ── */
+.planner-alert {
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.planner-alert-red {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: var(--error);
+}
+
+.planner-alert-blue {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: var(--blue-400);
+}
+
+/* ── Page Header ── */
+.planner-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ── Profile Summary Strip ── */
+.planner-profile-strip {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 16px 28px;
+}
+
+.planner-strip-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.planner-strip-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.planner-strip-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--blue-400);
+}
+
+.planner-strip-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--glass-border);
+}
+
+/* ── Tabs ── */
+.planner-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  width: fit-content;
+}
+
+.planner-tab {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: "Tajawal", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.25s var(--transition),
+    color 0.25s var(--transition),
+    box-shadow 0.25s var(--transition);
+}
+
+.planner-tab.active {
+  background: var(--glass-bg);
+  color: var(--blue-400);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+}
+
+.planner-tab:hover:not(.active) {
+  color: var(--text-secondary);
+}
+
+/* ══════════════════════════════════════
+   SCREEN 2 — Calculator Layout
+══════════════════════════════════════ */
+.planner-calc-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── Results Column ── */
+.planner-results-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Circle Card ── */
+.planner-circle-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.planner-circle-card-sm {
+  padding: 20px;
+}
+
+.planner-circle-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.planner-circle-inner {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.planner-circle-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.planner-circle-card-sm .planner-circle-value {
+  font-size: 1.3rem;
+}
+
+.planner-circle-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.planner-circle-sub {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+/* ── Stats Row ── */
+.planner-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.planner-stat-box {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.planner-stat-num {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--blue-400);
+}
+
+.planner-stat-txt {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-align: center;
+}
+
+/* ── Courses Column ── */
+.planner-courses-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Shared Card ── */
+.planner-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.planner-card h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.planner-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.planner-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--blue-400);
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+/* ── Course List ── */
+.planner-course-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.planner-course-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--card-item-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  transition: background 0.2s var(--transition);
+}
+
+.planner-course-row:hover {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.planner-course-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.planner-course-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.planner-course-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.planner-course-grade-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ── Smart Numeric Input ── */
+.planner-smart-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.planner-grade-input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--input-bg);
+  border: 1.5px solid rgba(37, 99, 235, 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: "Tajawal", sans-serif;
+  font-size: 0.9rem;
+  outline: none;
+  transition:
+    border-color 0.3s var(--transition),
+    box-shadow 0.3s var(--transition);
+  box-sizing: border-box;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.planner-grade-input::-webkit-inner-spin-button,
+.planner-grade-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.planner-grade-input:focus {
+  border-color: var(--blue-500);
+  background: var(--input-bg-focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* ── Number Stepper Buttons ── */
+.planner-stepper-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--glass-bg);
+  border: 1.5px solid rgba(37, 99, 235, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--blue-400);
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.2s var(--transition),
+    border-color 0.2s var(--transition),
+    color 0.2s var(--transition),
+    transform 0.15s var(--transition);
+  user-select: none;
+}
+
+.planner-stepper-btn:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: var(--blue-400);
+  transform: scale(1.08);
+}
+
+.planner-stepper-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.planner-stepper-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Small classification badge (inline with grade input) */
+.planner-cls-badge-sm {
+  padding: 3px 10px;
+  font-size: 0.68rem;
+  border-radius: 14px;
+}
+
+/* ── Select Dropdown ── */
+.planner-select {
+  padding: 8px 12px;
+  padding-left: 28px;
+  background: var(--input-bg);
+  border: 1.5px solid rgba(37, 99, 235, 0.15);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: "Tajawal", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 10px center;
+  transition:
+    border-color 0.2s var(--transition),
+    box-shadow 0.2s var(--transition);
+}
+
+.planner-select:focus {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.planner-select option {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+}
+
+.planner-course-pts {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════
+   SCREEN 3 — Target Planner
+══════════════════════════════════════ */
+.planner-target-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.planner-target-input-card {
+  max-width: 600px;
+}
+
+.planner-target-desc {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.planner-target-form {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.planner-target-form .planner-input {
+  flex: 1;
+}
+
+.planner-target-form .planner-btn-primary {
+  white-space: nowrap;
+}
+
+.planner-max-info {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 10px 14px;
+  background: rgba(37, 99, 235, 0.04);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(37, 99, 235, 0.08);
+}
+
+.planner-max-info strong {
+  color: var(--blue-400);
+}
+
+/* ── Red Alert Card ── */
+.planner-alert-card {
+  border-radius: var(--radius-md);
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.planner-alert-card-red {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1.5px solid rgba(239, 68, 68, 0.2);
+}
+
+.planner-alert-card-red h4 {
+  color: var(--error);
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.planner-alert-card-red p {
+  color: var(--text-secondary);
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.planner-alert-card-red strong {
+  color: var(--error);
+}
+
+.planner-alert-icon {
+  font-size: 2rem;
+}
+
+.planner-alert-tip {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: rgba(239, 68, 68, 0.04);
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+/* ── Green Strategy Card ── */
+.planner-strategy-card {
+  background: var(--glass-bg);
+  border: 1.5px solid rgba(34, 197, 94, 0.25);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 4px 24px rgba(34, 197, 94, 0.06);
+}
+
+.planner-strategy-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.planner-strategy-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.planner-strategy-head h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #22c55e;
+}
+
+.planner-strategy-head p {
+  margin: 2px 0 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+/* ── Strategy List ── */
+.planner-strategy-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.planner-strategy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--card-item-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+}
+
+.planner-strategy-course {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.planner-strategy-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.planner-strategy-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.planner-strategy-grade {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.planner-grade-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.grade-excellent {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+}
+
+.grade-good {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+}
+
+.grade-mid {
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+}
+
+.grade-low {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+}
+
+.planner-grade-name {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  min-width: 80px;
+}
+
+/* ── Strategy Summary ── */
+.planner-strategy-summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.planner-summary-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+/* ══════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════ */
+@media (max-width: 992px) {
+  .planner-calc-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .planner-results-col {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .planner-circle-card {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .planner-stats-row {
+    flex: 1;
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .planner-onboard-card {
+    padding: 32px 20px;
+  }
+
+  .planner-profile-strip {
+    padding: 14px 16px;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .planner-strip-divider {
+    display: none;
+  }
+
+  .planner-tabs {
+    width: 100%;
+  }
+
+  .planner-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 12px;
+    font-size: 0.78rem;
+  }
+
+  .planner-calc-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .planner-results-col {
+    flex-direction: column;
+  }
+
+  .planner-course-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .planner-course-grade-wrap {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .planner-smart-input {
+    justify-content: space-between;
+  }
+
+  .planner-target-form {
+    flex-direction: column;
+  }
+
+  .planner-target-input-card {
+    max-width: 100%;
+  }
+
+  .planner-strategy-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .planner-strategy-grade {
+    justify-content: flex-start;
+  }
+
+  .planner-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .planner-circle-card {
+    padding: 20px;
+  }
+
+  .planner-card {
+    padding: 18px;
+  }
+
+  .planner-alert-card {
+    padding: 20px 18px;
+  }
+
+  .planner-strategy-card {
+    padding: 20px;
+  }
+}
+
+/* ══════════════════════════════════════
+   CLASSIFICATION BADGES & INLINE LABELS
+══════════════════════════════════════ */
+
+/* Row container for input + badge */
+.planner-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.planner-input-row .planner-input {
+  flex: 1;
+}
+
+/* Classification badge (beside input) */
+.planner-cls-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.planner-cls-badge-inline {
+  margin-right: 4px;
+}
+
+/* Interval‑based badge colours */
+.cls-fail {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.cls-pass {
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.25);
+}
+.cls-ok {
+  background: rgba(234, 179, 8, 0.12);
+  color: #ca8a04;
+  border: 1px solid rgba(234, 179, 8, 0.25);
+}
+.cls-good {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.cls-vgood {
+  background: rgba(56, 189, 248, 0.12);
+  color: #0ea5e9;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+.cls-exc {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.cls-top {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+/* Strip classification text */
+.planner-strip-cls {
+  font-size: 0.68rem;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+/* Circle inner classification */
+.planner-circle-cls {
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+/* Inline classification in text */
+.planner-cls-inline {
+  font-weight: 700;
+  font-size: inherit;
+}
+
+/* Classification cards row (under circles) */
+.planner-cls-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.planner-cls-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 14px 10px;
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.planner-cls-card-label {
+  font-size: 0.68rem;
+  opacity: 0.85;
+}
+
+.planner-cls-card-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.planner-cls-card-class {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Strategy subtitle */
+.planner-strategy-subtitle {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+/* Target input wrap (input + badge) */
+.planner-target-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.planner-target-input-wrap .planner-input {
+  flex: 1;
+}
+
+/* ── Responsive: classification cards ── */
+@media (max-width: 640px) {
+  .planner-cls-row {
+    grid-template-columns: 1fr;
+  }
+
+  .planner-target-input-wrap {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .planner-cls-badge-inline {
+    align-self: flex-start;
+  }
+}
+
+/* ── Hide number input spinners ── */
+.planner-input[type="number"]::-webkit-inner-spin-button,
+.planner-input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.planner-input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
