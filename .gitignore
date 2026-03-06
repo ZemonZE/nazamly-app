@@ -1,11 +1,15 @@
-# Environment variables
+# Ignore Node modules (Dependencies)
+node_modules/
+
+# Ignore Environment variables
 .env
 
-# Sensitive files
+# Ignore specific sensitive scripts
 getToken.js
 
 # Dependencies
 node_modules/
 
-# Firebase credentials
+# Ignore Firebase private keys (Matches any name format just to be safe)
 *firebase-adminsdk*.json
+firebase-adminsdk.json

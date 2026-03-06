@@ -1,23 +1,19 @@
 const express = require("express");
 const cors = require("cors");
 
-const authRoutes = require("./routes/auth.routes");
+// 1. Route Imports
+const authRoutes = require("./routes/Auth.routes");
+const gpaRoutes = require("./routes/Gpa.routes");
 const scheduleRoutes = require("./routes/Schedule.routes");
-
 const app = express();
 
+// 2. Global Middlewares
 app.use(cors());
 app.use(express.json());
-//
-//app.use("/api", (req,res) => {
-//  try{
-//  res.status(200).json({ message: "API is running" });
-//  }
-//  catch(error){
-//    res.status(500).json({ message: "API is not running" });
-//  }
-//});
+
+// 3. Mount Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/gpa", gpaRoutes);
 app.use("/api/schedule", scheduleRoutes);
 
 module.exports = app;

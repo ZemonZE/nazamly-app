@@ -1,29 +1,20 @@
 const mongoose = require("mongoose");
 
-let connection = null;
-
 const connectDB = async () => {
-  if (connection) {
-    console.log("DB already connected (Singleton)");
-    return connection;
+  if (mongoose.connection.readyState >= 1) {
+    console.log("Using existing Mongo connection");
+    return;
   }
 
   try {
-    await mongoose.connect(process.env.MONGO_URL);
-    connection = mongoose.connection;
+    await mongoose.connect(process.env.MONGO_URI, {
+      dbName: "nazamly-app",
+    });
+
     console.log("Mongo Connected");
-    return connection;
   } catch (error) {
-    console.error("MongoDB connection error:", error);
+    console.error("Mongo connection error:", error);
     process.exit(1);
   }
 };
-
-//const getConnection = () => {
-//  if (!connection) {
-//    throw new Error("Database not connected. Call connectDB() first.");
-//  }
-//  return connection;
-//};
-
 module.exports = connectDB;

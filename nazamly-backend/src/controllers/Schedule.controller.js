@@ -23,34 +23,21 @@ const sessionsRepo = require("../Repos/Sessions_Repo");
 const addOrUpdateSchedule = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { sessions, title } = req.body;
+    const { entries, title, SemesterId } = req.body;
 
     // ✅ تحقق إن فيه sessions في الـ request
-    if (!sessions || !Array.isArray(sessions) || sessions.length === 0) {
+    if (!entries || !Array.isArray(entries) || entries.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "Sessions array is required and cannot be empty",
+        message: "Entries array is required and cannot be empty",
       });
     }
 
-    // ✅ اعمل create للـ sessions في الداتابيز واحتفظ بالـ IDs
-    const createdSessions = await sessionsRepo.createMany(
-      sessions.map((s) => ({ ...s, userId })),
+    // ✅ اعمل create للـ entries في الداتابيز واحتفظ بالـ IDs
+    const createdEntries = await sessionsRepo.createMany(
+      entries.map((e) => ({ ...e, userId, timeTableId: null })),
     );
-    const sessionIds = createdSessions.map((s) => s._id);
-
-    // ✅ احسب الساعات المعتمدة من الكورسات الفريدة بس
-    // (لو كورس ليه Lecture و Section مبنحسبش الساعات مرتين)
-    const totalCreditHours = createdSessions.reduce(
-      (acc, session) => {
-        if (!acc.seenCodes.has(session.courseCode)) {
-          acc.seenCodes.add(session.courseCode);
-          acc.total += session.creditHours;
-        }
-        return acc;
-      },
-      { total: 0, seenCodes: new Set() },
-    ).total;
+    const entryIds = createdEntries.map((e) => e._id);
 
     // ✅ دور على جدول موجود للـ user ده
     const existingSchedules = await scheduleRepo.findByUserId(userId);
@@ -59,22 +46,31 @@ const addOrUpdateSchedule = async (req, res) => {
     let result;
 
     if (!schedule) {
-      // ✅ Case 1: طالب جديد - اعمل جدول جديد مع إجمالي الساعات
+      // ✅ Case 1: طالب جديد - اعمل جدول جديد مع الـ entries
       result = await scheduleRepo.create({
         userId,
-        sessions: sessionIds,
-        title: title || undefined,
-        totalCreditHours,
+        SemesterId,
+        entries: entryIds,
+        title: title || "My Schedule",
+        totalCreditHours: 0,
       });
+
+      // حدث الـ entries بالـ timeTableId
+      for (const entry of createdEntries) {
+        entry.timeTableId = result._id;
+        await entry.save();
+      }
     } else {
-      // ✅ Case 2: جدول موجود - ضيف الـ sessions الجديدة واحدة واحدة
-      for (const sessionId of sessionIds) {
-        await scheduleRepo.addSession(schedule._id, sessionId);
+      // ✅ Case 2: جدول موجود - ضيف الـ entries الجديدة واحدة واحدة
+      for (const entryId of entryIds) {
+        await scheduleRepo.addEntry(schedule._id, entryId);
       }
 
-      // ✅ حدث إجمالي الساعات (الساعات القديمة + الجديدة)
-      const newTotal = (schedule.totalCreditHours || 0) + totalCreditHours;
-      await scheduleRepo.updateTotalCreditHours(schedule._id, newTotal);
+      // حدث الـ entries بالـ timeTableId
+      for (const entry of createdEntries) {
+        entry.timeTableId = schedule._id;
+        await entry.save();
+      }
 
       // لو في title جديد، حدثه
       if (title) {
@@ -90,7 +86,7 @@ const addOrUpdateSchedule = async (req, res) => {
       success: true,
       message: !schedule
         ? "Schedule created successfully"
-        : "Sessions added to schedule successfully",
+        : "Entries added to schedule successfully",
       data: result,
     });
   } catch (error) {
@@ -171,8 +167,8 @@ const deleteSession = async (req, res) => {
       });
     }
 
-    // ✅ شيل الـ session من الـ sessions array في الجدول ($pull)
-    await scheduleRepo.removeSession(schedule._id, sessionId);
+    // ✅ شيل الـ entry من الـ entries array في الجدول ($pull)
+    await scheduleRepo.removeEntry(schedule._id, sessionId);
 
     // ✅ Soft Delete الـ session نفسها من الداتابيز
     await sessionsRepo.delete(sessionId);
