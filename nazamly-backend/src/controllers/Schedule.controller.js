@@ -23,7 +23,7 @@ const sessionsRepo = require("../Repos/Sessions_Repo");
 const addOrUpdateSchedule = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { sessions, timeTableId, title } = req.body;
+    const { sessions, title } = req.body;
 
     // ✅ تحقق إن فيه sessions في الـ request
     if (!sessions || !Array.isArray(sessions) || sessions.length === 0) {
@@ -39,6 +39,19 @@ const addOrUpdateSchedule = async (req, res) => {
     );
     const sessionIds = createdSessions.map((s) => s._id);
 
+    // ✅ احسب الساعات المعتمدة من الكورسات الفريدة بس
+    // (لو كورس ليه Lecture و Section مبنحسبش الساعات مرتين)
+    const totalCreditHours = createdSessions.reduce(
+      (acc, session) => {
+        if (!acc.seenCodes.has(session.courseCode)) {
+          acc.seenCodes.add(session.courseCode);
+          acc.total += session.creditHours;
+        }
+        return acc;
+      },
+      { total: 0, seenCodes: new Set() },
+    ).total;
+
     // ✅ دور على جدول موجود للـ user ده
     const existingSchedules = await scheduleRepo.findByUserId(userId);
     const schedule = existingSchedules.length > 0 ? existingSchedules[0] : null;
@@ -46,25 +59,22 @@ const addOrUpdateSchedule = async (req, res) => {
     let result;
 
     if (!schedule) {
-      // ✅ Case 1: طالب جديد - اعمل جدول جديد
-      if (!timeTableId) {
-        return res.status(400).json({
-          success: false,
-          message: "timeTableId is required for creating a new schedule",
-        });
-      }
-
+      // ✅ Case 1: طالب جديد - اعمل جدول جديد مع إجمالي الساعات
       result = await scheduleRepo.create({
         userId,
-        timeTableId,
         sessions: sessionIds,
         title: title || undefined,
+        totalCreditHours,
       });
     } else {
       // ✅ Case 2: جدول موجود - ضيف الـ sessions الجديدة واحدة واحدة
       for (const sessionId of sessionIds) {
         await scheduleRepo.addSession(schedule._id, sessionId);
       }
+
+      // ✅ حدث إجمالي الساعات (الساعات القديمة + الجديدة)
+      const newTotal = (schedule.totalCreditHours || 0) + totalCreditHours;
+      await scheduleRepo.updateTotalCreditHours(schedule._id, newTotal);
 
       // لو في title جديد، حدثه
       if (title) {

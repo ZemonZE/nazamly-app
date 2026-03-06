@@ -7,10 +7,8 @@ const {
   deleteSession,
 } = require("../controllers/Schedule.controller");
 
-router.use(requireAuth);
-
-router.post("/AddOrUpdate", addOrUpdateSchedule);
-router.get("/my-schedule", getMySchedule);
-router.delete("/session/:sessionId", deleteSession);
+router.post("/AddOrUpdate", requireAuth, addOrUpdateSchedule);
+router.get("/my-schedule", requireAuth, getMySchedule);
+router.delete("/session/:sessionId", requireAuth, deleteSession);
 
 module.exports = router;

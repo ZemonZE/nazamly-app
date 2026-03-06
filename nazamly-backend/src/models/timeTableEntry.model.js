@@ -3,6 +3,12 @@ const { Schema, model } = mongoose;
 
 const timeTableEntrySchema = new Schema(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: [true, "User is required"],
+      index: true,
+    },
     timeTableId: {
       type: Schema.Types.ObjectId,
       ref: "TimeTable",
@@ -51,6 +57,19 @@ const timeTableEntrySchema = new Schema(
           return toMinutes(value) > toMinutes(this.startTime);
         },
         message: "End time must be after start time",
+      },
+    },
+    groupNumber: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    sessionType: {
+      type: String,
+      required: [true, "Session type is required"],
+      enum: {
+        values: ["Lecture", "Section", "Lab"],
+        message: "{VALUE} is not valid. Must be Lecture, Section, or Lab",
       },
     },
     location: {

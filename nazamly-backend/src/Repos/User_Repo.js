@@ -1,11 +1,18 @@
 const Base_Repo = require("./Base_Repo");
 const User = require("../models/user.model");
+const Schedule = require("../models/schedule.model");
 
 /**
  * الحقول المسموح تعديلها - أي حقل مش هنا مش هيتعدل
  * firebaseUid و email ممنوع تعديلهم عشان دول بيانات حساسة
  */
-const ALLOWED_UPDATE_FIELDS = ["displayName", "role"];
+const ALLOWED_UPDATE_FIELDS = [
+  "displayName",
+  "role",
+  "currentCGPA",
+  "earnedCreditHours",
+  "pastSemesters",
+];
 
 /**
  * User_Repo - الـ Repository الخاص بالـ User
@@ -140,6 +147,50 @@ class User_Repo extends Base_Repo {
       { isDeleted: true, deletedAt: new Date() },
       { new: true },
     );
+  }
+
+  /**
+   * getCurrentTermData - بتجيب بيانات الترم الحالي للطالب
+   * بتجيب الكورسات المسجلة وإجمالي الساعات المعتمدة
+   *
+   * Business Logic:
+   * 1. بتدور على الـ Active Schedule بتاع الـ user وبتعمل populate للـ sessions
+   * 2. بتستخرج الـ sessions array
+   * 3. بتستخدم reduce عشان تجمع الـ creditHours بتاعت الكورسات الفريدة
+   *    (بتفلتر الـ courseCodes المكررة - لو كورس ليه Lecture و Section مبنحسبش الساعات مرتين)
+   * 4. بترجع object فيه الكورسات الفريدة والـ totalTermCreditHours
+   *
+   * @param {String} userId - الـ MongoDB ObjectId بتاع الـ User
+   * @returns {Promise<Object>} { courses: [...], totalTermCreditHours: Number }
+   */
+  async getCurrentTermData(userId) {
+    const schedule = await Schedule.findOne({
+      userId,
+      isActive: true,
+      isDeleted: { $ne: true },
+    }).populate("sessions");
+
+    if (!schedule || !schedule.sessions || schedule.sessions.length === 0) {
+      return { courses: [], totalTermCreditHours: 0 };
+    }
+
+    const { courses, totalTermCreditHours } = schedule.sessions.reduce(
+      (acc, session) => {
+        if (!acc.seenCodes.has(session.courseCode)) {
+          acc.seenCodes.add(session.courseCode);
+          acc.courses.push({
+            courseCode: session.courseCode,
+            courseName: session.courseName,
+            creditHours: session.creditHours,
+          });
+          acc.totalTermCreditHours += session.creditHours;
+        }
+        return acc;
+      },
+      { courses: [], totalTermCreditHours: 0, seenCodes: new Set() },
+    );
+
+    return { courses, totalTermCreditHours };
   }
 }
 

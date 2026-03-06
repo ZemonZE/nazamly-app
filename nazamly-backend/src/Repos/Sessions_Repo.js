@@ -1,14 +1,12 @@
 const Base_Repo = require("./Base_Repo");
-const Session = require("../models/Sessions.model");
+const Session = require("../models/timeTableEntry.model");
 
 /**
  * الحقول المسموح تعديلها في الـ Session
  * userId ممنوع يتعدل عشان الحصة تفضل مرتبطة بصاحبها
  */
 const ALLOWED_UPDATE_FIELDS = [
-  "courseName",
-  "courseCode",
-  "creditHours",
+  "courseId",
   "dayOfWeek",
   "startTime",
   "endTime",
@@ -88,28 +86,43 @@ class Sessions_Repo extends Base_Repo {
    * @returns {Promise<Array>} array فيه كل الحصص بتاعت الـ user
    */
   async findByUserId(userId) {
-    return await this.model.find({ userId, isDeleted: { $ne: true } });
+    return await this.model
+      .find({ userId, isDeleted: { $ne: true } })
+      .populate("courseId");
   }
 
   /**
-   * findByCourseCode - بتجيب كل الحصص لمادة معينة عن طريق الكود
-   * @param {String} courseCode - كود المادة (مثلاً "CS304")
+   * findByTimeTableId - بتجيب كل الحصص الخاصة بجدول معين
+   * مع populate للـ courseId عشان تجيب بيانات المادة
+   * @param {String} timeTableId - الـ MongoDB ObjectId بتاع الـ TimeTable
+   * @returns {Promise<Array>} array فيه كل الحصص بتاعت الجدول
+   */
+  async findByTimeTableId(timeTableId) {
+    return await this.model
+      .find({ timeTableId, isDeleted: { $ne: true } })
+      .populate("courseId");
+  }
+
+  /**
+   * findByCourseId - بتجيب كل الحصص لمادة معينة عن طريق الـ courseId
+   * @param {String} courseId - الـ MongoDB ObjectId بتاع الـ Course
    * @returns {Promise<Array>} array فيه كل الحصص للمادة دي
    */
-  async findByCourseCode(courseCode) {
-    return await this.model.find({
-      courseCode: courseCode.toUpperCase(),
-      isDeleted: { $ne: true },
-    });
+  async findByCourseId(courseId) {
+    return await this.model
+      .find({ courseId, isDeleted: { $ne: true } })
+      .populate("courseId");
   }
 
   /**
    * findByDay - بتجيب كل الحصص في يوم معين
-   * @param {String} dayOfWeek - اليوم (مثلاً "Saturday", "Sunday", ...)
+   * @param {Number} dayOfWeek - اليوم (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
    * @returns {Promise<Array>} array فيه كل الحصص في اليوم ده
    */
   async findByDay(dayOfWeek) {
-    return await this.model.find({ dayOfWeek, isDeleted: { $ne: true } });
+    return await this.model
+      .find({ dayOfWeek, isDeleted: { $ne: true } })
+      .populate("courseId");
   }
 
   /**
@@ -125,27 +138,26 @@ class Sessions_Repo extends Base_Repo {
    * findUserDaySessions - بتجيب كل حصص user معين في يوم معين
    * مرتبة حسب وقت البداية عشان تطلع بالترتيب الزمني
    * @param {String} userId - الـ Firebase UID بتاع الـ User
-   * @param {String} dayOfWeek - اليوم (مثلاً "Monday")
+   * @param {Number} dayOfWeek - اليوم (0-6)
    * @returns {Promise<Array>} array فيه الحصص مرتبة بوقت البداية
    */
   async findUserDaySessions(userId, dayOfWeek) {
     return await this.model
       .find({ userId, dayOfWeek, isDeleted: { $ne: true } })
+      .populate("courseId")
       .sort({ startTime: 1 });
   }
 
   /**
    * findByUserAndCourse - بتجيب كل حصص user معين لمادة معينة
    * @param {String} userId - الـ Firebase UID بتاع الـ User
-   * @param {String} courseCode - كود المادة
+   * @param {String} courseId - الـ MongoDB ObjectId بتاع الـ Course
    * @returns {Promise<Array>} array فيه كل الحصص للمادة والـ user
    */
-  async findByUserAndCourse(userId, courseCode) {
-    return await this.model.find({
-      userId,
-      courseCode: courseCode.toUpperCase(),
-      isDeleted: { $ne: true },
-    });
+  async findByUserAndCourse(userId, courseId) {
+    return await this.model
+      .find({ userId, courseId, isDeleted: { $ne: true } })
+      .populate("courseId");
   }
 
   /**

@@ -1,26 +1,27 @@
-const mongoose = require("mongoose");
 const Base_Repo = require("./Base_Repo");
-const Schedule = require("../models/schedule.model");
+const Schedule = require("../models/timeTable.model");
 
 /**
  * الحقول المسموح تعديلها في الـ Schedule
- * userId و timeTableId ممنوع يتعدلوا عشان العلاقات تفضل سليمة
+ * userId ممنوع يتعدل عشان العلاقات تفضل سليمة
  */
 const ALLOWED_UPDATE_FIELDS = [
   "title",
   "isActive",
   "totalCreditHours",
-  "sessions",
+  "entries",
+  "sourceType",
+  "aiInputRaw",
 ];
 
 /**
- * Schedule_Repo - الـ Repository الخاص بالجداول الدراسية (Schedule)
- * بيعمل extends للـ Base_Repo وبيضيف functions خاصة بالـ Schedule
+ * Schedule_Repo - الـ Repository الخاص بالجداول الدراسية (TimeTable)
+ * بيعمل extends للـ Base_Repo وبيضيف functions خاصة بالـ TimeTable
  * بيورث كل العمليات الأساسية (create, findAll, findById, update, delete) من Base_Repo
  * كل العمليات فيها Mongoose Validation (runValidators: true)
  * بيستخدم Transactions في العمليات المعقدة (زي setActive)
  *
- * العلاقة: User → TimeTable → Schedule → Sessions[]
+ * العلاقة: User → TimeTable → TimeTableEntry[] → Course
  */
 class Schedule_Repo extends Base_Repo {
   /**
@@ -33,7 +34,7 @@ class Schedule_Repo extends Base_Repo {
 
   /**
    * _validateUpdateData - (Private) بيعمل validation على البيانات قبل التعديل
-   * بيشيل أي حقل مش مسموح بتعديله (زي userId و timeTableId)
+   * بيشيل أي حقل مش مسموح بتعديله (زي userId)
    * ولو مفيش أي حقل صالح بيرمي Error
    *
    * @param {Object} data - البيانات اللي جاية للتعديل
@@ -61,7 +62,7 @@ class Schedule_Repo extends Base_Repo {
    * update - (Override) بتعدل Schedule عن طريق الـ ID
    * بتعمل validation الأول وبتشغل Mongoose Validators
    * بتتجاهل الـ documents الممسوحة (isDeleted = true)
-   * الحقول الممنوعة: userId, timeTableId
+   * الحقول الممنوعة: userId
    *
    * @param {String} id - الـ MongoDB ObjectId
    * @param {Object} data - البيانات الجديدة (هيتم فلترتها تلقائياً)
@@ -82,7 +83,7 @@ class Schedule_Repo extends Base_Repo {
 
   /**
    * findByUserId - بتجيب كل الجداول الخاصة بـ user معين
-   * مع populate للـ TimeTable والـ Sessions
+   * مع populate للـ entries (TimeTableEntry) والـ courseId
    * بتتجاهل الممسوح (Soft Deleted)
    * @param {String} userId - الـ Firebase UID بتاع الـ User
    * @returns {Promise<Array>} array فيه كل الجداول بتاعت الـ user
@@ -90,19 +91,10 @@ class Schedule_Repo extends Base_Repo {
   async findByUserId(userId) {
     return await this.model
       .find({ userId, isDeleted: { $ne: true } })
-      .populate("timeTableId")
-      .populate("sessions");
-  }
-
-  /**
-   * findByTimeTableId - بتجيب الـ Schedule المرتبط بـ TimeTable معين
-   * @param {String} timeTableId - الـ MongoDB ObjectId بتاع الـ TimeTable
-   * @returns {Promise<Object|null>} الـ Schedule لو لقاه أو null
-   */
-  async findByTimeTableId(timeTableId) {
-    return await this.model
-      .findOne({ timeTableId, isDeleted: { $ne: true } })
-      .populate("sessions");
+      .populate({
+        path: "entries",
+        populate: { path: "courseId" },
+      });
   }
 
   /**
@@ -113,20 +105,10 @@ class Schedule_Repo extends Base_Repo {
   async findActiveByUserId(userId) {
     return await this.model
       .findOne({ userId, isActive: true, isDeleted: { $ne: true } })
-      .populate("timeTableId")
-      .populate("sessions");
-  }
-
-  /**
-   * findByUserAndTimeTable - بتجيب Schedule معين بتاع user و TimeTable محددين
-   * @param {String} userId - الـ Firebase UID بتاع الـ User
-   * @param {String} timeTableId - الـ MongoDB ObjectId بتاع الـ TimeTable
-   * @returns {Promise<Object|null>} الـ Schedule لو لقاه أو null
-   */
-  async findByUserAndTimeTable(userId, timeTableId) {
-    return await this.model
-      .findOne({ userId, timeTableId, isDeleted: { $ne: true } })
-      .populate("sessions");
+      .populate({
+        path: "entries",
+        populate: { path: "courseId" },
+      });
   }
 
   /**
@@ -172,29 +154,29 @@ class Schedule_Repo extends Base_Repo {
   }
 
   /**
-   * addSession - بتضيف session (حصة) على جدول موجود
-   * @param {String} scheduleId - الـ MongoDB ObjectId بتاع الـ Schedule
-   * @param {String} sessionId - الـ MongoDB ObjectId بتاع الـ Session اللي عايز تضيفها
+   * addEntry - بتضيف entry (حصة) على جدول موجود
+   * @param {String} timeTableId - الـ MongoDB ObjectId بتاع الـ TimeTable
+   * @param {String} entryId - الـ MongoDB ObjectId بتاع الـ TimeTableEntry اللي عايز تضيفها
    * @returns {Promise<Object|null>} الجدول بعد الإضافة
    */
-  async addSession(scheduleId, sessionId) {
+  async addEntry(timeTableId, entryId) {
     return await this.model.findOneAndUpdate(
-      { _id: scheduleId, isDeleted: { $ne: true } },
-      { $addToSet: { sessions: sessionId } },
+      { _id: timeTableId, isDeleted: { $ne: true } },
+      { $addToSet: { entries: entryId } },
       { new: true, runValidators: true },
     );
   }
 
   /**
-   * removeSession - بتشيل session (حصة) من جدول موجود
-   * @param {String} scheduleId - الـ MongoDB ObjectId بتاع الـ Schedule
-   * @param {String} sessionId - الـ MongoDB ObjectId بتاع الـ Session اللي عايز تشيلها
+   * removeEntry - بتشيل entry (حصة) من جدول موجود
+   * @param {String} timeTableId - الـ MongoDB ObjectId بتاع الـ TimeTable
+   * @param {String} entryId - الـ MongoDB ObjectId بتاع الـ TimeTableEntry اللي عايز تشيلها
    * @returns {Promise<Object|null>} الجدول بعد الإزالة
    */
-  async removeSession(scheduleId, sessionId) {
+  async removeEntry(timeTableId, entryId) {
     return await this.model.findOneAndUpdate(
-      { _id: scheduleId, isDeleted: { $ne: true } },
-      { $pull: { sessions: sessionId } },
+      { _id: timeTableId, isDeleted: { $ne: true } },
+      { $pull: { entries: entryId } },
       { new: true, runValidators: true },
     );
   }
@@ -235,8 +217,10 @@ class Schedule_Repo extends Base_Repo {
   async findUserSchedules(userId) {
     return await this.model
       .find({ userId, isDeleted: { $ne: true } })
-      .populate("timeTableId")
-      .populate("sessions")
+      .populate({
+        path: "entries",
+        populate: { path: "courseId" },
+      })
       .sort({ createdAt: -1 });
   }
 
