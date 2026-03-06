@@ -1,47 +1,90 @@
 @import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap");
 
-/* ── Variables ── */
+/* ── Global Variables & Themes ── */
 :root {
-  --bg-deep: #061a10;
-  --green-700: #0d7a44;
-  --green-500: #16a85e;
-  --green-400: #22c874;
-  --green-300: #5ee09a;
-  --green-glow: rgba(34, 200, 116, 0.25);
-  --glass-bg: rgba(10, 36, 22, 0.72);
-  --glass-border: rgba(34, 200, 116, 0.18);
-  --glass-strong: rgba(34, 200, 116, 0.08);
-  --text-primary: #e8f9f0;
-  --text-secondary: #a3c9b4;
-  --text-muted: #5a8a6e;
-  --error: #f87171;
+  --bg-deep: #eef2f7;
+  --blue-700: #1e40af;
+  --blue-500: #3b6de0;
+  --blue-400: #4a7cec;
+  --blue-300: #2563b8;
+  --blue-glow: rgba(37, 99, 235, 0.2);
+  --glass-bg: rgba(255, 255, 255, 0.65);
+  --glass-border: rgba(37, 99, 235, 0.18);
+  --glass-strong: rgba(37, 99, 235, 0.06);
+  --text-primary: #0f172a;
+  --text-secondary: #1e3a5f;
+  --text-muted: #64748b;
+  --error: #dc2626;
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 22px;
   --transition: cubic-bezier(0.4, 0, 0.2, 1);
+  --input-bg: rgba(255, 255, 255, 0.7);
+  --input-bg-focus: rgba(255, 255, 255, 0.9);
+  --autofill-bg: #eef2f7;
+  --card-item-bg: rgba(255, 255, 255, 0.5);
 }
 
+/* ── Dark Mode ── */
+[data-theme="dark"] {
+  --bg-deep: #0f172a;
+  --blue-700: #3b82f6;
+  --blue-500: #60a5fa;
+  --blue-400: #93bbfd;
+  --blue-300: #3b82f6;
+  --blue-glow: rgba(96, 165, 250, 0.18);
+  --glass-bg: rgba(30, 41, 59, 0.8);
+  --glass-border: rgba(96, 165, 250, 0.14);
+  --glass-strong: rgba(96, 165, 250, 0.06);
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --error: #f87171;
+  --input-bg: rgba(30, 41, 59, 0.7);
+  --input-bg-focus: rgba(30, 41, 59, 0.9);
+  --autofill-bg: #1e293b;
+  --card-item-bg: rgba(30, 41, 59, 0.5);
+}
 /* ── Body & Background ── */
 html,
 body {
   min-height: 100vh;
   font-family: "Tajawal", sans-serif;
   direction: rtl;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
-body {
+.auth-page {
   background: var(--bg-deep);
   background-image:
     radial-gradient(
       ellipse 80% 60% at 20% 10%,
-      rgba(13, 122, 68, 0.22) 0%,
+      rgba(37, 99, 235, 0.12) 0%,
       transparent 60%
     ),
     radial-gradient(
       ellipse 60% 80% at 80% 90%,
-      rgba(6, 78, 43, 0.3) 0%,
+      rgba(30, 64, 175, 0.1) 0%,
+      transparent 60%
+    );
+  overflow-x: hidden;
+}
+
+[data-theme="dark"] .auth-page {
+  background: var(--bg-deep);
+  background-image:
+    radial-gradient(
+      ellipse 80% 60% at 20% 10%,
+      rgba(96, 165, 250, 0.06) 0%,
       transparent 60%
     ),
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23166534' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  overflow-x: hidden;
+    radial-gradient(
+      ellipse 60% 80% at 80% 90%,
+      rgba(59, 130, 246, 0.05) 0%,
+      transparent 60%
+    );
 }

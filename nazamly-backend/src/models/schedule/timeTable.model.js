@@ -14,11 +14,27 @@ const timeTableSchema = new Schema({
         required: [true, 'Semester is required'],
         index: true
     },
+    entries: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "TimeTableEntry",
+      },
+    ],
     title: {
         type: String,
         required: [true, 'Title is required'],
         trim: true,
         maxlength: [100, 'Title cannot exceed 100 characters']
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    totalCreditHours: {
+      type: Number,
+      default: 0,
+      min: [0, "Total credit hours cannot be negative"],
+      max: [19, "Total credit hours cannot exceed 19"],
     },
     sourceType: {
         type: String,
