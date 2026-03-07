@@ -5,6 +5,9 @@ const cors = require("cors");
 const authRoutes = require("./routes/auth.routes");
 const gpaRoutes = require("./routes/gpa.routes");
 const scheduleRoutes = require('./routes/schedule.routes');
+ 
+// Add this in src/app.js alongside your other routes
+const aiRoutes = require('./routes/ai.routes');
 const materialsRoutes = require('./routes/materials.routes');
 
 const app = express();
@@ -17,6 +20,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/gpa", gpaRoutes);
 app.use('/api/schedule', scheduleRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/materials', materialsRoutes);
 
 module.exports = app;
