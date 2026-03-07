@@ -9,6 +9,8 @@ const scheduleRoutes = require('./routes/schedule.routes');
 // Add this in src/app.js alongside your other routes
 const aiRoutes = require('./routes/ai.routes');
 const materialsRoutes = require('./routes/materials.routes');
+const courseMaterialsRoutes = require('./routes/courseMaterials.routes');
+const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
 
@@ -22,5 +24,7 @@ app.use("/api/gpa", gpaRoutes);
 app.use('/api/schedule', scheduleRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/materials', materialsRoutes);
+app.use('/api/course-materials', courseMaterialsRoutes);
+app.use('/api/admin', adminRoutes);
 
 module.exports = app;

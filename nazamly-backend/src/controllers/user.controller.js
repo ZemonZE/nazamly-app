@@ -23,4 +23,22 @@ const syncUser = async (req, res) => {
   });
 };
 
-module.exports = { syncUser };
+const updateProfile = async (req, res) => {
+  const { uid } = req.user;
+  const { cgpa, completedHours } = req.body;
+
+  const update = {};
+  if (cgpa !== undefined) update.cgpa = Number(cgpa);
+  if (completedHours !== undefined) update.completedHours = Number(completedHours);
+
+  const user = await User.findOneAndUpdate(
+    { firebaseUid: uid },
+    { $set: update },
+    { new: true }
+  );
+
+  if (!user) return res.status(404).json({ message: "User not found" });
+  res.json({ message: "Profile updated", user });
+};
+
+module.exports = { syncUser, updateProfile };

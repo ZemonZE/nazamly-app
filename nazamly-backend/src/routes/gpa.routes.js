@@ -13,7 +13,10 @@ const {
 // 2. Import Controllers
 const { 
     calculateCurrentTerm, 
-    generateTargetPlan 
+    generateTargetPlan,
+    getTermCourses,
+    addTermCourse,
+    removeTermCourse
 } = require('../controllers/gpa.controller');
 
 // 3. Apply authentication to all routes in this file
@@ -41,5 +44,26 @@ router.post(
     validateTargetStrategy, 
     generateTargetPlan
 );
+
+/**
+ * @route   GET /api/gpa/my-courses
+ * @desc    Get the authenticated user's current term courses
+ * @access  Private
+ */
+router.get('/my-courses', getTermCourses);
+
+/**
+ * @route   POST /api/gpa/my-courses
+ * @desc    Add a course to the user's current term
+ * @access  Private
+ */
+router.post('/my-courses', addTermCourse);
+
+/**
+ * @route   DELETE /api/gpa/my-courses/:courseId
+ * @desc    Remove a course from the user's current term
+ * @access  Private
+ */
+router.delete('/my-courses/:courseId', removeTermCourse);
 
 module.exports = router;

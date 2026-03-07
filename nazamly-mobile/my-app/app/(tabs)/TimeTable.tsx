@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import AddClassModal from './AddClassModal';
 
 interface TimeTableItemProps {
   title: string;
@@ -12,8 +12,7 @@ interface TimeTableItemProps {
 
 const TimetableScreen = () => {
   const [selectedDay, setSelectedDay] = useState('Sat');
-  
-  const navigation = useNavigation<any>(); 
+  const [modalVisible, setModalVisible] = useState(false);
 
   const days = [
     { id: 'Sat', label: 'Sat', count: 2 },
@@ -26,6 +25,9 @@ const TimetableScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Add Class Modal */}
+      <AddClassModal visible={modalVisible} onClose={() => setModalVisible(false)} />
+
       {/* Header Section */}
       <View style={styles.header}>
         <View>
@@ -33,10 +35,9 @@ const TimetableScreen = () => {
           <Text style={styles.subtitle}>12 classes this semester</Text>
         </View>
         
-        {/* 3. ضفنا الـ onPress هنا عشان ينقلك للصفحة التانية */}
         <TouchableOpacity 
           style={styles.addButton} 
-          onPress={() => navigation.navigate('AddClassModal')}
+          onPress={() => setModalVisible(true)}
         >
           <Feather name="plus" size={20} color="#fff" />
           <Text style={styles.addButtonText}>Add Class</Text>
