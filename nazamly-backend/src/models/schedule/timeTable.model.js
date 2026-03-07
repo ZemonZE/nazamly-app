@@ -14,6 +14,12 @@ const timeTableSchema = new Schema({
         required: [true, 'Semester is required'],
         index: true
     },
+    entries: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "TimeTableEntry",
+      },
+    ],
     title: {
         type: String,
         required: [true, 'Title is required'],
