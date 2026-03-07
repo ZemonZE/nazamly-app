@@ -1,7 +1,5 @@
 const mongoose = require("mongoose");
 
-
-// هعمل سكيما زي اللي كنت بشوفها في الفاير بيز عادي
 const userSchema = new mongoose.Schema(
   {
     firebaseUid: {
@@ -12,6 +10,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
+      unique: true,
     },
     displayName: String,
     photoURL: String,
@@ -44,7 +43,7 @@ const userSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("User", userSchema);

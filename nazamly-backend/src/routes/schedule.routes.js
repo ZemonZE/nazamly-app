@@ -1,28 +1,20 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const authMiddleware = require('../middlewares/auth.middleware');
-const { validateScheduleInput } = require('../middlewares/schedule.validator');
-const { checkScheduleConflicts } = require('../middlewares/conflict.middleware');
+const authMiddleware = require("../middlewares/auth.middleware");
+const {
+  addOrUpdateSchedule,
+  getMySchedule,
+  deleteSession,
+} = require("../controllers/Schedule.controller");
 
-// TODO: [INTEGRATION - ABDO] Import the actual schedule controller here once it is ready.
-// const scheduleController = require('../controllers/schedule.controller');
+// ✅ POST /api/schedule/add - إضافة أو تحديث الجدول
+router.post("/add", authMiddleware, addOrUpdateSchedule);
 
-// TODO: [CLEANUP] Remove this dummy function completely after merging Abdo's code.
-const dummyAddScheduleController = (req, res) => {
-    res.status(201).json({
-        success: true,
-        message: 'Middlewares passed successfully! Ready for Abdo\'s DB code.',
-        data: req.body.sessions
-    });
-};
+// ✅ GET /api/schedule/my-schedule - جيب جدول الطالب
+router.get("/my-schedule", authMiddleware, getMySchedule);
 
-// TODO: [INTEGRATION - ABDO] Replace dummyAddScheduleController with the actual controller method (e.g., scheduleController.addSchedule).
-router.post('/add', 
-    authMiddleware, 
-    validateScheduleInput, 
-    checkScheduleConflicts, 
-    dummyAddScheduleController 
-);
+// ✅ DELETE /api/schedule/session/:sessionId - امسح حصة من الجدول
+router.delete("/session/:sessionId", authMiddleware, deleteSession);
 
 module.exports = router;

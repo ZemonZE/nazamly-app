@@ -1,14 +1,14 @@
-const { User } = require("../models");
+const userRepo = require("../Repos/User_Repo");
 
 const syncUser = async (req, res) => {
   const { uid, email, name, picture } = req.user;
 
-  let user = await User.findOne({ firebaseUid: uid });
+  let user = await userRepo.findByFirebaseUid(uid);
 
   const isCollege = email.endsWith("@std.sci.cu.edu.eg");
 
   if (!user) {
-    user = await User.create({
+    user = await userRepo.create({
       firebaseUid: uid,
       email,
       displayName: name,
