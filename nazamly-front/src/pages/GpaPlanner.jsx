@@ -1,26 +1,28 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import "../styles/GpaPlanner.css";
+import {
+  calculateTermGPA as apiCalculate,
+  generateTargetPlan as apiTargetPlan,
+  updateGpaProfile,
+  getTermCourses,
+  addTermCourse,
+  removeTermCourse,
+} from "../services/gpaService";
+import { IconTrash } from "../Icons/DashboardIcons";
 
 const STORAGE_KEY = "nazamly-gpa-profile";
 
-/* Fixed grade‑point options for dropdowns */
-const GRADE_OPTIONS = [
-  { value: 4.0, label: "امتياز مرتفع" },
-  { value: 3.5, label: "امتياز" },
-  { value: 3.0, label: "جيد جداً مرتفع" },
-  { value: 2.5, label: "جيد جيد" },
-  { value: 2.0, label: "جيد مرتفع" },
-  { value: 1.5, label: "جيد" },
-];
+/* mark → grade‑point (same formula the backend uses) */
+const markToGP = (m) => (m < 60 ? 0 : Number(((m / 10) - 5).toFixed(1)));
 
-/* Mock current‑term schedule */
-const MOCK_SCHEDULE = [
-  { id: 1, name: "الرياضيات التحليلية", code: "MATH 232", credits: 4 },
-  { id: 2, name: "البرمجة المتقدمة", code: "CS 301", credits: 4 },
-  { id: 3, name: "قواعد البيانات", code: "CS 302", credits: 3 },
-  { id: 4, name: "الجبر الخطي", code: "MATH 211", credits: 3 },
-  { id: 5, name: "مبادئ الإدارة", code: "MGT 101", credits: 2 },
-];
+/* grade‑rating labels based on mark */
+const getRating = (m) => {
+  if (m >= 85) return "ممتاز";
+  if (m >= 75) return "جيد جداً";
+  if (m >= 65) return "جيد";
+  if (m >= 60) return "مقبول";
+  return "راسب";
+};
 
 /* ══════════════════════════════════════
    INTERVAL‑BASED CLASSIFICATION
@@ -43,8 +45,7 @@ function classifyGpa(v) {
 }
 
 function gradeLabel(val) {
-  const g = GRADE_OPTIONS.find((o) => o.value === val);
-  return g ? g.label : classifyGpa(val).label;
+  return classifyGpa(val).label;
 }
 
 /* ══════════════════════════════════════
@@ -108,80 +109,6 @@ function CircularProgress({
 }
 
 /* ══════════════════════════════════════
-   TARGET PLANNER ALGORITHM
-══════════════════════════════════════ */
-function computeStrategy(courses, grades, oldCgpa, oldHours, target) {
-  const termHours = courses.reduce((s, c) => s + c.credits, 0);
-  const totalHours = oldHours + termHours;
-  const neededPoints = target * totalHours - oldCgpa * oldHours;
-  const maxPoints = courses.reduce((s, c) => s + 5.0 * c.credits, 0);
-  const maxCgpa = (oldCgpa * oldHours + maxPoints) / totalHours;
-
-  if (target > 5.0 || neededPoints > maxPoints) {
-    return {
-      possible: false,
-      maxCgpa: Math.min(maxCgpa, 5.0).toFixed(2),
-      maxCls: classifyGpa(Math.min(maxCgpa, 5.0)),
-    };
-  }
-
-  if (neededPoints <= 0) {
-    return {
-      possible: true,
-      requiredTermGpa: "0.00",
-      maxCgpa: Math.min(maxCgpa, 5.0).toFixed(2),
-      plan: courses.map((c) => ({ ...c, requiredGrade: 1.5 })),
-      note: "معدلك الحالي يتجاوز الهدف بالفعل! أي درجات ستحقق ذلك.",
-    };
-  }
-
-  let remaining = [...courses];
-  let remainingPoints = neededPoints;
-  const planGrades = {};
-
-  while (remaining.length > 0) {
-    const pointsPerCourse = remainingPoints / remaining.length;
-    const overflow = remaining.filter((c) => pointsPerCourse / c.credits > 5.0);
-
-    if (overflow.length === 0) {
-      remaining.forEach((c) => {
-        planGrades[c.id] = parseFloat((pointsPerCourse / c.credits).toFixed(2));
-      });
-      break;
-    }
-
-    overflow.forEach((c) => {
-      planGrades[c.id] = 4.9;
-      remainingPoints -= 4.9 * c.credits;
-    });
-
-    remaining = remaining.filter((c) => planGrades[c.id] === undefined);
-
-    if (remaining.length === 0 && remainingPoints > 0.001) {
-      return {
-        possible: false,
-        maxCgpa: Math.min(maxCgpa, 5.0).toFixed(2),
-        maxCls: classifyGpa(Math.min(maxCgpa, 5.0)),
-      };
-    }
-  }
-
-  const plan = courses.map((c) => ({
-    ...c,
-    requiredGrade: planGrades[c.id] ?? 0,
-  }));
-
-  const requiredTermGpa = termHours ? neededPoints / termHours : 0;
-
-  return {
-    possible: true,
-    requiredTermGpa: requiredTermGpa.toFixed(2),
-    maxCgpa: Math.min(maxCgpa, 5.0).toFixed(2),
-    plan,
-  };
-}
-
-/* ══════════════════════════════════════
    MAIN COMPONENT
 ══════════════════════════════════════ */
 function GpaPlanner() {
@@ -190,11 +117,26 @@ function GpaPlanner() {
   const [hoursInput, setHoursInput] = useState("");
   const [profileError, setProfileError] = useState("");
   const [activeTab, setActiveTab] = useState("calculator");
-  const [grades, setGrades] = useState(() =>
-    Object.fromEntries(MOCK_SCHEDULE.map((c) => [c.id, 4.0])),
-  );
+
+  /* Dynamic courses loaded from API */
+  const [courses, setCourses] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+  const [newCourseName, setNewCourseName] = useState("");
+  const [newCourseCode, setNewCourseCode] = useState("");
+  const [newCreditHours, setNewCreditHours] = useState("");
+  const [courseError, setCourseError] = useState("");
+
+  /* marks keyed by course _id (0-100) */
+  const [marks, setMarks] = useState({});
+
+  /* API results */
+  const [apiResult, setApiResult] = useState(null); // from /api/gpa/calculate
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
+
   const [targetCgpa, setTargetCgpa] = useState("");
   const [strategy, setStrategy] = useState(null);
+  const [strategyLoading, setStrategyLoading] = useState(false);
 
   /* Live classification for onboarding input */
   const cgpaClassification = useMemo(() => {
@@ -217,7 +159,28 @@ function GpaPlanner() {
     }
   }, []);
 
-  const saveProfile = useCallback(() => {
+  /* Load term courses from API */
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await getTermCourses();
+        setCourses(data);
+        setMarks((prev) => {
+          const next = { ...prev };
+          data.forEach((c) => {
+            if (!(c._id in next)) next[c._id] = 80;
+          });
+          return next;
+        });
+      } catch {
+        /* offline or not logged in */
+      } finally {
+        setCoursesLoading(false);
+      }
+    })();
+  }, []);
+
+  const saveProfile = useCallback(async () => {
     const cgpa = parseFloat(cgpaInput);
     const hours = parseInt(hoursInput, 10);
     setProfileError("");
@@ -231,6 +194,14 @@ function GpaPlanner() {
     }
     const data = { cgpa, hours };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+    /* Also persist to the server so /api/gpa endpoints use it */
+    try {
+      await updateGpaProfile(cgpa, hours);
+    } catch {
+      /* offline or not logged in — continue locally */
+    }
+
     setProfile(data);
   }, [cgpaInput, hoursInput]);
 
@@ -241,35 +212,89 @@ function GpaPlanner() {
     }
     setProfile(null);
     setStrategy(null);
+    setApiResult(null);
   };
 
-  const handleGradeChange = (courseId, value) => {
-    let v = parseFloat(value);
+  /* ── Course management handlers ── */
+  const handleAddCourse = async () => {
+    setCourseError("");
+    const credits = parseInt(newCreditHours, 10);
+    if (!newCourseName.trim()) {
+      setCourseError("أدخل اسم المادة");
+      return;
+    }
+    if (!newCourseCode.trim()) {
+      setCourseError("أدخل رمز المادة");
+      return;
+    }
+    if (isNaN(credits) || credits < 1 || credits > 6) {
+      setCourseError("الساعات يجب أن تكون بين 1 و 6");
+      return;
+    }
+    try {
+      const updatedCourses = await addTermCourse(
+        newCourseName.trim(),
+        newCourseCode.trim(),
+        credits,
+      );
+      setCourses(updatedCourses);
+      setMarks((prev) => {
+        const next = { ...prev };
+        updatedCourses.forEach((c) => {
+          if (!(c._id in next)) next[c._id] = 80;
+        });
+        return next;
+      });
+      setNewCourseName("");
+      setNewCourseCode("");
+      setNewCreditHours("");
+      setApiResult(null);
+    } catch (err) {
+      setCourseError(err.message);
+    }
+  };
+
+  const handleRemoveCourse = async (courseId) => {
+    try {
+      const updatedCourses = await removeTermCourse(courseId);
+      setCourses(updatedCourses);
+      setMarks((prev) => {
+        const next = { ...prev };
+        delete next[courseId];
+        return next;
+      });
+      setApiResult(null);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  /* ── Mark handlers ── */
+  const handleMarkChange = (courseId, value) => {
+    let v = parseInt(value, 10);
     if (isNaN(v)) v = 0;
-    v = Math.round(v * 100) / 100; // keep 2 decimals
-    v = Math.max(0, Math.min(5, v));
-    setGrades((prev) => ({ ...prev, [courseId]: v }));
+    v = Math.max(0, Math.min(100, v));
+    setMarks((prev) => ({ ...prev, [courseId]: v }));
   };
-  const incrementGrade = (courseId) => {
-    setGrades((prev) => {
-      const cur = prev[courseId] ?? 0;
-      const next = Math.min(5, Math.round((cur + 0.1) * 100) / 100);
+  const incrementMark = (courseId) => {
+    setMarks((prev) => {
+      const next = Math.min(100, (prev[courseId] ?? 0) + 1);
       return { ...prev, [courseId]: next };
     });
   };
-  const decrementGrade = (courseId) => {
-    setGrades((prev) => {
-      const cur = prev[courseId] ?? 0;
-      const next = Math.max(0, Math.round((cur - 0.1) * 100) / 100);
+  const decrementMark = (courseId) => {
+    setMarks((prev) => {
+      const next = Math.max(0, (prev[courseId] ?? 0) - 1);
       return { ...prev, [courseId]: next };
     });
   };
 
+  /* ── Local instant calculations (mark → grade‑point) ── */
   const calculations = useMemo(() => {
-    if (!profile) return null;
-    const termHours = MOCK_SCHEDULE.reduce((s, c) => s + c.credits, 0);
-    const termPoints = MOCK_SCHEDULE.reduce(
-      (s, c) => s + grades[c.id] * c.credits,
+    if (!profile || courses.length === 0) return null;
+    const termHours = courses.reduce((s, c) => s + c.creditHours, 0);
+    const termPoints = courses.reduce(
+      (s, c) => s + markToGP(marks[c._id] ?? 80) * c.creditHours,
       0,
     );
     const termGpa = termHours ? termPoints / termHours : 0;
@@ -288,24 +313,60 @@ function GpaPlanner() {
       expectedCgpa: parseFloat(expectedCgpa.toFixed(2)),
       maxCgpa: parseFloat(Math.min(maxCgpa, 5.0).toFixed(2)),
     };
-  }, [profile, grades]);
+  }, [profile, marks, courses]);
 
-  const computeTarget = useCallback(() => {
+  /* ── Call server for authoritative GPA calculation ── */
+  const handleServerCalc = useCallback(async () => {
+    setApiLoading(true);
+    setApiError("");
+    try {
+      const coursesPayload = courses.map((c) => ({
+        courseCode: c.courseCode,
+        creditHours: c.creditHours,
+        mark: marks[c._id] ?? 80,
+      }));
+      const data = await apiCalculate(coursesPayload);
+      setApiResult(data); // { termGPA, termHoursCalculated, oldCGPA, newCGPA }
+    } catch (err) {
+      setApiError(err.message);
+    } finally {
+      setApiLoading(false);
+    }
+  }, [marks, courses]);
+
+  /* ── Call server for target strategy ── */
+  const computeTarget = useCallback(async () => {
     const target = parseFloat(targetCgpa);
     if (!profile || isNaN(target) || target < 0 || target > 5) {
       setStrategy({ error: "الرجاء إدخال معدل مستهدف بين 0 و 5" });
       return;
     }
-    setStrategy(
-      computeStrategy(
-        MOCK_SCHEDULE,
-        grades,
-        profile.cgpa,
-        profile.hours,
-        target,
-      ),
-    );
-  }, [targetCgpa, profile, grades]);
+    setStrategyLoading(true);
+    try {
+      const coursesPayload = courses.map((c) => ({
+        courseCode: c.courseCode,
+        creditHours: c.creditHours,
+      }));
+      const data = await apiTargetPlan(target, coursesPayload);
+      /* data: { targetCGPA, requiredTermAverageGPA, plan: [{ courseCode, difficulty, targetMark, targetRating }] } */
+      setStrategy({
+        possible: true,
+        requiredTermGpa: data.requiredTermAverageGPA,
+        plan: data.plan,
+        targetCGPA: data.targetCGPA,
+      });
+    } catch (err) {
+      /* The API returns 400 for impossible targets */
+      setStrategy({
+        possible: false,
+        error: err.message,
+        maxCgpa: calculations?.maxCgpa,
+        maxCls: classifyGpa(calculations?.maxCgpa),
+      });
+    } finally {
+      setStrategyLoading(false);
+    }
+  }, [targetCgpa, profile, calculations]);
 
   /* ═══════════════════════════════
      SCREEN 1 — Onboarding
@@ -449,11 +510,26 @@ function GpaPlanner() {
       {activeTab === "calculator" && (
         <CalculatorScreen
           calculations={calculations}
-          grades={grades}
-          onGradeChange={handleGradeChange}
-          onIncrement={incrementGrade}
-          onDecrement={decrementGrade}
+          marks={marks}
+          onMarkChange={handleMarkChange}
+          onIncrement={incrementMark}
+          onDecrement={decrementMark}
           profile={profile}
+          onServerCalc={handleServerCalc}
+          apiResult={apiResult}
+          apiLoading={apiLoading}
+          apiError={apiError}
+          courses={courses}
+          coursesLoading={coursesLoading}
+          onRemoveCourse={handleRemoveCourse}
+          onAddCourse={handleAddCourse}
+          newCourseName={newCourseName}
+          setNewCourseName={setNewCourseName}
+          newCourseCode={newCourseCode}
+          setNewCourseCode={setNewCourseCode}
+          newCreditHours={newCreditHours}
+          setNewCreditHours={setNewCreditHours}
+          courseError={courseError}
         />
       )}
       {activeTab === "planner" && (
@@ -462,6 +538,7 @@ function GpaPlanner() {
           setTargetCgpa={setTargetCgpa}
           computeTarget={computeTarget}
           strategy={strategy}
+          strategyLoading={strategyLoading}
           calculations={calculations}
           profile={profile}
         />
@@ -475,146 +552,277 @@ function GpaPlanner() {
 ══════════════════════════════════════ */
 function CalculatorScreen({
   calculations,
-  grades,
-  onGradeChange,
+  marks,
+  onMarkChange,
   onIncrement,
   onDecrement,
   profile,
+  onServerCalc,
+  apiResult,
+  apiLoading,
+  apiError,
+  courses,
+  coursesLoading,
+  onRemoveCourse,
+  onAddCourse,
+  newCourseName,
+  setNewCourseName,
+  newCourseCode,
+  setNewCourseCode,
+  newCreditHours,
+  setNewCreditHours,
+  courseError,
 }) {
-  if (!calculations) return null;
+  /* Show server result when available, otherwise local */
+  const termGpa = apiResult
+    ? apiResult.termGPA
+    : calculations
+      ? calculations.termGpa
+      : 0;
+  const expectedCgpa = apiResult
+    ? apiResult.newCGPA
+    : calculations
+      ? calculations.expectedCgpa
+      : 0;
 
-  const termCls = classifyGpa(calculations.termGpa);
-  const expectedCls = classifyGpa(calculations.expectedCgpa);
+  const termCls = classifyGpa(termGpa);
+  const expectedCls = classifyGpa(expectedCgpa);
 
   return (
     <div className="planner-calc-layout">
       {/* Results Column */}
       <div className="planner-results-col">
-        <div className="planner-circle-card">
-          <CircularProgress
-            value={calculations.expectedCgpa}
-            label="المعدل المتوقع"
-            sub={`من ${profile.cgpa}`}
-            classification
-          />
-        </div>
+        {calculations && (
+          <>
+            <div className="planner-circle-card">
+              <CircularProgress
+                value={expectedCgpa}
+                label="المعدل المتوقع"
+                sub={`من ${profile.cgpa}`}
+                classification
+              />
+            </div>
 
-        <div className="planner-circle-card planner-circle-card-sm">
-          <CircularProgress
-            value={calculations.termGpa}
-            size={120}
-            stroke={8}
-            label="معدل الفصل"
-            classification
-          />
-        </div>
+            <div className="planner-circle-card planner-circle-card-sm">
+              <CircularProgress
+                value={termGpa}
+                size={120}
+                stroke={8}
+                label="معدل الفصل"
+                classification
+              />
+            </div>
 
-        {/* Classification badges */}
-        <div className="planner-cls-row">
-          <div className={`planner-cls-card ${expectedCls.css}`}>
-            <span className="planner-cls-card-label">المعدل المتوقع</span>
-            <span className="planner-cls-card-value">
-              {calculations.expectedCgpa}
-            </span>
-            <span className="planner-cls-card-class">{expectedCls.label}</span>
-          </div>
-          <div className={`planner-cls-card ${termCls.css}`}>
-            <span className="planner-cls-card-label">معدل الفصل</span>
-            <span className="planner-cls-card-value">
-              {calculations.termGpa}
-            </span>
-            <span className="planner-cls-card-class">{termCls.label}</span>
-          </div>
-        </div>
+            {/* Classification badges */}
+            <div className="planner-cls-row">
+              <div className={`planner-cls-card ${expectedCls.css}`}>
+                <span className="planner-cls-card-label">المعدل المتوقع</span>
+                <span className="planner-cls-card-value">{expectedCgpa}</span>
+                <span className="planner-cls-card-class">
+                  {expectedCls.label}
+                </span>
+              </div>
+              <div className={`planner-cls-card ${termCls.css}`}>
+                <span className="planner-cls-card-label">معدل الفصل</span>
+                <span className="planner-cls-card-value">{termGpa}</span>
+                <span className="planner-cls-card-class">{termCls.label}</span>
+              </div>
+            </div>
 
-        {/* Stats */}
-        <div className="planner-stats-row">
-          <div className="planner-stat-box">
-            <span className="planner-stat-num">{calculations.termHours}</span>
-            <span className="planner-stat-txt">ساعات الفصل</span>
+            {apiResult && (
+              <div
+                className="planner-alert planner-alert-blue"
+                style={{ textAlign: "center" }}
+              >
+                النتيجة من السيرفر — المعدل التراكمي السابق: {apiResult.oldCGPA}
+              </div>
+            )}
+
+            {apiError && (
+              <div className="planner-alert planner-alert-red">{apiError}</div>
+            )}
+
+            {/* Stats */}
+            <div className="planner-stats-row">
+              <div className="planner-stat-box">
+                <span className="planner-stat-num">
+                  {calculations.termHours}
+                </span>
+                <span className="planner-stat-txt">ساعات الفصل</span>
+              </div>
+              <div className="planner-stat-box">
+                <span className="planner-stat-num">
+                  {calculations.totalHours}
+                </span>
+                <span className="planner-stat-txt">إجمالي الساعات</span>
+              </div>
+              <div className="planner-stat-box">
+                <span className="planner-stat-num">
+                  {calculations.termPoints.toFixed(1)}
+                </span>
+                <span className="planner-stat-txt">النقاط</span>
+              </div>
+            </div>
+          </>
+        )}
+
+        {!calculations && courses.length === 0 && !coursesLoading && (
+          <div className="planner-alert planner-alert-blue">
+            أضف مواد الفصل أولاً لبدء الحساب
           </div>
-          <div className="planner-stat-box">
-            <span className="planner-stat-num">{calculations.totalHours}</span>
-            <span className="planner-stat-txt">إجمالي الساعات</span>
-          </div>
-          <div className="planner-stat-box">
-            <span className="planner-stat-num">
-              {calculations.termPoints.toFixed(1)}
-            </span>
-            <span className="planner-stat-txt">النقاط</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Courses Column */}
       <div className="planner-courses-col">
+        {/* Add Course Form */}
+        <div className="planner-card" style={{ marginBottom: 16 }}>
+          <div className="planner-card-head">
+            <h3>إضافة مادة جديدة</h3>
+          </div>
+          {courseError && (
+            <div className="planner-alert planner-alert-red">{courseError}</div>
+          )}
+          <div
+            className="planner-add-course-form"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr auto",
+              gap: 8,
+              marginBottom: 8,
+            }}
+          >
+            <input
+              className="planner-input"
+              type="text"
+              placeholder="اسم المادة"
+              value={newCourseName}
+              onChange={(e) => setNewCourseName(e.target.value)}
+            />
+            <input
+              className="planner-input"
+              type="text"
+              placeholder="رمز المادة (CS 301)"
+              value={newCourseCode}
+              onChange={(e) => setNewCourseCode(e.target.value)}
+            />
+            <input
+              className="planner-input"
+              type="number"
+              min={1}
+              max={6}
+              step={1}
+              placeholder="ساعات"
+              value={newCreditHours}
+              onChange={(e) => setNewCreditHours(e.target.value)}
+              style={{ width: 70 }}
+            />
+          </div>
+          <button
+            className="planner-btn-primary"
+            style={{ width: "100%" }}
+            onClick={onAddCourse}
+          >
+            + إضافة مادة
+          </button>
+        </div>
+
+        {/* Course List */}
         <div className="planner-card">
           <div className="planner-card-head">
             <h3>مواد الفصل الحالي</h3>
-            <span className="planner-badge">{MOCK_SCHEDULE.length} مواد</span>
+            <span className="planner-badge">{courses.length} مواد</span>
           </div>
 
+          {coursesLoading && (
+            <div style={{ textAlign: "center", padding: 24, opacity: 0.6 }}>
+              جاري التحميل...
+            </div>
+          )}
+
+          {!coursesLoading && courses.length === 0 && (
+            <div style={{ textAlign: "center", padding: 24, opacity: 0.6 }}>
+              لم تتم إضافة مواد بعد. أضف موادك أعلاه.
+            </div>
+          )}
+
           <div className="planner-course-list">
-            {MOCK_SCHEDULE.map((course) => (
-              <div key={course.id} className="planner-course-row">
-                <div className="planner-course-info">
-                  <span className="planner-course-name">{course.name}</span>
-                  <span className="planner-course-meta">
-                    {course.code} • {course.credits} ساعات
-                  </span>
+            {courses.map((course) => {
+              const mVal = marks[course._id] ?? 80;
+              const gp = markToGP(mVal);
+              const gCls = classifyGpa(gp);
+              return (
+                <div key={course._id} className="planner-course-row">
+                  <div className="planner-course-info">
+                    <span className="planner-course-name">{course.name}</span>
+                    <span className="planner-course-meta">
+                      {course.courseCode} • {course.creditHours} ساعات
+                    </span>
+                  </div>
+                  <div className="planner-course-grade-wrap">
+                    <div className="planner-smart-input">
+                      <button
+                        className="planner-stepper-btn"
+                        onClick={() => onDecrement(course._id)}
+                        disabled={mVal <= 0}
+                        tabIndex={-1}
+                        aria-label="تقليل"
+                      >
+                        −
+                      </button>
+                      <input
+                        className="planner-grade-input"
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={mVal}
+                        onChange={(e) =>
+                          onMarkChange(course._id, e.target.value)
+                        }
+                      />
+                      <button
+                        className="planner-stepper-btn"
+                        onClick={() => onIncrement(course._id)}
+                        disabled={mVal >= 100}
+                        tabIndex={-1}
+                        aria-label="زيادة"
+                      >
+                        +
+                      </button>
+                      <span
+                        className={`planner-cls-badge planner-cls-badge-sm ${gCls.css}`}
+                      >
+                        {gCls.label}
+                      </span>
+                    </div>
+                    <span className="planner-course-pts">
+                      {gp} GPA • {(gp * course.creditHours).toFixed(1)} نقطة
+                    </span>
+                  </div>
+                  <button
+                    className="planner-stepper-btn"
+                    onClick={() => onRemoveCourse(course._id)}
+                    title="حذف المادة"
+                    style={{ color: "#ef4444", marginRight: 4 }}
+                  >
+                    <IconTrash />
+                  </button>
                 </div>
-                <div className="planner-course-grade-wrap">
-                  {(() => {
-                    const gVal = grades[course.id];
-                    const gCls = classifyGpa(gVal);
-                    return (
-                      <>
-                        <div className="planner-smart-input">
-                          <button
-                            className="planner-stepper-btn"
-                            onClick={() => onDecrement(course.id)}
-                            disabled={gVal <= 0}
-                            tabIndex={-1}
-                            aria-label="تقليل"
-                          >
-                            −
-                          </button>
-                          <input
-                            className="planner-grade-input"
-                            type="number"
-                            min={0}
-                            max={5}
-                            step={0.1}
-                            value={gVal}
-                            onChange={(e) =>
-                              onGradeChange(course.id, e.target.value)
-                            }
-                          />
-                          <button
-                            className="planner-stepper-btn"
-                            onClick={() => onIncrement(course.id)}
-                            disabled={gVal >= 5}
-                            tabIndex={-1}
-                            aria-label="زيادة"
-                          >
-                            +
-                          </button>
-                          <span
-                            className={`planner-cls-badge planner-cls-badge-sm ${gCls.css}`}
-                          >
-                            {gCls.label}
-                          </span>
-                        </div>
-                        <span className="planner-course-pts">
-                          {(gVal * course.credits).toFixed(1)} نقطة
-                        </span>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {courses.length > 0 && (
+            <button
+              className="planner-btn-primary"
+              style={{ marginTop: 16, width: "100%" }}
+              onClick={onServerCalc}
+              disabled={apiLoading}
+            >
+              {apiLoading ? "جاري الحساب..." : "احسب من السيرفر"}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -629,6 +837,7 @@ function PlannerScreen({
   setTargetCgpa,
   computeTarget,
   strategy,
+  strategyLoading,
   calculations,
   profile,
 }) {
@@ -668,8 +877,12 @@ function PlannerScreen({
               </span>
             )}
           </div>
-          <button className="planner-btn-primary" onClick={computeTarget}>
-            احسب الخطة
+          <button
+            className="planner-btn-primary"
+            onClick={computeTarget}
+            disabled={strategyLoading}
+          >
+            {strategyLoading ? "جاري الحساب..." : "احسب الخطة"}
           </button>
         </div>
 
@@ -687,29 +900,20 @@ function PlannerScreen({
       </div>
 
       {/* Error */}
-      {strategy && strategy.error && (
-        <div className="planner-alert planner-alert-red">{strategy.error}</div>
-      )}
-
-      {/* Impossible */}
-      {strategy && !strategy.error && !strategy.possible && (
+      {strategy && strategy.error && !strategy.possible && (
         <div className="planner-alert-card planner-alert-card-red">
           <div className="planner-alert-icon">⚠️</div>
           <h4>عفواً، لا يمكن تحقيق هذا الهدف</h4>
-          <p>
-            أقصى معدل يمكنك الوصول إليه هو <strong>{strategy.maxCgpa}</strong>
-            <span className={`planner-cls-inline ${strategy.maxCls.css}`}>
-              {" "}
-              ({strategy.maxCls.label})
-            </span>
-          </p>
-          <div className="planner-alert-tip">
-            جرّب تحديد هدف أقل من أو يساوي {strategy.maxCgpa}
-          </div>
+          <p>{strategy.error}</p>
+          {strategy.maxCgpa && (
+            <div className="planner-alert-tip">
+              أقصى معدل يمكنك الوصول إليه هو {strategy.maxCgpa}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Possible */}
+      {/* Possible — server result */}
       {strategy && strategy.possible && strategy.plan && (
         <div className="planner-strategy-card">
           <div className="planner-strategy-head">
@@ -725,48 +929,37 @@ function PlannerScreen({
             </div>
           </div>
 
-          {strategy.note && (
-            <div className="planner-alert planner-alert-blue">
-              {strategy.note}
-            </div>
-          )}
-
           <div className="planner-strategy-subtitle">
             التوزيع المقترح للدرجات:
           </div>
 
           <div className="planner-strategy-list">
-            {strategy.plan.map((c) => {
-              const gi = classifyGpa(c.requiredGrade);
-              return (
-                <div key={c.id} className="planner-strategy-row">
-                  <div className="planner-strategy-course">
-                    <span className="planner-strategy-name">{c.name}</span>
-                    <span className="planner-strategy-meta">
-                      {c.code} • {c.credits} ساعات
-                    </span>
-                  </div>
-                  <div className="planner-strategy-grade">
-                    <span
-                      className={`planner-grade-badge ${
-                        c.requiredGrade >= 4.5
-                          ? "grade-excellent"
-                          : c.requiredGrade >= 3.5
-                            ? "grade-good"
-                            : c.requiredGrade >= 2.5
-                              ? "grade-mid"
-                              : "grade-low"
-                      }`}
-                    >
-                      {c.requiredGrade}
-                    </span>
-                    <span className="planner-grade-name">
-                      {gradeLabel(c.requiredGrade)}
-                    </span>
-                  </div>
+            {strategy.plan.map((c) => (
+              <div key={c.courseCode} className="planner-strategy-row">
+                <div className="planner-strategy-course">
+                  <span className="planner-strategy-name">{c.courseCode}</span>
+                  <span className="planner-strategy-meta">
+                    صعوبة: {c.difficulty}/5
+                  </span>
                 </div>
-              );
-            })}
+                <div className="planner-strategy-grade">
+                  <span
+                    className={`planner-grade-badge ${
+                      c.targetMark >= 85
+                        ? "grade-excellent"
+                        : c.targetMark >= 75
+                          ? "grade-good"
+                          : c.targetMark >= 65
+                            ? "grade-mid"
+                            : "grade-low"
+                    }`}
+                  >
+                    {c.targetMark}/100
+                  </span>
+                  <span className="planner-grade-name">{c.targetRating}</span>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Summary chips */}
@@ -774,7 +967,7 @@ function PlannerScreen({
             {(() => {
               const counts = {};
               strategy.plan.forEach((c) => {
-                const lbl = gradeLabel(c.requiredGrade);
+                const lbl = c.targetRating;
                 counts[lbl] = (counts[lbl] || 0) + 1;
               });
               return Object.entries(counts).map(([label, count]) => (

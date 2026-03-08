@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   TextInput,
   TouchableOpacity,
@@ -12,23 +12,13 @@ import { useRouter } from "expo-router";
 import styles from "./styles";
 import Email_input from "@/components/ui/Email_input";
 import Password_input from "@/components/ui/Password_input";
-import Google_pressable from "@/components/ui/Google_pressable";
 import Show_toggle from "@/components/ui/Show_toggle";
 import Header from "@/components/ui/Header";
 import {
   createUserWithEmailAndPassword,
   updateProfile,
-  signInWithCredential,
-  GoogleAuthProvider,
 } from "firebase/auth";
-import { auth, API_URL, GOOGLE_WEB_CLIENT_ID } from "@/firebase";
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
-
-WebBrowser.maybeCompleteAuthSession();
-
-// SDK 55 removed makeRedirectUri proxy support; auth.expo.io proxy still works at runtime
-const redirectUri = "https://auth.expo.io/@ZemonZE/my-app";
+import { auth, API_URL } from "@/firebase";
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
@@ -38,17 +28,6 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: GOOGLE_WEB_CLIENT_ID,
-    redirectUri,
-  });
-
-  useEffect(() => {
-    if (request) {
-      console.log("[Register] Google OAuth redirectUri:", request.redirectUri);
-    }
-  }, [request]);
 
   const syncWithBackend = async (user: any) => {
     const token = await user.getIdToken();
@@ -65,27 +44,6 @@ export default function RegisterScreen() {
     }
     return body;
   };
-
-  useEffect(() => {
-    console.log("[Register] AuthSession response:", JSON.stringify(response, null, 2));
-    if (response?.type === "success") {
-      const { id_token } = response.params;
-      console.log("[Register] id_token received:", id_token ? "yes" : "no");
-      const credential = GoogleAuthProvider.credential(id_token);
-      setLoading(true);
-      signInWithCredential(auth, credential)
-        .then(async (result) => {
-          await syncWithBackend(result.user);
-          Alert.alert("Success", "Registration successful");
-          router.replace("/(tabs)");
-        })
-        .catch((error: any) => {
-          console.error("[Register] Firebase signIn error:", error.code, error.message);
-          Alert.alert("Failed", error.message || "Google sign-in failed");
-        })
-        .finally(() => setLoading(false));
-    }
-  }, [response]);
 
   const handleRegister = async () => {
     if (password !== confirmPassword) {
@@ -162,14 +120,6 @@ export default function RegisterScreen() {
           {loading ? "Loading..." : "Register"}
         </Text>
       </TouchableOpacity>
-
-      <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={{ color: "#5a8a6e", fontSize: 13 }}>Or Continue With</Text>
-        <View style={styles.dividerLine} />
-      </View>
-
-      <Google_pressable onPress={() => promptAsync()} />
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Have Account Already? </Text>

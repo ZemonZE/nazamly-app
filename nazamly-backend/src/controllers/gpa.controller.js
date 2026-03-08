@@ -108,7 +108,58 @@ const generateTargetPlan = async (req, res) => {
     }
 };
 
+// ── Term Courses CRUD ──
+
+const getTermCourses = async (req, res) => {
+    try {
+        const student = await User.findOne({ firebaseUid: req.user.uid });
+        if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
+        return res.json({ success: true, data: student.termCourses || [] });
+    } catch (error) {
+        console.error('Error in getTermCourses:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+};
+
+const addTermCourse = async (req, res) => {
+    try {
+        const { name, courseCode, creditHours } = req.body;
+        if (!name || !courseCode || !creditHours) {
+            return res.status(400).json({ success: false, message: 'name, courseCode and creditHours are required.' });
+        }
+        const student = await User.findOne({ firebaseUid: req.user.uid });
+        if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
+
+        student.termCourses.push({ name, courseCode, creditHours: Number(creditHours) });
+        await student.save();
+
+        return res.status(201).json({ success: true, data: student.termCourses });
+    } catch (error) {
+        console.error('Error in addTermCourse:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+};
+
+const removeTermCourse = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const student = await User.findOne({ firebaseUid: req.user.uid });
+        if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
+
+        student.termCourses = student.termCourses.filter(c => c._id.toString() !== courseId);
+        await student.save();
+
+        return res.json({ success: true, data: student.termCourses });
+    } catch (error) {
+        console.error('Error in removeTermCourse:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+};
+
 module.exports = {
     calculateCurrentTerm,
-    generateTargetPlan
+    generateTargetPlan,
+    getTermCourses,
+    addTermCourse,
+    removeTermCourse
 };

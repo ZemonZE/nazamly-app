@@ -23,76 +23,22 @@ const syncUser = async (req, res) => {
   });
 };
 
-/**
- * @desc    Onboarding Endpoint (Setup Profile)
- * @route   POST /api/gpa/setup-profile
- * @access  Private (Authenticated User)
- * Business Logic:
- * 1. بيجيب الـ userId من الـ authenticated request (req.user.id)
- * 2. بيستخرج currentCGPA و earnedCreditHours من req.body
- * 3. بيعمل validation إن القيم أرقام صالحة
- * 4. بيحدث بيانات الـ user ويرجع 200 OK
- */
-const setupProfile = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { currentCGPA, earnedCreditHours } = req.body;
+const updateProfile = async (req, res) => {
+  const { uid } = req.user;
+  const { cgpa, completedHours } = req.body;
 
-    if (currentCGPA === undefined || earnedCreditHours === undefined) {
-      return res.status(400).json({
-        success: false,
-        message: "currentCGPA and earnedCreditHours are required",
-      });
-    }
+  const update = {};
+  if (cgpa !== undefined) update.cgpa = Number(cgpa);
+  if (completedHours !== undefined) update.completedHours = Number(completedHours);
 
-    if (
-      typeof currentCGPA !== "number" ||
-      typeof earnedCreditHours !== "number"
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "currentCGPA and earnedCreditHours must be valid numbers",
-      });
-    }
+  const user = await User.findOneAndUpdate(
+    { firebaseUid: uid },
+    { $set: update },
+    { new: true }
+  );
 
-    if (currentCGPA < 0 || currentCGPA > 5.0) {
-      return res.status(400).json({
-        success: false,
-        message: "currentCGPA must be between 0.0 and 5.0",
-      });
-    }
-
-    if (earnedCreditHours < 0) {
-      return res.status(400).json({
-        success: false,
-        message: "earnedCreditHours cannot be negative",
-      });
-    }
-
-    const user = await userRepo.update(userId, {
-      currentCGPA,
-      earnedCreditHours,
-    });
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Profile updated successfully",
-      data: user,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Error updating profile",
-      error: error.message,
-    });
-  }
+  if (!user) return res.status(404).json({ message: "User not found" });
+  res.json({ message: "Profile updated", user });
 };
 
-module.exports = { syncUser, setupProfile };
+module.exports = { syncUser, updateProfile };

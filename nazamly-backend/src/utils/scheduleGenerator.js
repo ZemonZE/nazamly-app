@@ -93,7 +93,7 @@ const generateValidSchedules = (groupedData) => {
             const score = evaluateSchedule(completeSchedule);
             
             const signature = completeSchedule
-                .map(s => `${s.courseCode}_${s.type}_${s.dayOfWeek}_${s.startTime}`)
+                .map(s => `${s.courseCode}_${s.type}_${s.dayOfWeek}_${s.startTime}_${s.group||''}`)
                 .sort()
                 .join('|');
 

@@ -13,34 +13,33 @@ const userSchema = new mongoose.Schema(
       unique: true,
     },
     displayName: String,
+    photoURL: String,
+    accessStatus: {
+      type: String,
+      enum: ["active", "pending", "blocked"],
+      default: "pending",
+    },
     role: {
       type: String,
       default: "student",
     },
-    currentCGPA: {
+    cgpa: {
       type: Number,
       default: 0,
       min: 0,
-      max: 5.0,
+      max: 5,
     },
-    earnedCreditHours: {
+    completedHours: {
       type: Number,
       default: 0,
       min: 0,
+      max: 200,
     },
-    pastSemesters: [
+    termCourses: [
       {
-        termName: {
-          type: String,
-          required: true,
-          trim: true,
-        },
-        termGPA: {
-          type: Number,
-          required: true,
-          min: 0,
-          max: 5.0,
-        },
+        name: { type: String, required: true },
+        courseCode: { type: String, required: true },
+        creditHours: { type: Number, required: true, min: 1, max: 10 },
       },
     ],
   },
