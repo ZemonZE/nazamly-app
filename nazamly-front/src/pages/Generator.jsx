@@ -100,6 +100,8 @@ function Generator() {
   const [aiSelected, setAiSelected] = useState(0); // which of the 3 is expanded
   const fileInputRef = useRef(null);
   const [exporting, setExporting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState("");
 
   /* ───────────────────────────────
      PDF EXPORT — compact student schedule card
@@ -343,6 +345,49 @@ function Generator() {
       if (map[dayAr]) map[dayAr].push(s);
     });
     return map;
+  };
+
+  /* ───────────────────────────────
+     SAVE AI SCHEDULE TO MOBILE TIMETABLE
+  ─────────────────────────────── */
+  const handleSaveToMobile = async () => {
+    const chosen = aiResults?.generatedSchedules?.[aiSelected]?.schedule || [];
+    if (chosen.length === 0) return;
+
+    setSaving(true);
+    setSaveSuccess("");
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("يجب تسجيل الدخول أولاً لحفظ الجدول");
+      }
+      const token = await user.getIdToken();
+
+      const res = await fetch(`${API_URL}/api/schedule/save-ai`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          schedule: chosen,
+          title: `جدول ذكي #${aiSelected + 1}`,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "فشل في حفظ الجدول");
+      }
+
+      setSaveSuccess("✅ تم حفظ الجدول بنجاح! افتح تطبيق Nazamly على موبايلك");
+    } catch (err) {
+      setSaveSuccess(`❌ ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* ═══════════════════════════════
@@ -771,13 +816,36 @@ function Generator() {
 
                 return (
                   <>
-                  <button
-                    className="btn-primary pdf-export-btn"
-                    onClick={() => exportPDF(`جدول-ذكي-${aiSelected + 1}.pdf`, "ai")}
-                    disabled={exporting}
-                  >
-                    {exporting ? "جاري التصدير..." : "📥 تصدير PDF"}
-                  </button>
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+                    <button
+                      className="btn-primary pdf-export-btn"
+                      onClick={() => exportPDF(`جدول-ذكي-${aiSelected + 1}.pdf`, "ai")}
+                      disabled={exporting}
+                    >
+                      {exporting ? "جاري التصدير..." : "📥 تصدير PDF"}
+                    </button>
+                    <button
+                      className="btn-primary pdf-export-btn"
+                      style={{ background: "#4f46e5" }}
+                      onClick={handleSaveToMobile}
+                      disabled={saving}
+                    >
+                      {saving ? "جاري الحفظ..." : "📱 حفظ للموبايل"}
+                    </button>
+                  </div>
+                  {saveSuccess && (
+                    <p style={{
+                      marginTop: "8px",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      background: saveSuccess.startsWith("✅") ? "#f0fdf4" : "#fef2f2",
+                      color: saveSuccess.startsWith("✅") ? "#16a34a" : "#dc2626",
+                    }}>
+                      {saveSuccess}
+                    </p>
+                  )}
                   <div className="gen-schedule">
                     {DAYS.map((day) => {
                       const items = byDay[day];

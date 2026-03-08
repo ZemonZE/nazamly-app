@@ -1,27 +1,110 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import AddClassModal from './AddClassModal';
+import { auth, API_URL } from '@/firebase';
 
-interface TimeTableItemProps {
-  title: string;
-  code: string;
-  time: string;
+// Day mapping: number → short label
+const DAY_MAP: Record<number, string> = {
+  6: 'Sat', 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri',
+};
+const DAY_ORDER = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu'];
+
+interface TimetableEntry {
+  _id: string;
+  courseCode: string;
+  courseName: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  sessionType: string;
   location: string;
+  groupNumber: string;
 }
 
 const TimetableScreen = () => {
   const [selectedDay, setSelectedDay] = useState('Sat');
   const [modalVisible, setModalVisible] = useState(false);
+  const [entries, setEntries] = useState<TimetableEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [scheduleTitle, setScheduleTitle] = useState('');
 
-  const days = [
-    { id: 'Sat', label: 'Sat', count: 2 },
-    { id: 'Sun', label: 'Sun', count: 2 },
-    { id: 'Mon', label: 'Mon', count: 2 },
-    { id: 'Tue', label: 'Tue', count: 2 },
-    { id: 'Wed', label: 'Wed', count: 2 },
-    { id: 'Thu', label: 'Thu', count: 2 },
-  ];
+  const fetchTimetable = async () => {
+    try {
+      setLoading(true);
+      const user = auth.currentUser;
+      if (!user) {
+        setEntries([]);
+        return;
+      }
+      const token = await user.getIdToken();
+      const res = await fetch(`${API_URL}/api/schedule/my-timetable`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setEntries(data.data.entries || []);
+        setScheduleTitle(data.data.title || '');
+      }
+    } catch (err) {
+      console.error('Failed to fetch timetable:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Refetch when screen comes into focus (e.g. after saving from web)
+  useFocusEffect(
+    useCallback(() => {
+      fetchTimetable();
+    }, [])
+  );
+
+  // Group entries by day label
+  const entriesByDay: Record<string, TimetableEntry[]> = {};
+  DAY_ORDER.forEach((d) => (entriesByDay[d] = []));
+  entries.forEach((e) => {
+    const dayLabel = DAY_MAP[e.dayOfWeek] || 'Sat';
+    if (entriesByDay[dayLabel]) entriesByDay[dayLabel].push(e);
+  });
+
+  // Build day tabs with real counts
+  const days = DAY_ORDER.map((d) => ({
+    id: d,
+    label: d,
+    count: entriesByDay[d]?.length || 0,
+  }));
+
+  const currentDayEntries = (entriesByDay[selectedDay] || []).sort((a, b) =>
+    a.startTime.localeCompare(b.startTime)
+  );
+
+  const totalClasses = entries.length;
+
+  const handleDelete = async (entryId: string) => {
+    Alert.alert('Delete Class', 'Are you sure you want to remove this class?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const user = auth.currentUser;
+            if (!user) return;
+            const token = await user.getIdToken();
+            await fetch(`${API_URL}/api/schedule/session/${entryId}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            setEntries((prev) => prev.filter((e) => e._id !== entryId));
+          } catch (err) {
+            Alert.alert('Error', 'Failed to delete class');
+          }
+        },
+      },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -32,7 +115,7 @@ const TimetableScreen = () => {
       <View style={styles.header}>
         <View>
           <Text style={styles.screenTitle}>Timetable</Text>
-          <Text style={styles.subtitle}>12 classes this semester</Text>
+          <Text style={styles.subtitle}>{totalClasses} classes this semester</Text>
         </View>
         
         <TouchableOpacity 
@@ -64,24 +147,39 @@ const TimetableScreen = () => {
 
       {/* Classes List */}
       <ScrollView contentContainerStyle={styles.classesList}>
-        <ClassItem
-          title="Data Structures"
-          code="CS201"
-          time="08:00–09:30"
-          location="B204"
-        />
-        <ClassItem
-          title="Linear Algebra"
-          code="MATH301"
-          time="10:00–11:30"
-          location="A101"
-        />
+        {loading ? (
+          <ActivityIndicator size="large" color="#4f46e5" style={{ marginTop: 40 }} />
+        ) : currentDayEntries.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={48} color="#cbd5e1" />
+            <Text style={styles.emptyText}>No classes on this day</Text>
+          </View>
+        ) : (
+          currentDayEntries.map((entry) => (
+            <ClassItem
+              key={entry._id}
+              title={entry.courseName || entry.courseCode}
+              code={entry.courseCode}
+              time={`${entry.startTime}–${entry.endTime}`}
+              location={entry.location}
+              onDelete={() => handleDelete(entry._id)}
+            />
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const ClassItem = ({ title, code, time, location }: TimeTableItemProps) => (
+interface ClassItemProps {
+  title: string;
+  code: string;
+  time: string;
+  location: string;
+  onDelete: () => void;
+}
+
+const ClassItem = ({ title, code, time, location, onDelete }: ClassItemProps) => (
   <View style={styles.classCard}>
     <View style={styles.orangeAccent} />
     <View style={styles.cardMainContent}>
@@ -100,7 +198,7 @@ const ClassItem = ({ title, code, time, location }: TimeTableItemProps) => (
           <Ionicons name="location-outline" size={14} color="#94a3b8" style={{ marginLeft: 10 }} />
           <Text style={styles.infoText}>{location}</Text>
         </View>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={onDelete}>
           <Feather name="trash-2" size={18} color="#cbd5e1" />
         </TouchableOpacity>
       </View>
@@ -177,6 +275,8 @@ const styles = StyleSheet.create({
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   infoRow: { flexDirection: 'row', alignItems: 'center' },
   infoText: { fontSize: 13, color: '#64748b', marginLeft: 4 },
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  emptyText: { fontSize: 16, color: '#94a3b8', marginTop: 8 },
 });
 
 export default TimetableScreen;

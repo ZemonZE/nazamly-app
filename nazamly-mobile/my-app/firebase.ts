@@ -1,5 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { initializeAuth, inMemoryPersistence, GoogleAuthProvider } from "firebase/auth";
+import {
+  initializeAuth,
+  browserLocalPersistence,
+} from "firebase/auth";
+import { Platform } from "react-native";
 import Constants from "expo-constants";
 
 const firebaseConfig = {
@@ -13,8 +17,21 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const auth = initializeAuth(app, { persistence: inMemoryPersistence });
-export const googleProvider = new GoogleAuthProvider();
+
+let auth: ReturnType<typeof initializeAuth>;
+
+if (Platform.OS === "web") {
+  auth = initializeAuth(app, { persistence: browserLocalPersistence });
+} else {
+  const AsyncStorage =
+    require("@react-native-async-storage/async-storage").default;
+  const { getReactNativePersistence } = require("firebase/auth");
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+}
+
+export { auth };
 
 const host = Constants.expoConfig?.hostUri?.split(":")[0] ?? "localhost";
 export const API_URL = `http://${host}:5000`;

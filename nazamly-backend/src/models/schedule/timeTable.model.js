@@ -11,7 +11,7 @@ const timeTableSchema = new Schema({
     SemesterId: {
         type: Schema.Types.ObjectId,
         ref: 'Semester',
-        required: [true, 'Semester is required'],
+        required: false,
         index: true
     },
     entries: [
@@ -38,7 +38,8 @@ const timeTableSchema = new Schema({
     },
     totalCreditHours: {
         type: Number,
-        required: [true, 'Total credit hours is required'],
+        required: false,
+        default: 0,
         min: [0, 'Total credit hours must be at least 0'],
         max: [19, 'Total credit hours cannot exceed 19']
     },

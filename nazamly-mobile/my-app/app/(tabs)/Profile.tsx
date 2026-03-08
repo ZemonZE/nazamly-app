@@ -1,6 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Alert } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'expo-router';
+import { auth } from '@/firebase';
 
 interface ProfileDetailProps {
   icon: keyof typeof Feather.glyphMap;
@@ -9,6 +12,35 @@ interface ProfileDetailProps {
 }
 
 const ProfileScreen = () => {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+  const user = auth.currentUser;
+
+  const displayName = user?.displayName || 'User';
+  const email = user?.email || '';
+  const initials = displayName.charAt(0).toUpperCase();
+
+  const handleSignOut = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          setSigningOut(true);
+          try {
+            await signOut(auth);
+            // Root layout's onAuthStateChanged will redirect to login
+          } catch (error: any) {
+            Alert.alert('Error', error.message || 'Failed to sign out');
+          } finally {
+            setSigningOut(false);
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -19,22 +51,20 @@ const ProfileScreen = () => {
           {/* Header with Avatar */}
           <View style={styles.cardHeader}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>A</Text>
+              <Text style={styles.avatarText}>{initials}</Text>
             </View>
             <View>
-              <Text style={styles.userName}>Ahmed Hassan</Text>
-              <Text style={styles.userEmail}>ahmed.hassan@university.edu</Text>
+              <Text style={styles.userName}>{displayName}</Text>
+              <Text style={styles.userEmail}>{email}</Text>
             </View>
           </View>
 
           <View style={styles.divider} />
 
           {/* Details List */}
-          <ProfileDetail icon="user" label="Name" value="Ahmed Hassan" />
-          <ProfileDetail icon="mail" label="Email" value="ahmed.hassan@university.edu" />
-          <ProfileDetail icon="hash" label="Student ID" value="STU-2024-0731" />
-          <ProfileDetail icon="briefcase" label="University" value="Cairo University" />
-          <ProfileDetail icon="book-open" label="Department" value="Computer Science" />
+          <ProfileDetail icon="user" label="Name" value={displayName} />
+          <ProfileDetail icon="mail" label="Email" value={email} />
+          {user?.uid && <ProfileDetail icon="hash" label="UID" value={user.uid.substring(0, 12) + '...'} />}
         </View>
 
         {/* Action Buttons */}
@@ -43,9 +73,9 @@ const ProfileScreen = () => {
           <Text style={styles.primaryButtonText}>View Student Card</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.signOutButton}>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} disabled={signingOut}>
           <Feather name="log-out" size={20} color="#ef4444" />
-          <Text style={styles.signOutText}>Sign Out</Text>
+          <Text style={styles.signOutText}>{signingOut ? 'Signing Out...' : 'Sign Out'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
