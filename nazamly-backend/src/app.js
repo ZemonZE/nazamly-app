@@ -15,7 +15,13 @@ const adminRoutes = require('./routes/admin.routes');
 const app = express();
 
 // 2. Global Middlewares
-app.use(cors());
+const allowedOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',') 
+  : ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"];
+
+app.use(cors({
+  origin: allowedOrigins
+}));
 app.use(express.json());
 
 // 3. Mount Routes
