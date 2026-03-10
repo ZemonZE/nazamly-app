@@ -14,7 +14,11 @@ import Password_input from "@/components/ui/Password_input";
 import Google_pressable from "@/components/ui/Google_pressable";
 import Show_toggle from "@/components/ui/Show_toggle";
 import Header from "@/components/ui/Header";
-import { signInWithEmailAndPassword, signInWithCredential, GoogleAuthProvider } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  signInWithCredential,
+  GoogleAuthProvider,
+} from "firebase/auth";
 import { auth, API_URL, GOOGLE_WEB_CLIENT_ID } from "@/firebase";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
@@ -30,7 +34,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
     redirectUri,
   });
@@ -58,7 +62,10 @@ const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
   };
 
   useEffect(() => {
-    console.log("[Login] AuthSession response:", JSON.stringify(response, null, 2));
+    console.log(
+      "[Login] AuthSession response:",
+      JSON.stringify(response, null, 2),
+    );
     if (response?.type === "success") {
       const { id_token } = response.params;
       console.log("[Login] id_token received:", id_token ? "yes" : "no");
@@ -68,15 +75,19 @@ const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
         .then(async (result) => {
           await syncWithBackend(result.user);
           Alert.alert("Success", "Login successfully");
-          router.replace("/(tabs)");
+          router.replace("/(tabs)/HomePage");
         })
         .catch((error: any) => {
-          console.error("[Login] Firebase signIn error:", error.code, error.message);
+          console.error(
+            "[Login] Firebase signIn error:",
+            error.code,
+            error.message,
+          );
           Alert.alert("Failed", error.message || "Google sign-in failed");
         })
         .finally(() => setLoading(false));
     }
-  }, [response]);
+  }, [response, router]);
 
   const handleLogin = async () => {
     setLoading(true);
@@ -84,9 +95,12 @@ const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
       const result = await signInWithEmailAndPassword(auth, email, password);
       await syncWithBackend(result.user);
       Alert.alert("Success", "Login successfully");
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/HomePage");
     } catch (error: any) {
-      Alert.alert("Failed", error.message || "Failed to login, check your data");
+      Alert.alert(
+        "Failed",
+        error.message || "Failed to login, check your data",
+      );
     } finally {
       setLoading(false);
     }
@@ -124,7 +138,9 @@ const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
         disabled={loading}
         activeOpacity={0.8}
       >
-        <Text style={styles.buttonText}>{loading ? "Loading..." : "Login"}</Text>
+        <Text style={styles.buttonText}>
+          {loading ? "Loading..." : "Login"}
+        </Text>
       </TouchableOpacity>
 
       <View style={styles.dividerRow}>

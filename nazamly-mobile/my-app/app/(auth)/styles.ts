@@ -1,6 +1,4 @@
-import { StyleSheet, Dimensions } from "react-native";
-
-const { width } = Dimensions.get("window");
+import { StyleSheet } from "react-native";
 
 // ── Design tokens (matching web glassmorphism theme) ──
 const C = {

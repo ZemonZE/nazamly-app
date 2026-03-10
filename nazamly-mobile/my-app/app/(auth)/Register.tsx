@@ -67,7 +67,10 @@ export default function RegisterScreen() {
   };
 
   useEffect(() => {
-    console.log("[Register] AuthSession response:", JSON.stringify(response, null, 2));
+    console.log(
+      "[Register] AuthSession response:",
+      JSON.stringify(response, null, 2),
+    );
     if (response?.type === "success") {
       const { id_token } = response.params;
       console.log("[Register] id_token received:", id_token ? "yes" : "no");
@@ -77,15 +80,19 @@ export default function RegisterScreen() {
         .then(async (result) => {
           await syncWithBackend(result.user);
           Alert.alert("Success", "Registration successful");
-          router.replace("/(tabs)");
+          router.replace("/(tabs)/HomePage");
         })
         .catch((error: any) => {
-          console.error("[Register] Firebase signIn error:", error.code, error.message);
+          console.error(
+            "[Register] Firebase signIn error:",
+            error.code,
+            error.message,
+          );
           Alert.alert("Failed", error.message || "Google sign-in failed");
         })
         .finally(() => setLoading(false));
     }
-  }, [response]);
+  }, [response, router]);
 
   const handleRegister = async () => {
     if (password !== confirmPassword) {
@@ -97,11 +104,15 @@ export default function RegisterScreen() {
     }
     setLoading(true);
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const result = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
       await updateProfile(result.user, { displayName: name });
       await syncWithBackend(result.user);
       Alert.alert("Success", "Registration successful");
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/HomePage");
     } catch (error: any) {
       Alert.alert("Failed", error.message || "Registration failed");
     } finally {
