@@ -154,6 +154,24 @@ function Materials() {
     return matchLevel && matchSearch;
   });
 
+  const handleSyncDrive = async () => {
+    if (!window.confirm('Sync existing folders from Google Drive? This will create missing courses in the database.')) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/admin/course-materials/sync-drive`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sync failed');
+      alert(data.message);
+      fetchCourses();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── RENDER ──
 
   // Detail view for a selected course
@@ -380,10 +398,20 @@ function Materials() {
   // ── Courses grid (main view) ──
   return (
     <div className="page-content">
-      <PageHeader
-        title="Materials Management"
-        description="Manage course material folders on Google Drive"
-      />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <PageHeader
+          title="Materials Management"
+          description="Manage course material folders on Google Drive"
+        />
+        <button 
+          className="action-btn" 
+          onClick={handleSyncDrive}
+          disabled={loading}
+          style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid rgba(16, 185, 129, 0.4)' }}
+        >
+          {loading ? 'Syncing...' : '🔄 Sync from Drive'}
+        </button>
+      </div>
 
       {error && (
         <div style={{
