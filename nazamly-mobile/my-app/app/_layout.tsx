@@ -1,65 +1,66 @@
-import { useState, useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter, useSegments } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { auth } from '@/firebase';
+import { Stack, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import "react-native-reanimated";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { useEffect } from "react";
+import { View, ActivityIndicator } from "react-native";
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  initialRouteName: "(auth)",
+  screens: {
+    "(auth)": {
+      initialRouteName: "Login",
+    },
+    "(tabs)": {
+      initialRouteName: "HomePage",
+    },
+  },
 };
 
-export default function RootLayout() {
+function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const [user, setUser] = useState<User | null>(null);
-  const [initializing, setInitializing] = useState(true);
-  const router = useRouter();
+  const { user, isLoading } = useAuth();
   const segments = useSegments();
+  const router = useRouter();
 
-  // Listen for Firebase auth state changes
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      if (initializing) setInitializing(false);
-    });
-    return unsubscribe;
-  }, []);
+    if (isLoading) return;
 
-  // Redirect based on auth state
-  useEffect(() => {
-    if (initializing) return;
+    const inAuthGroup = segments[0] === "(auth)";
 
-    const inAuth = segments[0] === '(auth)';
-
-    if (!user && !inAuth) {
-      // Not signed in → go to login
-      router.replace('/(auth)/Login');
-    } else if (user && inAuth) {
-      // Signed in but still on auth screen → go to tabs
-      router.replace('/(tabs)');
+    if (!user && !inAuthGroup) {
+      // Redirect to the sign-in page.
+      router.replace("/(auth)/Login");
+    } else if (user && inAuthGroup) {
+      // Redirect away from the sign-in page.
+      router.replace("/(tabs)/HomePage");
     }
-  }, [user, initializing, segments]);
+  }, [user, isLoading, segments, router]);
 
-  if (initializing) {
+  if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#4f46e5" />
       </View>
     );
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <>
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+    </>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
   );
 }

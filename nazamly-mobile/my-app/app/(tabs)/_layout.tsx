@@ -54,10 +54,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Hidden screens — not shown in tab bar */}
-      <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="explore" options={{ href: null }} />
-      <Tabs.Screen name="AddClassModal" options={{ href: null }} />
     </Tabs>
   );
 }

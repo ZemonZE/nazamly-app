@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
-import AddClassModal from './AddClassModal';
+import AddClassModal from '../../components/ui/AddClassModal';
 import { auth, API_URL } from '@/firebase';
 
 // Day mapping: number → short label
@@ -117,9 +117,9 @@ const TimetableScreen = () => {
           <Text style={styles.screenTitle}>Timetable</Text>
           <Text style={styles.subtitle}>{totalClasses} classes this semester</Text>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.addButton} 
+
+        <TouchableOpacity
+          style={styles.addButton}
           onPress={() => setModalVisible(true)}
         >
           <Feather name="plus" size={20} color="#fff" />
@@ -129,14 +129,28 @@ const TimetableScreen = () => {
 
       {/* Days Selector - Horizontal Scroll */}
       <View style={styles.daysContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.daysScroll}
+        >
           {days.map((day) => (
             <TouchableOpacity
               key={day.id}
               onPress={() => setSelectedDay(day.id)}
-              style={[styles.dayTab, selectedDay === day.id && styles.activeDayTab]}
+              style={[
+                styles.dayTab,
+                selectedDay === day.id && styles.activeDayTab,
+              ]}
             >
-              <Text style={[styles.dayText, selectedDay === day.id && styles.activeDayText]}>{day.label}</Text>
+              <Text
+                style={[
+                  styles.dayText,
+                  selectedDay === day.id && styles.activeDayText,
+                ]}
+              >
+                {day.label}
+              </Text>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{day.count}</Text>
               </View>
@@ -185,7 +199,12 @@ const ClassItem = ({ title, code, time, location, onDelete }: ClassItemProps) =>
     <View style={styles.cardMainContent}>
       <View style={styles.cardHeader}>
         <View style={styles.titleRow}>
-          <Feather name="book" size={18} color="#1e293b" style={{ marginRight: 8 }} />
+          <Feather
+            name="book"
+            size={18}
+            color="#1e293b"
+            style={{ marginRight: 8 }}
+          />
           <Text style={styles.classTitle}>{title}</Text>
         </View>
         <Text style={styles.classCode}>{code}</Text>
@@ -195,7 +214,12 @@ const ClassItem = ({ title, code, time, location, onDelete }: ClassItemProps) =>
         <View style={styles.infoRow}>
           <Feather name="clock" size={14} color="#94a3b8" />
           <Text style={styles.infoText}>{time}</Text>
-          <Ionicons name="location-outline" size={14} color="#94a3b8" style={{ marginLeft: 10 }} />
+          <Ionicons
+            name="location-outline"
+            size={14}
+            color="#94a3b8"
+            style={{ marginLeft: 10 }}
+          />
           <Text style={styles.infoText}>{location}</Text>
         </View>
         <TouchableOpacity onPress={onDelete}>
@@ -215,7 +239,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 20,
-    marginBottom: 20
+    marginBottom: 20,
   },
   screenTitle: { fontSize: 24, fontWeight: 'bold', color: '#0f172a' },
   subtitle: { fontSize: 14, color: '#94a3b8', marginTop: 4 },
@@ -225,7 +249,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 12
+    borderRadius: 12,
   },
   addButtonText: { color: '#fff', fontWeight: '600', marginLeft: 6 },
   daysContainer: { paddingHorizontal: 15, marginBottom: 20 },
@@ -236,7 +260,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 12,
-    marginRight: 5
+    marginRight: 5,
   },
   activeDayTab: { backgroundColor: '#fff', elevation: 2, shadowOpacity: 0.1 },
   dayText: { fontSize: 14, color: '#64748b', fontWeight: '500' },
@@ -251,7 +275,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     position: 'absolute',
     top: -2,
-    right: 2
+    right: 2,
   },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
   classesList: { paddingHorizontal: 20 },

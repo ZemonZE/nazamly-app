@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   TouchableOpacity,
   ScrollView,
@@ -13,8 +13,19 @@ import Email_input from "@/components/ui/Email_input";
 import Password_input from "@/components/ui/Password_input";
 import Show_toggle from "@/components/ui/Show_toggle";
 import Header from "@/components/ui/Header";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, API_URL } from "@/firebase";
+import {
+  signInWithEmailAndPassword,
+  signInWithCredential,
+  GoogleAuthProvider,
+} from "firebase/auth";
+import { auth, API_URL, GOOGLE_WEB_CLIENT_ID } from "@/firebase";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+
+WebBrowser.maybeCompleteAuthSession();
+
+// SDK 55 removed makeRedirectUri proxy support; auth.expo.io proxy still works at runtime
+const redirectUri = "https://auth.expo.io/@ZemonZE/my-app";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -22,6 +33,16 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: GOOGLE_WEB_CLIENT_ID,
+    redirectUri,
+  });
+
+  useEffect(() => {
+    if (request) {
+      console.log("[Login] Google OAuth redirectUri:", request.redirectUri);
+    }
+  }, [request]);
 
   const syncWithBackend = async (user: any) => {
     const token = await user.getIdToken();
@@ -39,15 +60,46 @@ export default function LoginScreen() {
     return body;
   };
 
+  useEffect(() => {
+    console.log(
+      "[Login] AuthSession response:",
+      JSON.stringify(response, null, 2),
+    );
+    if (response?.type === "success") {
+      const { id_token } = response.params;
+      console.log("[Login] id_token received:", id_token ? "yes" : "no");
+      const credential = GoogleAuthProvider.credential(id_token);
+      setLoading(true);
+      signInWithCredential(auth, credential)
+        .then(async (result) => {
+          await syncWithBackend(result.user);
+          Alert.alert("Success", "Login successfully");
+          router.replace("/(tabs)/HomePage");
+        })
+        .catch((error: any) => {
+          console.error(
+            "[Login] Firebase signIn error:",
+            error.code,
+            error.message,
+          );
+          Alert.alert("Failed", error.message || "Google sign-in failed");
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [response, router]);
+
   const handleLogin = async () => {
     setLoading(true);
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await syncWithBackend(result.user);
       Alert.alert("Success", "Login successfully");
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/HomePage");
     } catch (error: any) {
-      Alert.alert("Failed", error.message || "Failed to login, check your data");
+      Alert.alert(
+        "Failed",
+        error.message || "Failed to login, check your data",
+      );
     } finally {
       setLoading(false);
     }
@@ -85,7 +137,9 @@ export default function LoginScreen() {
         disabled={loading}
         activeOpacity={0.8}
       >
-        <Text style={styles.buttonText}>{loading ? "Loading..." : "Login"}</Text>
+        <Text style={styles.buttonText}>
+          {loading ? "Loading..." : "Login"}
+        </Text>
       </TouchableOpacity>
 
       <View style={styles.footer}>
