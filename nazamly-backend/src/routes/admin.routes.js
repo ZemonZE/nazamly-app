@@ -41,6 +41,7 @@ router.delete('/materials/files/:fileId', materialsCtrl.deleteFile);
 // ── Course Materials (Drive folder per course) ──
 router.get('/course-materials', courseMaterialsCtrl.getCourseMaterialsAdmin);
 router.post('/course-materials/init', courseMaterialsCtrl.initCourseFolders);
+router.post('/course-materials/sync-drive', courseMaterialsCtrl.syncDriveToDatabase);
 router.get('/course-materials/:courseCode/files/:subFolderType', courseMaterialsCtrl.getSubFolderFiles);
 router.post('/course-materials/:courseCode/upload/:subFolderType', upload.single('file'), courseMaterialsCtrl.uploadToSubFolder);
 router.delete('/course-materials/:courseCode/files/:subFolderType/:fileId', courseMaterialsCtrl.deleteFileFromSubFolder);

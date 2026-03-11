@@ -88,4 +88,20 @@ async function listFiles(folderId) {
   return response.data.files;
 }
 
-module.exports = { createFolder, uploadFile, deleteFile, listFiles };
+/**
+ * List only folders inside a Google Drive folder.
+ * @param {string} folderId - Drive folder ID
+ * @returns {Array} List of folders
+ */
+async function listFolders(folderId) {
+  if (!drive) throw new Error('Google Drive is not configured');
+
+  const response = await drive.files.list({
+    q: `'${folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+    fields: 'files(id, name, webViewLink, createdTime)',
+  });
+
+  return response.data.files;
+}
+
+module.exports = { createFolder, uploadFile, deleteFile, listFiles, listFolders };
