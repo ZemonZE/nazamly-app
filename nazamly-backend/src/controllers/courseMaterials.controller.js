@@ -284,3 +284,111 @@ exports.deleteFileFromSubFolder = async (req, res) => {
     res.status(500).json({ error: 'Failed to delete file', details: error.message });
   }
 };
+
+/**
+ * POST /api/admin/course-materials/sync-drive
+ * Admin endpoint to scan Google Drive ROOT_FOLDER_ID and auto-create
+ * Course/CourseMaterial database entries for any existing folders.
+ */
+exports.syncDriveToDatabase = async (req, res) => {
+  try {
+    const rootFolderId = process.env.DRIVE_ROOT_FOLDER_ID;
+    if (!rootFolderId) {
+      return res.status(500).json({ error: 'DRIVE_ROOT_FOLDER_ID not configured' });
+    }
+
+    // 1. Get all folders in the root drive directory
+    const driveFolders = await driveService.listFolders(rootFolderId);
+    if (!driveFolders || driveFolders.length === 0) {
+      return res.json({ message: 'No folders found in Drive root', syncedCount: 0 });
+    }
+
+    let syncedCount = 0;
+    const errors = [];
+
+    // 2. Process each folder
+    for (const folder of driveFolders) {
+      try {
+        // Expected format: "Machine Learning - CS401"
+        const parts = folder.name.split(' - ');
+        if (parts.length < 2) {
+          console.warn(`Skipping folder "${folder.name}" - unable to parse course code.`);
+          continue;
+        }
+        
+        const courseName = parts[0].trim();
+        const courseCode = parts[1].toUpperCase().trim();
+
+        // Extract level from courseCode (e.g., CS301 -> 3)
+        const levelMatch = courseCode.match(/\d/);
+        const parsedLevel = levelMatch ? parseInt(levelMatch[0], 10) : 1;
+
+        // 3. Check if CourseMaterial already exists
+        let cm = await CourseMaterial.findOne({ courseCode });
+
+        // 4. Check if Course exists in DB, create if not
+        let course = await Course.findOne({ courseCode });
+        if (!course) {
+          course = await Course.create({
+            courseCode,
+            courseName,
+            level: parsedLevel,
+            creditHours: 3, // Defaulting to 3 for synced courses
+            difficulty: 3, // Default
+            department: 'General'
+          });
+        } else {
+          // Update level for any existing synced courses that defaulted to 1
+          if (course.level !== parsedLevel) {
+            course.level = parsedLevel;
+            await course.save();
+          }
+        }
+
+        if (cm) continue; // CourseMaterial already exists, skip creating subfolders
+
+        // 5. Build sub-folders array from Drive
+        const subFoldersOnDrive = await driveService.listFolders(folder.id);
+        const subFolders = [];
+
+        // Map recognized subfolders, ignore others
+        for (const sf of DEFAULT_SUBFOLDERS) {
+          const matchedDriveSf = subFoldersOnDrive.find(dsf => dsf.name === sf.label);
+          if (matchedDriveSf) {
+            subFolders.push({
+              type: sf.type,
+              label: sf.label,
+              driveFolderId: matchedDriveSf.id,
+              driveWebViewLink: matchedDriveSf.webViewLink,
+            });
+          }
+        }
+
+        // 6. Create CourseMaterial entry
+        await CourseMaterial.create({
+          courseCode: course.courseCode,
+          courseName: course.courseName,
+          driveFolderId: folder.id,
+          driveWebViewLink: folder.webViewLink,
+          subFolders,
+        });
+
+        syncedCount++;
+
+      } catch (err) {
+        console.error(`Failed to sync folder ${folder.name}:`, err.message);
+        errors.push({ folder: folder.name, error: err.message });
+      }
+    }
+
+    res.json({
+      message: `Sync complete. Processing finished.`,
+      syncedCount,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
+  } catch (error) {
+    console.error('Error syncing drive to database:', error.message);
+    res.status(500).json({ error: 'Failed to sync drive to database' });
+  }
+};
