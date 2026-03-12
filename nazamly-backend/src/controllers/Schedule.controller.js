@@ -111,10 +111,10 @@ const addOrUpdateSchedule = async (req, res) => {
       data: result,
     });
   } catch (error) {
+    console.error('Error adding/updating schedule:', error);
     return res.status(500).json({
       success: false,
-      message: "Error adding/updating schedule",
-      error: error.message,
+      message: "Error adding/updating schedule"
     });
   }
 };
@@ -153,10 +153,10 @@ const getMySchedule = async (req, res) => {
       data: schedules,
     });
   } catch (error) {
+    console.error('Error retrieving schedule:', error);
     return res.status(500).json({
       success: false,
-      message: "Error retrieving schedule",
-      error: error.message,
+      message: "Error retrieving schedule"
     });
   }
 };
@@ -199,10 +199,10 @@ const deleteSession = async (req, res) => {
       message: "Session removed from schedule successfully",
     });
   } catch (error) {
+    console.error('Error deleting session:', error);
     return res.status(500).json({
       success: false,
-      message: "Error deleting session",
-      error: error.message,
+      message: "Error deleting session"
     });
   }
 };
@@ -313,8 +313,7 @@ const saveAISchedule = async (req, res) => {
     console.error("❌ Save AI Schedule Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Error saving AI schedule",
-      error: error.message,
+      message: "Error saving AI schedule"
     });
   }
 };
@@ -376,10 +375,10 @@ const getMyTimetable = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error('Error retrieving timetable:', error);
     return res.status(500).json({
       success: false,
-      message: "Error retrieving timetable",
-      error: error.message,
+      message: "Error retrieving timetable"
     });
   }
 };

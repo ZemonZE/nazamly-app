@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { auth, API_URL } from '../firebase';
 import { IconEmail, IconLock, IconBrain, IconEyeOpen, IconEyeClose } from '../Icons/Icons';
 import './AdminLogin.css';
 
@@ -39,14 +39,32 @@ function AdminLogin({ onLoginSuccess }) {
       
       const token = await user.getIdToken();
       
+      // Verify admin role with backend
+      const response = await fetch(`${API_URL}/api/auth/verify-admin`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        // Log detailed error for debugging but throw generic error for security
+        console.error('Admin verification failed:', errorData.message);
+        throw new Error('Invalid credentials');
+      }
+
+      const { user: dbUser } = await response.json();
+      
       setFailedAttempts(0);
       
       const userData = {
         user: {
           uid: user.uid,
           email: user.email,
-          name: user.displayName || 'Admin User',
-          role: 'admin'
+          name: dbUser.name || user.displayName || 'Admin User',
+          admin: true
         },
         token
       };
@@ -62,21 +80,23 @@ function AdminLogin({ onLoginSuccess }) {
         setFailedAttempts(0);
         setError('Too many failed attempts. Please wait 30 seconds before trying again');
       } else {
-        setError(getErrorMessage(err.code));
+        setError(getErrorMessage(err));
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const getErrorMessage = (code) => {
-    switch (code) {
+  const getErrorMessage = (error) => {
+    // Handle specific system errors that don't reveal user information
+    switch (error.code) {
       case 'auth/too-many-requests':
         return 'Too many failed attempts. Please try again later';
       case 'auth/network-request-failed':
         return 'Network error. Please check your connection';
       default:
-        return 'Invalid email or password';
+        // Generic message for all authentication failures (security best practice)
+        return 'Invalid credentials';
     }
   };
 

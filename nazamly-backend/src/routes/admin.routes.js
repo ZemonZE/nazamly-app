@@ -7,9 +7,15 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 }
 });
 
+const authMiddleware = require('../middlewares/auth.middleware');
+const requireAdmin = require('../middlewares/admin.middleware');
 const adminCtrl = require('../controllers/admin.controller');
 const materialsCtrl = require('../controllers/materials.controller');
 const courseMaterialsCtrl = require('../controllers/courseMaterials.controller');
+
+// Apply authentication and admin authorization to all routes
+router.use(authMiddleware);
+router.use(requireAdmin);
 
 // ── Courses ──
 router.get('/courses', adminCtrl.getCourses);
