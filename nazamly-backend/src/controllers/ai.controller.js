@@ -5,6 +5,7 @@
  */
 const { extractScheduleFromImages } = require('../services/ai.service');
 const { groupCourses, generateValidSchedules } = require('../utils/scheduleGenerator');
+const userRepo = require('../Repos/User_Repo');
 
 const generateScheduleFromFiles = async (req, res) => {
     try {
@@ -15,25 +16,25 @@ const generateScheduleFromFiles = async (req, res) => {
         // 1. Extract raw data and the model name used from the AI service
         const { extractedData, usedModel } = await extractScheduleFromImages(req.files);
 
-        // 2. Define target course numbers dynamically from the request body (Frontend Integration)
-        // We keep your initial array as a default fallback for Postman testing
-        let targetNumbers = ['408', '427', '407', '490', '402', '428', '303'];
-
-        // If the frontend sends target courses, parse and use them instead
-        if (req.body && req.body.targetCourses) {
-            try {
-                // Assuming the frontend sends a stringified JSON array in form-data
-                const parsedTargets = JSON.parse(req.body.targetCourses);
-                
-                // Extract only the digits, allowing the frontend to send "س402" or "402" safely
-                targetNumbers = parsedTargets.map(course => {
-                    const match = String(course).match(/\d+/);
-                    return match ? match[0] : null;
-                }).filter(Boolean);
-            } catch (parseError) {
-                console.warn("⚠️ Could not parse targetCourses from req.body. Using default test array.");
-            }
+        // 2. Extract Valid Courses from User Database
+        if (!req.user || !req.user.uid) {
+            return res.status(401).json({ success: false, message: 'Unauthorized. Please login to generate schedules.' });
         }
+
+        const user = await userRepo.findByFirebaseUid(req.user.uid);
+
+        if (!user || !user.termCourses || user.termCourses.length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Please register for courses before generating an AI schedule.' 
+            });
+        }
+
+        // 3. Map target course numbers from user's registered courses
+        const targetNumbers = user.termCourses.map(course => {
+            const match = String(course.courseCode).match(/\d+/);
+            return match ? match[0] : null;
+        }).filter(Boolean);
 
         // 3. Flexible Filtering Layer
         const filteredData = extractedData.filter(session => {

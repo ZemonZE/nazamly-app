@@ -17,11 +17,11 @@ const markToGP = (m) => (m < 60 ? 0 : Number(((m / 10) - 5).toFixed(1)));
 
 /* grade‑rating labels based on mark */
 const getRating = (m) => {
-  if (m >= 85) return "ممتاز";
-  if (m >= 75) return "جيد جداً";
-  if (m >= 65) return "جيد";
-  if (m >= 60) return "مقبول";
-  return "راسب";
+  if (m >= 85) return "Excellent";
+  if (m >= 75) return "Very Good";
+  if (m >= 65) return "Good";
+  if (m >= 60) return "Pass";
+  return "Fail";
 };
 
 /* ══════════════════════════════════════
@@ -31,16 +31,16 @@ const getRating = (m) => {
 function classifyGpa(v) {
   const n = parseFloat(v);
   if (isNaN(n) || n < 0) return { label: "", color: "", css: "" };
-  if (n === 0) return { label: "راسب", color: "#ef4444", css: "cls-fail" };
-  if (n < 1.5) return { label: "مقبول", color: "#ef4444", css: "cls-fail" };
-  if (n < 2.0) return { label: "جيد", color: "#f97316", css: "cls-pass" };
-  if (n < 2.5) return { label: "جيد مرتفع", color: "#eab308", css: "cls-ok" };
-  if (n < 3.0) return { label: "جيد جداً", color: "#f59e0b", css: "cls-good" };
+  if (n === 0) return { label: "Fail", color: "#ef4444", css: "cls-fail" };
+  if (n < 1.5) return { label: "Pass", color: "#ef4444", css: "cls-fail" };
+  if (n < 2.0) return { label: "Good", color: "#f97316", css: "cls-pass" };
+  if (n < 2.5) return { label: "High Good", color: "#eab308", css: "cls-ok" };
+  if (n < 3.0) return { label: "Very Good", color: "#f59e0b", css: "cls-good" };
   if (n < 3.5)
-    return { label: "جيد جداً مرتفع", color: "#38bdf8", css: "cls-vgood" };
-  if (n < 4.0) return { label: "امتياز", color: "#3b82f6", css: "cls-exc" };
+    return { label: "High Very Good", color: "#38bdf8", css: "cls-vgood" };
+  if (n < 4.0) return { label: "Excellent", color: "#3b82f6", css: "cls-exc" };
   if (n <= 5.0)
-    return { label: "امتياز مرتفع", color: "#22c55e", css: "cls-top" };
+    return { label: "High Excellent", color: "#22c55e", css: "cls-top" };
   return { label: "", color: "", css: "" };
 }
 
@@ -185,11 +185,11 @@ function GpaPlanner() {
     const hours = parseInt(hoursInput, 10);
     setProfileError("");
     if (isNaN(cgpa) || cgpa < 0 || cgpa > 5) {
-      setProfileError("المعدل التراكمي يجب أن يكون بين 0 و 5");
+      setProfileError("CGPA must be between 0 and 5");
       return;
     }
     if (isNaN(hours) || hours < 0 || hours > 300) {
-      setProfileError("عدد الساعات غير صحيح");
+      setProfileError("Invalid number of hours");
       return;
     }
     const data = { cgpa, hours };
@@ -220,15 +220,15 @@ function GpaPlanner() {
     setCourseError("");
     const credits = parseInt(newCreditHours, 10);
     if (!newCourseName.trim()) {
-      setCourseError("أدخل اسم المادة");
+      setCourseError("Enter course name");
       return;
     }
     if (!newCourseCode.trim()) {
-      setCourseError("أدخل رمز المادة");
+      setCourseError("Enter course code");
       return;
     }
     if (isNaN(credits) || credits < 1 || credits > 6) {
-      setCourseError("الساعات يجب أن تكون بين 1 و 6");
+      setCourseError("Hours must be between 1 and 6");
       return;
     }
     try {
@@ -338,7 +338,7 @@ function GpaPlanner() {
   const computeTarget = useCallback(async () => {
     const target = parseFloat(targetCgpa);
     if (!profile || isNaN(target) || target < 0 || target > 5) {
-      setStrategy({ error: "الرجاء إدخال معدل مستهدف بين 0 و 5" });
+      setStrategy({ error: "Please enter a target GPA between 0 and 5" });
       return;
     }
     setStrategyLoading(true);
@@ -377,9 +377,9 @@ function GpaPlanner() {
         <div className="planner-onboard-wrap">
           <div className="planner-onboard-card">
             <div className="planner-onboard-icon">🎓</div>
-            <h2 className="planner-onboard-title">مخطط المعدل الذكي</h2>
+            <h2 className="planner-onboard-title">Smart GPA Planner</h2>
             <p className="planner-onboard-sub">
-              أدخل بياناتك الأكاديمية الحالية للبدء في التخطيط لمعدلك التراكمي
+              Enter your current academic data to start planning your cumulative GPA
             </p>
 
             {profileError && (
@@ -390,8 +390,8 @@ function GpaPlanner() {
 
             <div className="planner-onboard-form">
               <div className="planner-field">
-                <label className="planner-label">المعدل التراكمي الحالي</label>
-                <div className="planner-input-hint">من 0.00 إلى 5.00</div>
+                <label className="planner-label">Current Cumulative GPA</label>
+                <div className="planner-input-hint">From 0.00 to 5.00</div>
                 <div className="planner-input-row">
                   <input
                     className="planner-input"
@@ -399,7 +399,7 @@ function GpaPlanner() {
                     min={0}
                     max={5}
                     step={0.01}
-                    placeholder="مثال: 3.75"
+                    placeholder="Example: 3.75"
                     value={cgpaInput}
                     onChange={(e) => setCgpaInput(e.target.value)}
                   />
@@ -414,9 +414,9 @@ function GpaPlanner() {
               </div>
 
               <div className="planner-field">
-                <label className="planner-label">إجمالي الساعات المجتازة</label>
+                <label className="planner-label">Total Completed Hours</label>
                 <div className="planner-input-hint">
-                  الساعات المعتمدة المكتسبة حتى الآن
+                  Credit hours earned so far
                 </div>
                 <input
                   className="planner-input"
@@ -424,14 +424,14 @@ function GpaPlanner() {
                   min={0}
                   max={300}
                   step={1}
-                  placeholder="مثال: 90"
+                  placeholder="Example: 90"
                   value={hoursInput}
                   onChange={(e) => setHoursInput(e.target.value)}
                 />
               </div>
 
               <button className="planner-btn-primary" onClick={saveProfile}>
-                حفظ والمتابعة
+                Save and Continue
               </button>
             </div>
           </div>
@@ -450,20 +450,20 @@ function GpaPlanner() {
       {/* Header */}
       <div className="planner-header">
         <div>
-          <h2 className="page-title">مخطط المعدل الذكي</h2>
+          <h2 className="page-title">Smart GPA Planner</h2>
           <p className="page-sub">
-            خطط لمعدلك التراكمي واعرف ما تحتاج لتحقيق هدفك
+            Plan your cumulative GPA and know what you need to achieve your goal
           </p>
         </div>
         <button className="planner-btn-outline" onClick={editProfile}>
-          تعديل البيانات
+          Edit Data
         </button>
       </div>
 
       {/* Profile Strip */}
       <div className="planner-profile-strip">
         <div className="planner-strip-item">
-          <span className="planner-strip-label">المعدل التراكمي</span>
+          <span className="planner-strip-label">Cumulative GPA</span>
           <span className="planner-strip-value">{profile.cgpa}</span>
           <span className={`planner-strip-cls ${profileCls.css}`}>
             {profileCls.label}
@@ -471,17 +471,17 @@ function GpaPlanner() {
         </div>
         <div className="planner-strip-divider" />
         <div className="planner-strip-item">
-          <span className="planner-strip-label">الساعات المجتازة</span>
+          <span className="planner-strip-label">Completed Hours</span>
           <span className="planner-strip-value">{profile.hours}</span>
         </div>
         <div className="planner-strip-divider" />
         <div className="planner-strip-item">
-          <span className="planner-strip-label">ساعات الفصل</span>
+          <span className="planner-strip-label">Term Hours</span>
           <span className="planner-strip-value">{calculations?.termHours}</span>
         </div>
         <div className="planner-strip-divider" />
         <div className="planner-strip-item">
-          <span className="planner-strip-label">أقصى معدل ممكن</span>
+          <span className="planner-strip-label">Maximum Possible GPA</span>
           <span className="planner-strip-value">{calculations?.maxCgpa}</span>
           <span
             className={`planner-strip-cls ${classifyGpa(calculations?.maxCgpa).css}`}
@@ -497,13 +497,13 @@ function GpaPlanner() {
           className={`planner-tab ${activeTab === "calculator" ? "active" : ""}`}
           onClick={() => setActiveTab("calculator")}
         >
-          حاسبة الفصل الحالي
+          Current Term Calculator
         </button>
         <button
           className={`planner-tab ${activeTab === "planner" ? "active" : ""}`}
           onClick={() => setActiveTab("planner")}
         >
-          التخطيط الاستراتيجي
+          Strategic Planning
         </button>
       </div>
 
@@ -597,8 +597,8 @@ function CalculatorScreen({
             <div className="planner-circle-card">
               <CircularProgress
                 value={expectedCgpa}
-                label="المعدل المتوقع"
-                sub={`من ${profile.cgpa}`}
+                label="Expected GPA"
+                sub={`Out of ${profile.cgpa}`}
                 classification
               />
             </div>
@@ -608,7 +608,7 @@ function CalculatorScreen({
                 value={termGpa}
                 size={120}
                 stroke={8}
-                label="معدل الفصل"
+                label="Term GPA"
                 classification
               />
             </div>
@@ -616,14 +616,14 @@ function CalculatorScreen({
             {/* Classification badges */}
             <div className="planner-cls-row">
               <div className={`planner-cls-card ${expectedCls.css}`}>
-                <span className="planner-cls-card-label">المعدل المتوقع</span>
+                <span className="planner-cls-card-label">Expected GPA</span>
                 <span className="planner-cls-card-value">{expectedCgpa}</span>
                 <span className="planner-cls-card-class">
                   {expectedCls.label}
                 </span>
               </div>
               <div className={`planner-cls-card ${termCls.css}`}>
-                <span className="planner-cls-card-label">معدل الفصل</span>
+                <span className="planner-cls-card-label">Term GPA</span>
                 <span className="planner-cls-card-value">{termGpa}</span>
                 <span className="planner-cls-card-class">{termCls.label}</span>
               </div>
@@ -634,7 +634,7 @@ function CalculatorScreen({
                 className="planner-alert planner-alert-blue"
                 style={{ textAlign: "center" }}
               >
-                النتيجة من السيرفر — المعدل التراكمي السابق: {apiResult.oldCGPA}
+                Server Result — Previous CGPA: {apiResult.oldCGPA}
               </div>
             )}
 
@@ -648,19 +648,19 @@ function CalculatorScreen({
                 <span className="planner-stat-num">
                   {calculations.termHours}
                 </span>
-                <span className="planner-stat-txt">ساعات الفصل</span>
+                <span className="planner-stat-txt">Term Hours</span>
               </div>
               <div className="planner-stat-box">
                 <span className="planner-stat-num">
                   {calculations.totalHours}
                 </span>
-                <span className="planner-stat-txt">إجمالي الساعات</span>
+                <span className="planner-stat-txt">Total Hours</span>
               </div>
               <div className="planner-stat-box">
                 <span className="planner-stat-num">
                   {calculations.termPoints.toFixed(1)}
                 </span>
-                <span className="planner-stat-txt">النقاط</span>
+                <span className="planner-stat-txt">Points</span>
               </div>
             </div>
           </>
@@ -668,7 +668,7 @@ function CalculatorScreen({
 
         {!calculations && courses.length === 0 && !coursesLoading && (
           <div className="planner-alert planner-alert-blue">
-            أضف مواد الفصل أولاً لبدء الحساب
+            Add term courses first to start calculation
           </div>
         )}
       </div>
@@ -678,7 +678,7 @@ function CalculatorScreen({
         {/* Add Course Form */}
         <div className="planner-card" style={{ marginBottom: 16 }}>
           <div className="planner-card-head">
-            <h3>إضافة مادة جديدة</h3>
+            <h3>Add New Course</h3>
           </div>
           {courseError && (
             <div className="planner-alert planner-alert-red">{courseError}</div>
@@ -695,14 +695,14 @@ function CalculatorScreen({
             <input
               className="planner-input"
               type="text"
-              placeholder="اسم المادة"
+              placeholder="Course Name"
               value={newCourseName}
               onChange={(e) => setNewCourseName(e.target.value)}
             />
             <input
               className="planner-input"
               type="text"
-              placeholder="رمز المادة (CS 301)"
+              placeholder="Course Code (CS 301)"
               value={newCourseCode}
               onChange={(e) => setNewCourseCode(e.target.value)}
             />
@@ -712,7 +712,7 @@ function CalculatorScreen({
               min={1}
               max={6}
               step={1}
-              placeholder="ساعات"
+              placeholder="Hours"
               value={newCreditHours}
               onChange={(e) => setNewCreditHours(e.target.value)}
               style={{ width: 70 }}
@@ -723,26 +723,26 @@ function CalculatorScreen({
             style={{ width: "100%" }}
             onClick={onAddCourse}
           >
-            + إضافة مادة
+            + Add Course
           </button>
         </div>
 
         {/* Course List */}
         <div className="planner-card">
           <div className="planner-card-head">
-            <h3>مواد الفصل الحالي</h3>
-            <span className="planner-badge">{courses.length} مواد</span>
+            <h3>Current Term Courses</h3>
+            <span className="planner-badge">{courses.length} Courses</span>
           </div>
 
           {coursesLoading && (
             <div style={{ textAlign: "center", padding: 24, opacity: 0.6 }}>
-              جاري التحميل...
+              Loading...
             </div>
           )}
 
           {!coursesLoading && courses.length === 0 && (
             <div style={{ textAlign: "center", padding: 24, opacity: 0.6 }}>
-              لم تتم إضافة مواد بعد. أضف موادك أعلاه.
+              No courses added yet. Add your courses above.
             </div>
           )}
 
@@ -756,7 +756,7 @@ function CalculatorScreen({
                   <div className="planner-course-info">
                     <span className="planner-course-name">{course.name}</span>
                     <span className="planner-course-meta">
-                      {course.courseCode} • {course.creditHours} ساعات
+                      {course.courseCode} • {course.creditHours} Hours
                     </span>
                   </div>
                   <div className="planner-course-grade-wrap">
@@ -766,7 +766,7 @@ function CalculatorScreen({
                         onClick={() => onDecrement(course._id)}
                         disabled={mVal <= 0}
                         tabIndex={-1}
-                        aria-label="تقليل"
+                        aria-label="Decrease"
                       >
                         −
                       </button>
@@ -786,7 +786,7 @@ function CalculatorScreen({
                         onClick={() => onIncrement(course._id)}
                         disabled={mVal >= 100}
                         tabIndex={-1}
-                        aria-label="زيادة"
+                        aria-label="Increase"
                       >
                         +
                       </button>
@@ -797,13 +797,13 @@ function CalculatorScreen({
                       </span>
                     </div>
                     <span className="planner-course-pts">
-                      {gp} GPA • {(gp * course.creditHours).toFixed(1)} نقطة
+                      {gp} GPA • {(gp * course.creditHours).toFixed(1)} pts
                     </span>
                   </div>
                   <button
                     className="planner-stepper-btn"
                     onClick={() => onRemoveCourse(course._id)}
-                    title="حذف المادة"
+                    title="Delete Course"
                     style={{ color: "#ef4444", marginRight: 4 }}
                   >
                     <IconTrash />
@@ -820,7 +820,7 @@ function CalculatorScreen({
               onClick={onServerCalc}
               disabled={apiLoading}
             >
-              {apiLoading ? "جاري الحساب..." : "احسب من السيرفر"}
+              {apiLoading ? "Calculating..." : "Calculate from Server"}
             </button>
           )}
         </div>
@@ -851,9 +851,9 @@ function PlannerScreen({
     <div className="planner-target-layout">
       {/* Input Card */}
       <div className="planner-card planner-target-input-card">
-        <h3>🎯 حدد هدفك</h3>
+        <h3>🎯 Set Your Target</h3>
         <p className="planner-target-desc">
-          أدخل المعدل التراكمي الذي تطمح للوصول إليه وسنخبرك بالخطة المطلوبة
+          Enter the CGPA you aspire to reach and we will give you the required plan
         </p>
 
         <div className="planner-target-form">
@@ -864,7 +864,7 @@ function PlannerScreen({
               min={0}
               max={5}
               step={0.01}
-              placeholder="المعدل المستهدف (مثال: 4.50)"
+              placeholder="Target CGPA (e.g. 4.50)"
               value={targetCgpa}
               onChange={(e) => setTargetCgpa(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && computeTarget()}
@@ -882,13 +882,13 @@ function PlannerScreen({
             onClick={computeTarget}
             disabled={strategyLoading}
           >
-            {strategyLoading ? "جاري الحساب..." : "احسب الخطة"}
+            {strategyLoading ? "Calculating..." : "Calculate Plan"}
           </button>
         </div>
 
         {calculations && (
           <div className="planner-max-info">
-            أقصى معدل ممكن هذا الفصل: <strong>{calculations.maxCgpa}</strong>
+            Highest possible GPA this semester: <strong>{calculations.maxCgpa}</strong>
             <span
               className={`planner-cls-inline ${classifyGpa(calculations.maxCgpa).css}`}
             >
@@ -903,11 +903,11 @@ function PlannerScreen({
       {strategy && strategy.error && !strategy.possible && (
         <div className="planner-alert-card planner-alert-card-red">
           <div className="planner-alert-icon">⚠️</div>
-          <h4>عفواً، لا يمكن تحقيق هذا الهدف</h4>
+          <h4>Sorry, this target cannot be achieved</h4>
           <p>{strategy.error}</p>
           {strategy.maxCgpa && (
             <div className="planner-alert-tip">
-              أقصى معدل يمكنك الوصول إليه هو {strategy.maxCgpa}
+              The maximum GPA you can reach is {strategy.maxCgpa}
             </div>
           )}
         </div>
@@ -919,10 +919,10 @@ function PlannerScreen({
           <div className="planner-strategy-head">
             <div className="planner-strategy-icon">✅</div>
             <div>
-              <h4>يمكنك تحقيق هدفك!</h4>
+              <h4>You can achieve your target!</h4>
               <p>
-                للوصول إلى المعدل <strong>{targetCgpa}</strong> (
-                {classifyGpa(targetCgpa).label})، تحتاج معدل فصلي{" "}
+                To reach a GPA of <strong>{targetCgpa}</strong> (
+                {classifyGpa(targetCgpa).label}), you need a semester GPA of{" "}
                 <strong>{strategy.requiredTermGpa}</strong> (
                 {classifyGpa(strategy.requiredTermGpa).label})
               </p>
@@ -930,7 +930,7 @@ function PlannerScreen({
           </div>
 
           <div className="planner-strategy-subtitle">
-            التوزيع المقترح للدرجات:
+            Suggested grade distribution:
           </div>
 
           <div className="planner-strategy-list">
@@ -939,7 +939,7 @@ function PlannerScreen({
                 <div className="planner-strategy-course">
                   <span className="planner-strategy-name">{c.courseCode}</span>
                   <span className="planner-strategy-meta">
-                    صعوبة: {c.difficulty}/5
+                    Difficulty: {c.difficulty}/5
                   </span>
                 </div>
                 <div className="planner-strategy-grade">
@@ -972,7 +972,7 @@ function PlannerScreen({
               });
               return Object.entries(counts).map(([label, count]) => (
                 <span key={label} className="planner-summary-chip">
-                  {count} مادة {label}
+                  {count} {label} courses
                 </span>
               ));
             })()}

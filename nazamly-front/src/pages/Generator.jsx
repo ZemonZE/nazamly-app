@@ -7,34 +7,34 @@ import { auth, API_URL } from "../firebase";
 /* ═══════════════════════════════════
    SHARED CONSTANTS
 ═══════════════════════════════════ */
-const DAYS = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
-const DAYS_EN_TO_AR = {
-  Saturday: "السبت",
-  Sunday: "الأحد",
-  Monday: "الاثنين",
-  Tuesday: "الثلاثاء",
-  Wednesday: "الأربعاء",
-  Thursday: "الخميس",
+const DAYS = ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+const DAYS_EN_MAP = {
+  Saturday: "Saturday",
+  Sunday: "Sunday",
+  Monday: "Monday",
+  Tuesday: "Tuesday",
+  Wednesday: "Wednesday",
+  Thursday: "Thursday",
 };
 
 const SLOTS = {
   2: [
-    { start: "8:00 ص", end: "10:00 ص" },
-    { start: "10:00 ص", end: "12:00 م" },
-    { start: "12:00 م", end: "2:00 م" },
-    { start: "2:00 م", end: "4:00 م" },
-    { start: "4:00 م", end: "6:00 م" },
-    { start: "6:00 م", end: "8:00 م" },
+    { start: "8:00 AM", end: "10:00 AM" },
+    { start: "10:00 AM", end: "12:00 PM" },
+    { start: "12:00 PM", end: "2:00 PM" },
+    { start: "2:00 PM", end: "4:00 PM" },
+    { start: "4:00 PM", end: "6:00 PM" },
+    { start: "6:00 PM", end: "8:00 PM" },
   ],
   3: [
-    { start: "8:00 ص", end: "11:00 ص" },
-    { start: "11:00 ص", end: "2:00 م" },
-    { start: "2:00 م", end: "5:00 م" },
-    { start: "5:00 م", end: "8:00 م" },
+    { start: "8:00 AM", end: "11:00 AM" },
+    { start: "11:00 AM", end: "2:00 PM" },
+    { start: "2:00 PM", end: "5:00 PM" },
+    { start: "5:00 PM", end: "8:00 PM" },
   ],
 };
 
-const TYPE_LABELS = { ن: "نظري", ت: "سكشن", ع: "عملي" };
+const TYPE_LABELS = { ن: "Lecture", ت: "Section", ع: "Lab" };
 const TYPE_COLORS = {
   ن: "type-badge-n",
   ت: "type-badge-t",
@@ -44,7 +44,7 @@ const TYPE_COLORS = {
 const initialForm = {
   subject: "",
   type: "ن",
-  day: "السبت",
+  day: "Saturday",
   duration: 2,
   slotIndex: 0,
   group: "",
@@ -52,8 +52,16 @@ const initialForm = {
 };
 
 /* ═══════════════════════════════════
-   HELPER — convert 24h to Arabic 12h
+   HELPER — convert 24h to English/Arabic 12h
 ═══════════════════════════════════ */
+function to12hEn(time24) {
+  if (!time24) return "";
+  const [h, m] = time24.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hr = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hr}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
 function to12hAr(time24) {
   if (!time24) return "";
   const [h, m] = time24.split(":").map(Number);
@@ -104,7 +112,10 @@ function Generator() {
   const [saveSuccess, setSaveSuccess] = useState("");
 
   /* ───────────────────────────────
-     PDF EXPORT — compact student schedule card
+     PDF EXPORT — Professional A4 Schedule
+  ─────────────────────────────── */
+  /* ───────────────────────────────
+     PDF EXPORT — Professional A4 Schedule
   ─────────────────────────────── */
   const exportPDF = async (filename, type = "manual") => {
     setExporting(true);
@@ -119,42 +130,88 @@ function Generator() {
         dayGroups = groupByDay(chosen);
       }
 
-      /* ── build hidden compact card ── */
-      const wrap = document.createElement("div");
-      wrap.style.cssText = `
-        position:fixed;left:-9999px;top:0;
-        width:370px;background:#fff;padding:14px 12px;
-        font-family:'Segoe UI',Tahoma,sans-serif;
-        direction:rtl;color:#1e293b;
-      `;
+      /* ── Stage container for measuring multiple pages ── */
+      const stage = document.createElement("div");
+      stage.style.cssText = "position:fixed; left:-9999px; top:0;";
+      document.body.appendChild(stage);
 
-      /* title */
-      const hdr = document.createElement("div");
-      hdr.style.cssText = "text-align:center;margin-bottom:8px;";
-      hdr.innerHTML = `
-        <div style="font-size:14px;font-weight:700;margin-bottom:1px">جدولي الدراسي</div>
-        <div style="font-size:8px;color:#94a3b8;letter-spacing:2px">NAZAMLY</div>
+      const createPage = () => {
+        const wrap = document.createElement("div");
+        wrap.innerHTML = `<style>
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+        </style>`;
+        
+        // Standard A4 dimensions in pixels approx (794 x 1123)
+        wrap.style.cssText = `
+          width:794px; min-height: 1123px;
+          background:#ffffff; padding:40px;
+          font-family:'Cairo', sans-serif;
+          direction:rtl; color:#1e293b;
+          box-sizing: border-box;
+        `;
+
+        /* title */
+        const hdr = document.createElement("div");
+        hdr.style.cssText = "text-align:center; margin-bottom: 30px; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px;";
+        hdr.innerHTML = `
+        <div style="font-size:32px; font-weight:700; color:#0f172a; margin-bottom:4px;">جدولي الدراسي</div>
+        <div style="font-size:14px; color:#64748b; letter-spacing:3px;">NAZAMLY</div>
+        `;
+        wrap.appendChild(hdr);
+        return wrap;
+      };
+
+      let currentWrap = createPage();
+      stage.appendChild(currentWrap);
+      const pages = [currentWrap];
+
+      /* Global Table Header */
+      const tableHeaderRow = `
+        <tr style="background-color: #f1f5f9; font-weight: 700; font-size: 14px; color: #334155;">
+          <th style="padding: 12px; text-align: right; width: 170px; border-radius: 0 6px 0 0;">الوقت</th>
+          <th style="padding: 12px; text-align: right;">المادة</th>
+          <th style="padding: 12px; text-align: center; width: 80px;">النوع</th>
+          <th style="padding: 12px; text-align: right; width: 100px;">المجموعة</th>
+          <th style="padding: 12px; text-align: right; width: 140px; border-radius: 6px 0 0 0;">المكان</th>
+        </tr>
       `;
-      wrap.appendChild(hdr);
 
       /* each day */
       DAYS.forEach((day) => {
         const items = dayGroups[day];
         if (!items || !items.length) return;
 
+        const dayContainer = document.createElement("div");
+        dayContainer.style.marginBottom = "24px";
+
         /* day header */
+        const arDays = {
+          "Saturday": "السبت",
+          "Sunday": "الأحد",
+          "Monday": "الاثنين",
+          "Tuesday": "الثلاثاء",
+          "Wednesday": "الأربعاء",
+          "Thursday": "الخميس"
+        };
         const dh = document.createElement("div");
-        dh.textContent = day;
+        dh.textContent = arDays[day] || day;
         dh.style.cssText = `
-          background:#6ee7b7;color:#064e3b;
-          padding:2px 8px;font-size:9px;font-weight:700;
-          border-radius:3px 3px 0 0;margin-top:5px;
+          background:#10b981; color:#ffffff;
+          padding: 8px 16px; font-size: 18px; font-weight: 700;
+          border-radius: 6px 6px 0 0;
         `;
-        wrap.appendChild(dh);
+        dayContainer.appendChild(dh);
 
         /* rows */
         const tbl = document.createElement("table");
-        tbl.style.cssText = "width:100%;border-collapse:collapse;font-size:8px;";
+        tbl.style.cssText = "width:100%; border-collapse:collapse; font-size:14px; border: 1px solid #e2e8f0; border-top: none;";
+        
+        // Append Header
+        const thead = document.createElement("thead");
+        thead.innerHTML = tableHeaderRow;
+        tbl.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
 
         const sorted = [...items].sort((a, b) => {
           const aT = type === "manual" ? a.slot.start : (a.startTime || "");
@@ -162,43 +219,95 @@ function Generator() {
           return aT.localeCompare(bT);
         });
 
-        sorted.forEach((item) => {
+        sorted.forEach((item, index) => {
           const tr = document.createElement("tr");
-          tr.style.cssText = "border-bottom:1px solid #e2e8f0;";
+          // Zebra striping
+          tr.style.cssText = `border-bottom:1px solid #e2e8f0; background-color: ${index % 2 === 0 ? '#ffffff' : '#f8fafc'};`;
+          
           const tc = type === "manual" ? item.type : aiTypeToAr(item.type);
           const clr = { "\u0646":"#3b82f6", "\u062a":"#f59e0b", "\u0639":"#ef4444" };
-          const time = type === "manual"
-            ? `${item.slot.start} — ${item.slot.end}`
-            : `${to12hAr(item.startTime)} — ${to12hAr(item.endTime)}`;
+          
+          let tStartAr = type === "manual" ? item.slot.start.replace("AM", "ص").replace("PM", "م") : to12hAr(item.startTime);
+          let tEndAr = type === "manual" ? item.slot.end.replace("AM", "ص").replace("PM", "م") : to12hAr(item.endTime);
+
+         // Extract suffix and time separately
+          const startSuffix = tStartAr.includes("ص") ? "ص" : "م";
+          const startTimeNum = tStartAr.replace(" ص", "").replace(" م", "").replace("ص", "").replace("م", "").trim();
+          
+          const endSuffix = tEndAr.includes("ص") ? "ص" : "م";
+          const endTimeNum = tEndAr.replace(" ص", "").replace(" م", "").replace("ص", "").replace("م", "").trim();
+
+          // Force strictly LTR physical layout to bypass html2canvas bidi bugs
+          // Visual LTR order: [End Suffix] [End Time] [إلى] [Start Suffix] [Start Time]
+          const timeHtml = `
+            <div style="display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: 4px; direction: ltr; width: 100%;">
+              <span style="font-weight: 700;">${endSuffix}</span>
+              <span style="font-weight: 600;">${endTimeNum}</span>
+              
+              <span style="color: #94a3b8; font-size: 12px; margin: 0 4px;">إلى</span>
+              
+              <span style="font-weight: 700;">${startSuffix}</span>
+              <span style="font-weight: 600;">${startTimeNum}</span>
+            </div>
+          `;
+
           const name = type === "manual" ? item.subject : item.courseCode;
-          const extra = type === "manual"
-            ? [item.group, item.place].filter(Boolean).join(" · ")
-            : [item.group, item.location].filter(Boolean).join(" · ");
+          const group = item.group || "—";
+          const location = type === "manual" ? (item.place || "—") : (item.location || "—");
+
+          const TYPE_LABELS_AR = { "ن": "نظري", "ت": "سكشن", "ع": "معمل" };
 
           tr.innerHTML = `
-            <td style="padding:3px 5px;width:75px;color:#64748b;font-size:7px;white-space:nowrap">${time}</td>
-            <td style="padding:3px 5px;font-weight:600;font-size:8px">${name}</td>
-            <td style="padding:3px 5px;width:32px;text-align:center">
-              <span style="background:${clr[tc]||"#94a3b8"};color:#fff;padding:1px 4px;border-radius:2px;font-size:6px">${TYPE_LABELS[tc]}</span>
+            <td style="padding: 12px; color: #475569; font-weight: 600;">${timeHtml}</td>
+            <td style="padding: 12px; font-weight: 700; color: #0f172a; text-align: right;">${name}</td>
+            <td style="padding: 12px; text-align: center;">
+              <span style="background:${clr[tc]||"#94a3b8"}; color:#fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 600;">${TYPE_LABELS_AR[tc] || TYPE_LABELS[tc]}</span>
             </td>
-            ${extra ? `<td style="padding:3px 5px;color:#94a3b8;font-size:6px;white-space:nowrap">${extra}</td>` : ""}
+            <td style="padding: 12px; color: #64748b; font-weight: 600; text-align: right;">${group}</td>
+            <td style="padding: 12px; color: #64748b; font-weight: 600; text-align: right;">${location}</td>
           `;
-          tbl.appendChild(tr);
+          tbody.appendChild(tr);
         });
-        wrap.appendChild(tbl);
+        
+        tbl.appendChild(tbody);
+        dayContainer.appendChild(tbl);
+        currentWrap.appendChild(dayContainer);
+
+        // Check overflow threshold (~1040px height leaves margin space)
+        let totalHeight = 0;
+        for (let j = 0; j < currentWrap.children.length; j++) {
+          totalHeight += currentWrap.children[j].getBoundingClientRect().height || currentWrap.children[j].offsetHeight;
+        }
+
+        if (totalHeight > 1040 && currentWrap.children.length > 2) {
+          // Remove from current page due to overflow
+          currentWrap.removeChild(dayContainer);
+          // Create new formal page
+          currentWrap = createPage();
+          stage.appendChild(currentWrap);
+          pages.push(currentWrap);
+          // Fit it on the new page
+          currentWrap.appendChild(dayContainer);
+        }
       });
 
-      document.body.appendChild(wrap);
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      const canvas = await html2canvas(wrap, { scale: 2, backgroundColor: "#ffffff" });
-      document.body.removeChild(wrap);
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i], { 
+          scale: 2, 
+          backgroundColor: "#ffffff",
+          useCORS: true 
+        });
+        const imgData = canvas.toDataURL("image/jpeg", 0.9);
+        
+        if (i > 0) pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
+      }
 
-      const imgData = canvas.toDataURL("image/jpeg", 0.8);
-      const mmW = (canvas.width / 2 / 96) * 25.4;
-      const mmH = (canvas.height / 2 / 96) * 25.4;
-
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: [mmW, mmH] });
-      pdf.addImage(imgData, "JPEG", 0, 0, mmW, mmH);
+      document.body.removeChild(stage);
       pdf.save(filename);
     } catch (err) {
       console.error("PDF export failed:", err);
@@ -226,7 +335,7 @@ function Generator() {
     if (timeConflict) {
       setConflict({
         type: "time",
-        msg: `لديك بالفعل مادة "${timeConflict.subject}" في هذا الميعاد!`,
+        msg: `You already have a course "${timeConflict.subject}" at this time!`,
       });
       return false;
     }
@@ -238,7 +347,7 @@ function Generator() {
     if (sameType) {
       setConflict({
         type: "type",
-        msg: `مادة "${form.subject}" مسجلة بالفعل كـ ${TYPE_LABELS[form.type]}!`,
+        msg: `Course "${form.subject}" is already registered as ${TYPE_LABELS[form.type]}!`,
       });
       return false;
     }
@@ -249,7 +358,7 @@ function Generator() {
     if (sameSubject.length >= 2) {
       setConflict({
         type: "limit",
-        msg: `مادة "${form.subject}" وصلت للحد الأقصى (مرتين فقط)!`,
+        msg: `Course "${form.subject}" has reached the maximum limit (twice only)!`,
       });
       return false;
     }
@@ -288,7 +397,7 @@ function Generator() {
   const handleFilePick = (e) => {
     const picked = Array.from(e.target.files || []);
     if (picked.length + aiFiles.length > 5) {
-      setAiError("الحد الأقصى 5 صور فقط");
+      setAiError("Max 5 images only");
       return;
     }
     setAiFiles((prev) => [...prev, ...picked]);
@@ -300,7 +409,7 @@ function Generator() {
 
   const handleGenerate = async () => {
     if (aiFiles.length === 0) {
-      setAiError("يرجى رفع صورة واحدة على الأقل");
+      setAiError("Please upload at least one image");
       return;
     }
     setAiLoading(true);
@@ -308,6 +417,12 @@ function Generator() {
     setAiResults(null);
 
     try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("You must login first to generate a schedule");
+      }
+      const token = await user.getIdToken();
+
       const formData = new FormData();
       aiFiles.forEach((f) => formData.append("scheduleFiles", f));
       if (aiCourses.trim()) {
@@ -320,12 +435,15 @@ function Generator() {
 
       const res = await fetch(`${API_URL}/api/ai/generate`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.message || "فشل في توليد الجداول");
+        throw new Error(data.message || "Failed to generate schedules");
       }
       setAiResults(data);
       setAiSelected(0);
@@ -336,13 +454,13 @@ function Generator() {
     }
   };
 
-  /* Group an AI schedule array by day (Arabic) */
+  /* Group an AI schedule array by day (English) */
   const groupByDay = (schedule) => {
     const map = {};
     DAYS.forEach((d) => (map[d] = []));
     schedule.forEach((s) => {
-      const dayAr = DAYS_EN_TO_AR[s.dayOfWeek] || s.dayOfWeek;
-      if (map[dayAr]) map[dayAr].push(s);
+      const dayEn = DAYS_EN_MAP[s.dayOfWeek] || s.dayOfWeek;
+      if (map[dayEn]) map[dayEn].push(s);
     });
     return map;
   };
@@ -360,7 +478,7 @@ function Generator() {
     try {
       const user = auth.currentUser;
       if (!user) {
-        throw new Error("يجب تسجيل الدخول أولاً لحفظ الجدول");
+        throw new Error("You must login first to save the schedule");
       }
       const token = await user.getIdToken();
 
@@ -372,17 +490,17 @@ function Generator() {
         },
         body: JSON.stringify({
           schedule: chosen,
-          title: `جدول ذكي #${aiSelected + 1}`,
+          title: `Smart Schedule #${aiSelected + 1}`,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.message || "فشل في حفظ الجدول");
+        throw new Error(data.message || "Failed to save the schedule");
       }
 
-      setSaveSuccess("✅ تم حفظ الجدول بنجاح! افتح تطبيق Nazamly على موبايلك");
+      setSaveSuccess("✅ Schedule saved successfully! Open the Nazamly app on your mobile");
     } catch (err) {
       setSaveSuccess(`❌ ${err.message}`);
     } finally {
@@ -397,8 +515,8 @@ function Generator() {
     <div className="dash-home">
       {/* ── Title ── */}
       <div>
-        <h2 className="page-title">منظم الجداول</h2>
-        <p className="page-sub">نظّم جدولك الدراسي بسهولة</p>
+        <h2 className="page-title">Schedule Manager</h2>
+        <p className="page-sub">Organize your study schedule easily</p>
       </div>
 
       {/* ── Tab Switcher ── */}
@@ -407,13 +525,13 @@ function Generator() {
           className={`gen-tab-btn ${tab === "manual" ? "active" : ""}`}
           onClick={() => setTab("manual")}
         >
-          📝 الجدول اليدوي
+          📝 Manual Schedule
         </button>
         <button
           className={`gen-tab-btn ${tab === "smart" ? "active" : ""}`}
           onClick={() => setTab("smart")}
         >
-          🤖 الجدول الذكي
+          🤖 Smart Schedule
         </button>
       </div>
 
@@ -422,10 +540,10 @@ function Generator() {
         <div className="conflict-overlay" onClick={() => setConflict(null)}>
           <div className="conflict-popup" onClick={(e) => e.stopPropagation()}>
             <div className="conflict-icon">⚠️</div>
-            <h3>تعارض في الجدول</h3>
+            <h3>Schedule Conflict</h3>
             <p>{conflict.msg}</p>
             <button className="btn-primary" onClick={() => setConflict(null)}>
-              حسناً
+              OK
             </button>
           </div>
         </div>
@@ -444,14 +562,14 @@ function Generator() {
                 addSchedule();
               }}
             >
-              <h3 style={{ marginBottom: "16px" }}>إضافة ميعاد</h3>
+              <h3 style={{ marginBottom: "16px" }}>Add Schedule Slot</h3>
 
               <div className="form-group">
-                <label>اسم المادة</label>
+                <label>Course Name</label>
                 <input
                   className="gpa-input"
                   type="text"
-                  placeholder="مثال: Operating Systems"
+                  placeholder="Example: Operating Systems"
                   value={form.subject}
                   onChange={(e) => handleChange("subject", e.target.value)}
                   required
@@ -459,7 +577,7 @@ function Generator() {
               </div>
 
               <div className="form-group">
-                <label>نوع المادة</label>
+                <label>Course Type</label>
                 <div className="type-selector">
                   {Object.entries(TYPE_LABELS).map(([key, val]) => (
                     <button
@@ -476,7 +594,7 @@ function Generator() {
               </div>
 
               <div className="form-group">
-                <label>اليوم</label>
+                <label>Day</label>
                 <select
                   className="gpa-input"
                   value={form.day}
@@ -493,12 +611,12 @@ function Generator() {
 
               <div className="form-group">
                 <label>
-                  مدة{" "}
+                  Duration of{" "}
                   {form.type === "ن"
-                    ? "المحاضرة"
+                    ? "Lecture"
                     : form.type === "ع"
-                      ? "العملي"
-                      : "السكشن"}
+                      ? "Lab"
+                      : "Section"}
                 </label>
                 <div className="duration-selector">
                   <button
@@ -506,20 +624,20 @@ function Generator() {
                     className={`duration-btn ${form.duration === 2 ? "active" : ""}`}
                     onClick={() => handleChange("duration", 2)}
                   >
-                    ساعتان
+                    2 Hours
                   </button>
                   <button
                     type="button"
                     className={`duration-btn ${form.duration === 3 ? "active" : ""}`}
                     onClick={() => handleChange("duration", 3)}
                   >
-                    ٣ ساعات
+                    3 Hours
                   </button>
                 </div>
               </div>
 
               <div className="form-group">
-                <label>الميعاد</label>
+                <label>Time Slot</label>
                 <select
                   className="gpa-input"
                   value={form.slotIndex}
@@ -537,11 +655,11 @@ function Generator() {
               </div>
 
               <div className="form-group">
-                <label>رقم المجموعة</label>
+                <label>Group Number</label>
                 <input
                   className="gpa-input"
                   type="text"
-                  placeholder="مثال: G1"
+                  placeholder="Example: G1"
                   value={form.group}
                   onChange={(e) => handleChange("group", e.target.value)}
                   required
@@ -549,11 +667,11 @@ function Generator() {
               </div>
 
               <div className="form-group">
-                <label>مكان الحضور</label>
+                <label>Location</label>
                 <input
                   className="gpa-input"
                   type="text"
-                  placeholder="مثال: قاعة 101"
+                  placeholder="Example: Room 101"
                   value={form.place}
                   onChange={(e) => handleChange("place", e.target.value)}
                   required
@@ -561,7 +679,7 @@ function Generator() {
               </div>
 
               <button type="submit" className="btn-primary">
-                + إضافة للجدول
+                + Add to Schedule
               </button>
             </form>
           </div>
@@ -571,32 +689,32 @@ function Generator() {
             {schedules.length > 0 && (
               <button
                 className="btn-primary pdf-export-btn"
-                onClick={() => exportPDF("جدولي.pdf", "manual")}
+                onClick={() => exportPDF("My-Schedule.pdf", "manual")}
                 disabled={exporting}
               >
-                {exporting ? "جاري التصدير..." : "📥 تصدير PDF"}
+                {exporting ? "Exporting..." : "📥 Export PDF"}
               </button>
             )}
             {schedules.length === 0 ? (
               <div className="gpa-card">
                 <div className="gpa-empty">
                   <span>📅</span>
-                  <p>أضف مواعيد لعرض جدولك</p>
+                  <p>Add slots to view your schedule</p>
                 </div>
               </div>
             ) : (
               DAYS.map((day) => {
                 const items = scheduleByDay[day];
-                if (!items.length) return null;
+                if (!items?.length) return null;
                 return (
                   <div key={day} className="gen-day-card">
                     <h4 className="gen-day-title">{day}</h4>
 
                     <div className="gen-item-header">
-                      <span>الوقت</span>
-                      <span>المادة</span>
-                      <span>المجموعة</span>
-                      <span>المكان</span>
+                      <span>Time</span>
+                      <span>Course</span>
+                      <span>Group</span>
+                      <span>Location</span>
                       <span></span>
                     </div>
 
@@ -614,7 +732,7 @@ function Generator() {
                             </div>
 
                             <div className="gen-col">
-                              <span className="gen-col-label">المادة</span>
+                              <span className="gen-col-label">Course</span>
                               <div className="gen-item-top">
                                 <span className="gen-subject">
                                   {item.subject}
@@ -628,14 +746,14 @@ function Generator() {
                             </div>
 
                             <div className="gen-col">
-                              <span className="gen-col-label">المجموعة</span>
+                              <span className="gen-col-label">Group</span>
                               <span className="gen-col-value">
                                 {item.group || "—"}
                               </span>
                             </div>
 
                             <div className="gen-col">
-                              <span className="gen-col-label">المكان</span>
+                              <span className="gen-col-label">Location</span>
                               <span className="gen-col-value">
                                 {item.place || "—"}
                               </span>
@@ -666,10 +784,9 @@ function Generator() {
           {/* ── Upload + Course input ── */}
           {!aiResults && (
             <div className="gpa-card ai-upload-card">
-              <h3 style={{ marginBottom: "4px" }}>🤖 توليد جدول ذكي</h3>
+              <h3 style={{ marginBottom: "4px" }}>🤖 Generate Smart Schedule</h3>
               <p className="ai-upload-desc">
-                ارفع صور جداول الكلية وحدد أرقام المواد — سيتم اقتراح أفضل 3
-                جداول بدون تعارض
+                Upload college schedule images and select course numbers — we will suggest the 3 best schedules without conflicts
               </p>
 
               {/* Drop zone */}
@@ -686,9 +803,9 @@ function Generator() {
                   onChange={handleFilePick}
                 />
                 <span className="ai-dropzone-icon">📷</span>
-                <p>اضغط أو اسحب الصور هنا</p>
+                <p>Click or drag images here</p>
                 <p className="ai-dropzone-hint">
-                  JPG, PNG, WEBP, PDF — حتى 5 ملفات
+                  JPG, PNG, WEBP, PDF — up to 5 files
                 </p>
               </div>
 
@@ -711,16 +828,16 @@ function Generator() {
 
               {/* Course numbers input */}
               <div className="form-group" style={{ marginTop: "16px" }}>
-                <label>أرقام المواد (اختياري)</label>
+                <label>Course Numbers (Optional)</label>
                 <input
                   className="gpa-input"
                   type="text"
-                  placeholder="مثال: 402, 407, 408, 490"
+                  placeholder="Example: 402, 407, 408, 490"
                   value={aiCourses}
                   onChange={(e) => setAiCourses(e.target.value)}
                 />
                 <span className="ai-input-hint">
-                  افصل بين الأرقام بفاصلة — اتركه فارغ لإظهار كل المواد
+                  Separate numbers with a comma — leave empty to show all courses
                 </span>
               </div>
 
@@ -732,7 +849,7 @@ function Generator() {
                 onClick={handleGenerate}
                 disabled={aiLoading}
               >
-                {aiLoading ? "جاري التحليل بالذكاء الاصطناعي..." : "🚀 توليد الجداول"}
+                {aiLoading ? "Analyzing with AI..." : "🚀 Generate Schedules"}
               </button>
 
               {aiLoading && (
@@ -749,19 +866,19 @@ function Generator() {
               {/* Metadata */}
               <div className="ai-meta-bar">
                 <div className="ai-meta-item">
-                  <span className="ai-meta-label">النموذج</span>
+                  <span className="ai-meta-label">Model</span>
                   <span className="ai-meta-value">
                     {aiResults.metadata?.aiModelUsed || "Gemini"}
                   </span>
                 </div>
                 <div className="ai-meta-item">
-                  <span className="ai-meta-label">جلسات مستخرجة</span>
+                  <span className="ai-meta-label">Extracted Sessions</span>
                   <span className="ai-meta-value">
                     {aiResults.metadata?.totalSessionsExtracted || 0}
                   </span>
                 </div>
                 <div className="ai-meta-item">
-                  <span className="ai-meta-label">مواد تم رصدها</span>
+                  <span className="ai-meta-label">Detected Courses</span>
                   <span className="ai-meta-value">
                     {(
                       aiResults.metadata?.uniqueCoursesIdentified || []
@@ -776,7 +893,7 @@ function Generator() {
                     setAiCourses("");
                   }}
                 >
-                  ↻ جرب مرة أخرى
+                  ↻ Try Again
                 </button>
               </div>
 
@@ -790,7 +907,7 @@ function Generator() {
                   >
                     <span className="ai-pill-rank">#{i + 1}</span>
                     <span className="ai-pill-score">
-                      نقاط: {Math.round(s.score)}
+                      Score: {Math.round(s.score)}
                     </span>
                   </button>
                 ))}
@@ -808,7 +925,7 @@ function Generator() {
                     <div className="gpa-card">
                       <div className="gpa-empty">
                         <span>📋</span>
-                        <p>لا توجد جداول مناسبة</p>
+                        <p>No suitable schedules found</p>
                       </div>
                     </div>
                   );
@@ -819,10 +936,10 @@ function Generator() {
                   <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
                     <button
                       className="btn-primary pdf-export-btn"
-                      onClick={() => exportPDF(`جدول-ذكي-${aiSelected + 1}.pdf`, "ai")}
+                      onClick={() => exportPDF(`Smart-Schedule-${aiSelected + 1}.pdf`, "ai")}
                       disabled={exporting}
                     >
-                      {exporting ? "جاري التصدير..." : "📥 تصدير PDF"}
+                      {exporting ? "Exporting..." : "📥 Export PDF"}
                     </button>
                     <button
                       className="btn-primary pdf-export-btn"
@@ -830,7 +947,7 @@ function Generator() {
                       onClick={handleSaveToMobile}
                       disabled={saving}
                     >
-                      {saving ? "جاري الحفظ..." : "📱 حفظ للموبايل"}
+                      {saving ? "Saving..." : "📱 Save to Mobile"}
                     </button>
                   </div>
                   {saveSuccess && (
@@ -854,11 +971,11 @@ function Generator() {
                         <div key={day} className="gen-day-card">
                           <h4 className="gen-day-title">{day}</h4>
                           <div className="gen-item-header">
-                            <span>الوقت</span>
-                            <span>المادة</span>
-                            <span>النوع</span>
-                            <span>المجموعة</span>
-                            <span>المكان</span>
+                            <span>Time</span>
+                            <span>Course</span>
+                            <span>Type</span>
+                            <span>Group</span>
+                            <span>Location</span>
                           </div>
                           <div className="gen-day-items">
                             {items
@@ -872,14 +989,14 @@ function Generator() {
                                 return (
                                   <div key={idx} className="gen-item ai-item">
                                     <div className="gen-item-time">
-                                      <span>{to12hAr(s.startTime)}</span>
+                                      <span>{to12hEn(s.startTime)}</span>
                                       <span className="gen-time-sep">↓</span>
-                                      <span>{to12hAr(s.endTime)}</span>
+                                      <span>{to12hEn(s.endTime)}</span>
                                     </div>
 
                                     <div className="gen-col">
                                       <span className="gen-col-label">
-                                        المادة
+                                        Course
                                       </span>
                                       <div className="gen-item-top">
                                         <span className="gen-subject">
@@ -890,7 +1007,7 @@ function Generator() {
 
                                     <div className="gen-col">
                                       <span className="gen-col-label">
-                                        النوع
+                                        Type
                                       </span>
                                       <span
                                         className={`type-badge ${TYPE_COLORS[typeAr]}`}
@@ -901,7 +1018,7 @@ function Generator() {
 
                                     <div className="gen-col">
                                       <span className="gen-col-label">
-                                        المجموعة
+                                        Group
                                       </span>
                                       <span className="gen-col-value">
                                         {s.group || "—"}
@@ -910,7 +1027,7 @@ function Generator() {
 
                                     <div className="gen-col">
                                       <span className="gen-col-label">
-                                        المكان
+                                        Location
                                       </span>
                                       <span className="gen-col-value">
                                         {s.location || "—"}

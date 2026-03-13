@@ -5,7 +5,7 @@ const syncUser = async (req, res) => {
 
   let user = await userRepo.findByFirebaseUid(uid);
 
-  const isCollege = email.endsWith("@std.sci.cu.edu.eg");
+  const isCollege = email?.endsWith("@std.sci.cu.edu.eg") || false;
 
   if (!user) {
     user = await userRepo.create({

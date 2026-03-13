@@ -17,30 +17,30 @@ import {
 } from "../Icons/DashboardIcons";
 
 const navItems = [
-  { path: "/dashboard", label: "الرئيسية", icon: <IconHome /> },
+  { path: "/dashboard", label: "Dashboard", icon: <IconHome /> },
   {
     path: "/dashboard/gpa-calculator",
-    label: "حساب المعدل",
+    label: "GPA Calculator",
     icon: <IconChart />,
   },
   {
     path: "/dashboard/gpa-planner",
-    label: "مخطط المعدل",
+    label: "GPA Planner",
     icon: <IconCalendar />,
   },
-  { path: "/dashboard/materials", label: "مركز المواد", icon: <IconBook /> },
+  { path: "/dashboard/materials", label: "Materials Center", icon: <IconBook /> },
   {
     path: "/dashboard/questions",
-    label: "بنك الأسئلة",
+    label: "Question Bank",
     icon: <IconQuestion />,
   },
-  { path: "/dashboard/generator", label: "منظم الجداول", icon: <IconTable /> },
+  { path: "/dashboard/generator", label: "Schedule Generator", icon: <IconTable /> },
 ];
 
 function DashboardLayout({ user, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const name = user?.user?.displayName || user?.user?.email || "طالب";
-  const email = user?.user?.email || "";
+  const name = user?.displayName || user?.email || "Student";
+  const email = user?.email || "";
   const avatar = name.charAt(0).toUpperCase();
   return (
     <div className="dash-wrapper">
@@ -50,10 +50,10 @@ function DashboardLayout({ user, onLogout }) {
         <div className="dash-logo">
           {sidebarOpen && (
             <div className="logo-text">
-              <img src={logo} alt="نظملي" className="logo-img" />
+              <img src={logo} alt="Nazamly" className="logo-img" />
               <div>
-                <h1>نظملي</h1>
-                <p>صفحة الطالب</p>
+                <h1>Nazamly</h1>
+                <p>Student Portal</p>
               </div>
             </div>
           )}
@@ -99,34 +99,33 @@ function DashboardLayout({ user, onLogout }) {
             className={({ isActive }) =>
               `dash-nav-item ${isActive ? "active" : ""}`
             }
-            title={!sidebarOpen ? "الإعدادات" : ""}
+            title={!sidebarOpen ? "Settings" : ""}
           >
             <span className="nav-icon">
               <IconSettings />
             </span>
-            {sidebarOpen && <span className="nav-label">الإعدادات</span>}
+            {sidebarOpen && <span className="nav-label">Settings</span>}
           </NavLink>
           <button
             className="dash-nav-item dash-logout"
             onClick={onLogout}
-            title={!sidebarOpen ? "تسجيل الخروج" : ""}
+            title={!sidebarOpen ? "Logout" : ""}
           >
             <span className="nav-icon">
               <IconLogout />
             </span>
-            {sidebarOpen && <span className="nav-label">تسجيل الخروج</span>}
+            {sidebarOpen && <span className="nav-label">Logout</span>}
           </button>
         </div>
       </aside>
       {/* ══ Main ══ */}
       <main className="dash-main">
         <header className="dash-header">
-          <h2>مرحباً، {name}!</h2>
+          <h2>Welcome, {name}!</h2>
           <p>
-            لوحة معلومات النجاح الأكاديمي الشخصية الخاصة بك. تتبع تقدمك وحقق
-            أهدافك.
+            Your personal academic success dashboard. Track your progress and achieve your goals.
           </p>
-          <p>GPA: 3.8</p>
+          <p>GPA: {user?.cgpa || 0}</p>
         </header>
         <Outlet context={{ user, onLogout }} />
       </main>
