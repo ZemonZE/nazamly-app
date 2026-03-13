@@ -13,7 +13,7 @@ import { IconTrash } from "../Icons/DashboardIcons";
 const STORAGE_KEY = "nazamly-gpa-profile";
 
 /* mark → grade‑point (same formula the backend uses) */
-const markToGP = (m) => (m < 60 ? 0 : Number(((m / 10) - 5).toFixed(1)));
+const markToGP = (m) => (m < 60 ? 0 : Number((m / 10 - 5).toFixed(1)));
 
 /* grade‑rating labels based on mark */
 const getRating = (m) => {
@@ -379,7 +379,8 @@ function GpaPlanner() {
             <div className="planner-onboard-icon">🎓</div>
             <h2 className="planner-onboard-title">Smart GPA Planner</h2>
             <p className="planner-onboard-sub">
-              Enter your current academic data to start planning your cumulative GPA
+              Enter your current academic data to start planning your cumulative
+              GPA
             </p>
 
             {profileError && (
@@ -449,12 +450,6 @@ function GpaPlanner() {
     <div className="dash-home">
       {/* Header */}
       <div className="planner-header">
-        <div>
-          <h2 className="page-title">Smart GPA Planner</h2>
-          <p className="page-sub">
-            Plan your cumulative GPA and know what you need to achieve your goal
-          </p>
-        </div>
         <button className="planner-btn-outline" onClick={editProfile}>
           Edit Data
         </button>
@@ -597,7 +592,7 @@ function CalculatorScreen({
             <div className="planner-circle-card">
               <CircularProgress
                 value={expectedCgpa}
-                label="Expected GPA"
+                label="CGPA"
                 sub={`Out of ${profile.cgpa}`}
                 classification
               />
@@ -608,7 +603,7 @@ function CalculatorScreen({
                 value={termGpa}
                 size={120}
                 stroke={8}
-                label="Term GPA"
+                label="Semester GPA"
                 classification
               />
             </div>
@@ -616,14 +611,14 @@ function CalculatorScreen({
             {/* Classification badges */}
             <div className="planner-cls-row">
               <div className={`planner-cls-card ${expectedCls.css}`}>
-                <span className="planner-cls-card-label">Expected GPA</span>
+                <span className="planner-cls-card-label">CGPA</span>
                 <span className="planner-cls-card-value">{expectedCgpa}</span>
                 <span className="planner-cls-card-class">
                   {expectedCls.label}
                 </span>
               </div>
               <div className={`planner-cls-card ${termCls.css}`}>
-                <span className="planner-cls-card-label">Term GPA</span>
+                <span className="planner-cls-card-label">Semester GPA</span>
                 <span className="planner-cls-card-value">{termGpa}</span>
                 <span className="planner-cls-card-class">{termCls.label}</span>
               </div>
@@ -853,7 +848,8 @@ function PlannerScreen({
       <div className="planner-card planner-target-input-card">
         <h3>🎯 Set Your Target</h3>
         <p className="planner-target-desc">
-          Enter the CGPA you aspire to reach and we will give you the required plan
+          Enter the CGPA you aspire to reach and we will give you the required
+          plan
         </p>
 
         <div className="planner-target-form">
@@ -888,7 +884,8 @@ function PlannerScreen({
 
         {calculations && (
           <div className="planner-max-info">
-            Highest possible GPA this semester: <strong>{calculations.maxCgpa}</strong>
+            Highest possible GPA this semester:{" "}
+            <strong>{calculations.maxCgpa}</strong>
             <span
               className={`planner-cls-inline ${classifyGpa(calculations.maxCgpa).css}`}
             >

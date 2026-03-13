@@ -218,13 +218,6 @@ function Materials() {
   ═══════════════════════════════ */
   return (
     <div className="dash-home">
-      <div className="mat-header">
-        <h2 className="page-title">Materials Center</h2>
-        <p className="page-sub">
-          Browse your study materials and access lectures and files
-        </p>
-      </div>
-
       {courses.length === 0 && (
         <div className="mat-empty-wrap">
           <div className="mat-empty">
