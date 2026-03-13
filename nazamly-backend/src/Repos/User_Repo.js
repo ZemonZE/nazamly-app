@@ -5,10 +5,10 @@ const Schedule = require("../models/schedule/timeTable.model");
 /**
  * الحقول المسموح تعديلها - أي حقل مش هنا مش هيتعدل
  * firebaseUid و email ممنوع تعديلهم عشان دول بيانات حساسة
+ * the 'role' is removed for security reasons 
  */
 const ALLOWED_UPDATE_FIELDS = [
   "displayName",
-  "role",
   "currentCGPA",
   "earnedCreditHours",
   "pastSemesters",
