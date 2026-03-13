@@ -41,4 +41,34 @@ const updateProfile = async (req, res) => {
   res.json({ message: "Profile updated", user });
 };
 
-module.exports = { syncUser, updateProfile };
+/**
+ * Verify Admin Role
+ * Returns user data if the authenticated user has admin custom claim
+ * Used by admin dashboard login to verify authorization
+ */
+const verifyAdmin = async (req, res) => {
+  try {
+    // req.user comes from authMiddleware (decoded Firebase token with custom claims)
+    
+    if (!req.user.admin) {
+      return res.status(403).json({ 
+        message: 'Forbidden: Admin access required' 
+      });
+    }
+    
+    res.json({
+      message: "Admin verified",
+      user: {
+        uid: req.user.uid,
+        email: req.user.email,
+        name: req.user.name || req.user.email,
+        admin: true
+      }
+    });
+  } catch (error) {
+    console.error('Error verifying admin:', error);
+    res.status(500).json({ message: "Error verifying admin status" });
+  }
+};
+
+module.exports = { syncUser, updateProfile, verifyAdmin };

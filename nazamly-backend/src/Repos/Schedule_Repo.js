@@ -202,8 +202,10 @@ class Schedule_Repo extends Base_Repo {
    * @returns {Promise<Array>} array فيه كل الجداول اللي اسمها فيه الكلمة دي
    */
   async findByTitle(title) {
+    // Escape special regex characters to prevent ReDoS and NoSQL injection
+    const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return await this.model.find({
-      title: { $regex: title, $options: "i" },
+      title: { $regex: escaped, $options: "i" },
       isDeleted: { $ne: true },
     });
   }

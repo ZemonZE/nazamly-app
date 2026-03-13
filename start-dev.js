@@ -10,6 +10,7 @@ async function start() {
     const backendUrl = `http://localhost:${backendPort}`;
 
     console.log(`\x1b[32m[Smart-Starter] Using Backend Port: ${backendPort}\x1b[0m`);
+    console.log(`\x1b[33m[Smart-Starter] Starting Backend, Frontend, Admin, and Mobile apps...\x1b[0m`);
 
     // 2. Find free ports for frontend and admin (Vite will handle its own, but we can be explicit if we want)
     // However, the most important thing is that they know the Backend URL.
@@ -37,11 +38,18 @@ async function start() {
           env: { VITE_API_URL: backendUrl, ...process.env },
           prefixColor: 'magenta'
         },
+        { 
+          command: `npx expo start`, 
+          cwd: path.join(__dirname, 'nazamly-mobile', 'my-app'), 
+          name: 'mobile', 
+          env: { EXPO_API_URL: backendUrl, ...process.env },
+          prefixColor: 'yellow'
+        },
       ],
       {
         prefix: 'name',
-        killOthers: ['failure', 'success'],
-        restartTries: 3,
+        killOthersOn: ['failure'],
+        restartTries: 1,
       }
     );
 

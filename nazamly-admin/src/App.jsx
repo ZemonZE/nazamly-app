@@ -11,7 +11,7 @@ import Chapters from './pages/Chapters';
 import Materials from './pages/Materials';
 import AIPanel from './pages/AIPanel';
 import AdminLogin from './pages/AdminLogin';
-import { auth } from './firebase';
+import { auth, API_URL } from './firebase';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -21,15 +21,50 @@ function App() {
 
   useEffect(() => {
     // Check if user is already logged in
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
         // Check if user data is stored in localStorage
         const storedData = localStorage.getItem('adminUserData');
         if (storedData) {
           const data = JSON.parse(storedData);
-          if (data.user && data.user.role === 'admin') {
-            setIsAuthenticated(true);
-            setUserData(data);
+          if (data.user && data.user.admin && data.token) {
+            // Re-verify admin status with backend
+            try {
+              const response = await fetch(`${API_URL}/api/auth/verify-admin`, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${data.token}`,
+                  'Content-Type': 'application/json'
+                }
+              });
+
+              if (response.ok) {
+                const { user: dbUser } = await response.json();
+                // Update stored data with fresh backend data
+                const updatedData = {
+                  ...data,
+                  user: {
+                    ...data.user,
+                    admin: true,
+                    name: dbUser.name || data.user.name
+                  }
+                };
+                setIsAuthenticated(true);
+                setUserData(updatedData);
+                localStorage.setItem('adminUserData', JSON.stringify(updatedData));
+              } else {
+                // Backend verification failed - clear session
+                console.warn('Admin verification failed, clearing session');
+                localStorage.removeItem('adminUserData');
+                setIsAuthenticated(false);
+                setUserData(null);
+              }
+            } catch (error) {
+              console.error('Error verifying admin status:', error);
+              // On network error, allow cached session but log warning
+              setIsAuthenticated(true);
+              setUserData(data);
+            }
           }
         }
       }

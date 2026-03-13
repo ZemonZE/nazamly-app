@@ -38,8 +38,8 @@ exports.createFolder = async (req, res) => {
       driveWebViewLink: driveFolder.webViewLink,
     });
   } catch (error) {
-    console.error('Error creating folder:', error.message);
-    res.status(500).json({ error: 'Failed to create folder', details: error.message });
+    console.error('Error creating folder:', error);
+    res.status(500).json({ error: 'Failed to create folder' });
   }
 };
 
@@ -53,7 +53,7 @@ exports.getFolders = async (req, res) => {
     const folders = await MaterialsFolder.find({ courseInstanceId }).sort({ createdAt: 1 });
     res.json(folders);
   } catch (error) {
-    console.error('Error fetching folders:', error.message);
+    console.error('Error fetching folders:', error);
     res.status(500).json({ error: 'Failed to fetch folders' });
   }
 };
@@ -93,7 +93,7 @@ exports.deleteFolder = async (req, res) => {
 
     res.json({ message: 'Folder and all contents deleted successfully' });
   } catch (error) {
-    console.error('Error deleting folder:', error.message);
+    console.error('Error deleting folder:', error);
     res.status(500).json({ error: 'Failed to delete folder' });
   }
 };
@@ -142,8 +142,8 @@ exports.uploadFile = async (req, res) => {
       file: materialFile,
     });
   } catch (error) {
-    console.error('Error uploading file:', error.message);
-    res.status(500).json({ error: 'Failed to upload file', details: error.message });
+    console.error('Error uploading file:', error);
+    res.status(500).json({ error: 'Failed to upload file' });
   }
 };
 
@@ -163,7 +163,7 @@ exports.getFiles = async (req, res) => {
     const files = await MaterialFile.find(query).sort({ createdAt: 1 });
     res.json(files);
   } catch (error) {
-    console.error('Error fetching files:', error.message);
+    console.error('Error fetching files:', error);
     res.status(500).json({ error: 'Failed to fetch files' });
   }
 };
@@ -190,7 +190,7 @@ exports.deleteFile = async (req, res) => {
 
     res.json({ message: 'File deleted successfully' });
   } catch (error) {
-    console.error('Error deleting file:', error.message);
+    console.error('Error deleting file:', error);
     res.status(500).json({ error: 'Failed to delete file' });
   }
 };
@@ -215,7 +215,7 @@ exports.createChapter = async (req, res) => {
     const chapter = await Chapter.create({ courseInstanceId, materialFileId, title });
     res.status(201).json({ message: 'Chapter created successfully', chapter });
   } catch (error) {
-    console.error('Error creating chapter:', error.message);
+    console.error('Error creating chapter:', error);
     res.status(500).json({ error: 'Failed to create chapter' });
   }
 };
@@ -232,7 +232,7 @@ exports.getChapters = async (req, res) => {
       .sort({ createdAt: 1 });
     res.json(chapters);
   } catch (error) {
-    console.error('Error fetching chapters:', error.message);
+    console.error('Error fetching chapters:', error);
     res.status(500).json({ error: 'Failed to fetch chapters' });
   }
 };
@@ -248,7 +248,7 @@ exports.deleteChapter = async (req, res) => {
     if (!chapter) return res.status(404).json({ error: 'Chapter not found' });
     res.json({ message: 'Chapter deleted successfully' });
   } catch (error) {
-    console.error('Error deleting chapter:', error.message);
+    console.error('Error deleting chapter:', error);
     res.status(500).json({ error: 'Failed to delete chapter' });
   }
 };
