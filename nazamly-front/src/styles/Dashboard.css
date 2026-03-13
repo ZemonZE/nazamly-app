@@ -16,7 +16,7 @@
       rgba(30, 64, 175, 0.06) 0%,
       transparent 60%
     );
-  direction: rtl;
+  direction: ltr;
 }
 
 [data-theme="dark"] .dash-wrapper {

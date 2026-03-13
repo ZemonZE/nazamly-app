@@ -17,7 +17,7 @@ export default function ThemeToggle() {
       className="theme-toggle"
       onClick={() => setDark((d) => !d)}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-      title={dark ? "الوضع الفاتح" : "الوضع الداكن"}
+      title={dark ? "Light Mode" : "Dark Mode"}
     >
       <span className={`theme-icon ${dark ? "hidden" : "visible"}`}>🌙</span>
       <span className={`theme-icon ${dark ? "visible" : "hidden"}`}>☀️</span>

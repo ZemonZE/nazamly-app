@@ -74,15 +74,15 @@ function GpaCalculator() {
     <div className="dash-home">
       {/* ── Title ── */}
       <div>
-        <h2 className="page-title">حساب المعدل</h2>
-        <p className="page-sub">احسب معدلك الفصلي مع تفاصيل الدرجات</p>
+        <h2 className="page-title">GPA Calculator</h2>
+        <p className="page-sub">Calculate your semester GPA with grade details</p>
       </div>
 
       {/* ── GPA Result Card ── */}
       <div className="gpa-result-card">
         <div className="gpa-main">
           <span className="gpa-label">
-            {result ? "معدل الفصل" : "المعدل الحالي"}
+            {result ? "Semester GPA" : "Current GPA"}
           </span>
           <span className="gpa-value">
             {result ? result.termGPA : "—"}
@@ -90,23 +90,23 @@ function GpaCalculator() {
         </div>
         <div className="gpa-sub-stats">
           <div className="gpa-sub-item">
-            <span className="gpa-sub-label">المعدل التراكمي المتوقع</span>
+            <span className="gpa-sub-label">Expected CGPA</span>
             <span className="gpa-sub-value">
               {result ? result.newCGPA : "—"}
             </span>
           </div>
           <div className="gpa-sub-item">
-            <span className="gpa-sub-label">إجمالي الساعات</span>
+            <span className="gpa-sub-label">Total Hours</span>
             <span className="gpa-sub-value">
               {result ? result.termHoursCalculated : totalCredits}
             </span>
           </div>
           <div className="gpa-sub-item">
-            <span className="gpa-sub-label">عدد المواد</span>
+            <span className="gpa-sub-label">Courses Count</span>
             <span className="gpa-sub-value">{courses.length}</span>
           </div>
           <div className="gpa-sub-item">
-            <span className="gpa-sub-label">متوسط الدرجات</span>
+            <span className="gpa-sub-label">Average Grade</span>
             <span className="gpa-sub-value">{avgMark}</span>
           </div>
         </div>
@@ -120,14 +120,14 @@ function GpaCalculator() {
       <div className="gpa-grid">
         {/* Add Course */}
         <div className="gpa-card">
-          <h3>إضافة مادة</h3>
+          <h3>Add Course</h3>
 
           <div className="form-group">
-            <label>كود المادة</label>
+            <label>Course Code</label>
             <input
               className="gpa-input"
               type="text"
-              placeholder="مثال: CS 301"
+              placeholder="Example: CS 301"
               value={courseCode}
               onChange={(e) => setCourseCode(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addCourse()}
@@ -135,7 +135,7 @@ function GpaCalculator() {
           </div>
 
           <div className="form-group">
-            <label>الدرجة (0 — 100)</label>
+            <label>Grade (0 — 100)</label>
             <input
               className="gpa-input"
               type="number"
@@ -148,7 +148,7 @@ function GpaCalculator() {
           </div>
 
           <div className="form-group">
-            <label>الساعات المعتمدة</label>
+            <label>Credit Hours</label>
             <input
               className="gpa-input"
               type="number"
@@ -166,28 +166,28 @@ function GpaCalculator() {
               checked={isRetake}
               onChange={(e) => setIsRetake(e.target.checked)}
             />
-            <label htmlFor="isRetake" style={{ margin: 0 }}>إعادة مادة</label>
+            <label htmlFor="isRetake" style={{ margin: 0 }}>Retake Course</label>
           </div>
 
           <button className="btn-primary" onClick={addCourse}>
-            + إضافة مادة
+            + Add Course
           </button>
         </div>
 
         {/* Courses List */}
         <div className="gpa-card">
-          <h3>المواد المضافة</h3>
+          <h3>Added Courses</h3>
           <p className="gpa-courses-count">
             {courses.length
-              ? `${courses.length} مادة مضافة`
-              : "لم تضف أي مادة بعد"}
+              ? `${courses.length} course(s) added`
+              : "No courses added yet"}
           </p>
 
           <div className="gpa-courses-list">
             {courses.length === 0 && (
               <div className="gpa-empty">
                 <span>📚</span>
-                <p>أضف مواد لحساب معدلك</p>
+                <p>Add courses to calculate your GPA</p>
               </div>
             )}
             {courses.map((c) => (
@@ -195,8 +195,8 @@ function GpaCalculator() {
                 <div className="gpa-course-info">
                   <span className="gpa-course-name">{c.courseCode}</span>
                   <span className="gpa-course-detail">
-                    {c.creditHours} ساعات • درجة {c.mark}/100 → {markToGP(c.mark)} GPA
-                    {c.isRetake ? " (إعادة)" : ""}
+                    {c.creditHours} hours • grade {c.mark}/100 → {markToGP(c.mark)} GPA
+                    {c.isRetake ? " (Retake)" : ""}
                   </span>
                 </div>
                 <div className="gpa-course-right">
@@ -221,7 +221,7 @@ function GpaCalculator() {
               onClick={handleCalculate}
               disabled={loading}
             >
-              {loading ? "جاري الحساب..." : "احسب المعدل"}
+              {loading ? "Calculating..." : "Calculate GPA"}
             </button>
           )}
         </div>

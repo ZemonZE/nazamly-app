@@ -18,16 +18,16 @@ const extractScheduleFromImages = async (files) => {
      - Column 2: "اليوم" (Day Number) -> STRICTLY MAP: 1=Saturday, 2=Sunday, 3=Monday, 4=Tuesday, 5=Wednesday, 6=Thursday.
      - Column 3: "من" (Start Time) -> 24h format (HH:MM)
      - Column 4: "الي" (End Time) -> 24h format (HH:MM)
-     - Column 5: "المكان" (Location) ignore
+     - Column 5: "المكان" (Location) -> Extract exactly as written (e.g. "مدرج أ", "معمل 1")
      - Column 6: "ك المقرر" (Course Code) -> e.g., "س407", "س402"
-     - Column 7: "المجموعة" (Group) ignore
+     - Column 7: "المجموعة" (Group) -> Extract exactly as written (e.g. "مجموعة 1", "G1")
      - Column 8: "ن الدراسة" (Type) -> "ن/ان" = "Lecture", "ع/ت/ات" = "Section"
     
      RULES:
      - DO NOT SUMMARIZE. Extract EVERY SINGLE course session visible.
      - Ensure you specifically look for course 402.
      - Return ONLY a valid JSON array of objects. NO conversational text.
-     Schema: [{"courseCode": "", "type": "", "dayOfWeek": "", "startTime": "", "endTime": ""}]
+     Schema: [{"courseCode": "", "type": "", "dayOfWeek": "", "startTime": "", "endTime": "", "location": "", "group": ""}]
   `;
 
     try {

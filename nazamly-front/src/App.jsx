@@ -39,7 +39,7 @@ function App() {
             },
           });
           const data = await res.json();
-          setUser(data);
+          setUser(data.user);
         } catch {
           setUser(null);
         }
@@ -65,10 +65,10 @@ function App() {
       <div className="auth-card">
         <div className="auth-header">
           <a href="#">
-            <img src={mainLogo} className="site-logo" alt="نظملي" />
-            <h1>نظملي</h1>
+            <img src={mainLogo} className="site-logo" alt="Nazamly" />
+            <h1>Nazamly</h1>
           </a>
-          <p className="tagline">Nazamly — منصة التعليم المتكاملة</p>
+          <p className="tagline">Nazamly — Integrated Education Platform</p>
         </div>
         <div className="auth-content">
           <InfoPanel />
@@ -91,7 +91,7 @@ function App() {
   if (authLoading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
-        <p style={{ fontSize: 18, opacity: 0.6 }}>جاري التحميل...</p>
+        <p style={{ fontSize: 18, opacity: 0.6 }}>Loading...</p>
       </div>
     );
   }

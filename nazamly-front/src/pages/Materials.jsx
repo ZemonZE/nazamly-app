@@ -112,7 +112,7 @@ function Materials() {
     return (
       <div className="dash-home mat-center">
         <div className="mat-spinner" />
-        <p className="mat-loading-text">جاري تحميل المواد...</p>
+        <p className="mat-loading-text">Loading materials...</p>
       </div>
     );
   }
@@ -134,7 +134,7 @@ function Materials() {
         {/* Header */}
         <div className="mat-detail-header">
           <button className="mat-back-btn" onClick={handleBack}>
-            ← العودة
+            ← Back
           </button>
           <div className="mat-detail-title-wrap">
             <h2 className="page-title">{selectedCourse.courseName}</h2>
@@ -149,7 +149,7 @@ function Materials() {
               rel="noopener noreferrer"
               className="mat-drive-link"
             >
-              فتح في Drive ↗
+              Open in Drive ↗
             </a>
           )}
         </div>
@@ -181,9 +181,9 @@ function Materials() {
           {!filesLoading && files.length === 0 && (
             <div className="mat-empty" style={{ gridColumn: "1 / -1" }}>
               <span className="mat-empty-icon">📂</span>
-              <p>لا توجد ملفات بعد في هذا القسم</p>
+              <p>No files yet in this section</p>
               <p className="mat-empty-sub">
-                سيتم رفع الملفات من قبل الإدارة قريباً
+                Files will be uploaded by administration soon
               </p>
             </div>
           )}
@@ -202,7 +202,7 @@ function Materials() {
                 <span className="mat-file-meta">
                   {formatSize(file.size)}
                   {file.createdTime &&
-                    ` • ${new Date(file.createdTime).toLocaleDateString("ar-EG")}`}
+                    ` • ${new Date(file.createdTime).toLocaleDateString("en-US")}`}
                 </span>
               </div>
               <span className="mat-file-open">↗</span>
@@ -219,9 +219,9 @@ function Materials() {
   return (
     <div className="dash-home">
       <div className="mat-header">
-        <h2 className="page-title">مركز المواد</h2>
+        <h2 className="page-title">Materials Center</h2>
         <p className="page-sub">
-          تصفح موادك الدراسية والوصول للمحاضرات والملفات
+          Browse your study materials and access lectures and files
         </p>
       </div>
 
@@ -229,9 +229,9 @@ function Materials() {
         <div className="mat-empty-wrap">
           <div className="mat-empty">
             <span className="mat-empty-icon">📚</span>
-            <p>لا توجد مواد متاحة حالياً</p>
+            <p>No materials currently available</p>
             <p className="mat-empty-sub">
-              لم تتم إضافة أي مقررات بعد من قبل الإدارة
+              No courses added yet by the administration
             </p>
           </div>
         </div>
@@ -254,15 +254,15 @@ function Materials() {
               <span className="mat-course-card-code">{course.courseCode}</span>
               {course.creditHours && (
                 <span className="mat-course-card-hours">
-                  {course.creditHours} ساعات
+                  {course.creditHours} hours
                 </span>
               )}
             </div>
             <div className="mat-course-card-footer">
               <span className="mat-course-card-status ready">
-                {(course.subFolders || []).length} أقسام
+                {(course.subFolders || []).length} sections
               </span>
-              <span className="mat-course-card-arrow">←</span>
+              <span className="mat-course-card-arrow">→</span>
             </div>
           </div>
         ))}
