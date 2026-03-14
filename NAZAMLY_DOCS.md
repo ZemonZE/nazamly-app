@@ -9,7 +9,7 @@
 1. [Project Overview](#project-overview)
 2. [Security](#security)
 3. [Admin Management](#admin-management)
-4. [Recent Uncommitted Changes](#recent-uncommitted-changes)
+4. [Committed Changes](#committed-changes--branch-mohamed_walid88)
 
 ---
 
@@ -142,15 +142,14 @@ await firebase.auth().currentUser.getIdToken(true);
 
 ---
 
-## Recent Uncommitted Changes
+## Committed Changes — Branch `Mohamed_walid88`
 
-> Changes on branch `Mohamed_walid88` not yet committed as of March 14, 2026.
+### Commit: `feat(users): integrate live user management API`
 
-### 1. Users Management — Full API Integration (`nazamly-admin/src/pages/Users.jsx`)
+#### 1. Users Management — Full API Integration (`nazamly-admin/src/pages/Users.jsx`)
 
 Replaced static hardcoded user list with live data from the backend.
 
-**What changed:**
 - Added `fetchWithAuth` helper — attaches Firebase Bearer token to every request
 - Users are now fetched from `GET /api/admin/users` on mount
 - Search is debounced (300ms) and triggers a new fetch
@@ -162,9 +161,7 @@ Replaced static hardcoded user list with live data from the backend.
 - Added dismissible error banner for API errors with status-code-specific messages
 - `lastLogin` is now formatted from ISO date string to `toLocaleDateString()`
 
-### 2. Users API — Backend Implementation (`nazamly-backend/src/controllers/admin.controller.js`)
-
-Added three new controller functions for user management:
+#### 2. Users API — Backend Implementation (`nazamly-backend/src/controllers/admin.controller.js`)
 
 **`getUsers` — `GET /api/admin/users`**
 - Fetches all users from Firebase Auth (paginated, handles >1000 users)
@@ -185,7 +182,7 @@ Added three new controller functions for user management:
 - Updates only `accessStatus` in MongoDB
 - Syncs `disabled` flag to Firebase Auth (`blocked` → `disabled: true`)
 
-### 3. Users Routes (`nazamly-backend/src/routes/admin.routes.js`)
+#### 3. Users Routes (`nazamly-backend/src/routes/admin.routes.js`)
 
 Added three new routes under the admin router (all protected by `requireAdmin` middleware):
 
@@ -194,3 +191,43 @@ GET    /api/admin/users
 PUT    /api/admin/users/:id
 PATCH  /api/admin/users/:id/status
 ```
+
+---
+
+### Commit: `fix: add auth token to admin API requests in Courses, Materials, and CourseInstances`
+
+All fetch calls to protected `/api/admin/*` routes were missing the `Authorization` header, causing 401/403 responses.
+
+#### 1. Auth Helpers (`nazamly-admin/src/firebase.js`)
+
+- Added `getAdminToken()` — reads the stored token from `localStorage`
+- Added `authHeaders(extra?)` — returns headers object with `Content-Type` and `Authorization: Bearer <token>`
+
+#### 2. Courses (`nazamly-admin/src/pages/Courses.jsx`)
+
+Applied `authHeaders()` to:
+- `GET /api/admin/courses`
+- `POST /api/admin/courses`
+- `PUT /api/admin/courses/:id`
+- `DELETE /api/admin/courses/:id`
+
+#### 3. Materials (`nazamly-admin/src/pages/Materials.jsx`)
+
+Applied `authHeaders()` to:
+- `GET /api/admin/course-materials`
+- `GET /api/admin/course-materials/:courseCode/files/:subFolderType`
+- `POST /api/admin/course-materials/init`
+- `POST /api/admin/course-materials/sync-drive`
+- `DELETE /api/admin/course-materials/:courseCode/files/:subFolderType/:fileId`
+- File upload uses bare `Authorization` header only (no `Content-Type`) to preserve the browser-set multipart boundary
+
+#### 4. Course Instances (`nazamly-admin/src/pages/CourseInstances.jsx`)
+
+Applied `authHeaders()` to:
+- `GET /api/admin/course-instances`
+- `GET /api/admin/courses`
+- `GET /api/admin/doctors`
+- `POST /api/admin/course-instances`
+- `PUT /api/admin/course-instances/:id`
+- `DELETE /api/admin/course-instances/:id`
+- `POST /api/admin/doctors` (inline doctor creation)
