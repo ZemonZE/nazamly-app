@@ -52,4 +52,9 @@ router.get('/course-materials/:courseCode/files/:subFolderType', courseMaterials
 router.post('/course-materials/:courseCode/upload/:subFolderType', upload.single('file'), courseMaterialsCtrl.uploadToSubFolder);
 router.delete('/course-materials/:courseCode/files/:subFolderType/:fileId', courseMaterialsCtrl.deleteFileFromSubFolder);
 
+// ── Users ──
+router.get('/users', adminCtrl.getUsers);
+router.put('/users/:id', adminCtrl.updateUser);
+router.patch('/users/:id/status', adminCtrl.updateUserStatus);
+
 module.exports = router;
