@@ -6,8 +6,10 @@ import {
   Text,
   Alert,
   Pressable,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
 import styles from "./styles";
 import Email_input from "@/components/ui/Email_input";
 import Password_input from "@/components/ui/Password_input";
@@ -16,17 +18,16 @@ import Show_toggle from "@/components/ui/Show_toggle";
 import Header from "@/components/ui/Header";
 import {
   signInWithEmailAndPassword,
+  signInWithPopup,
   signInWithCredential,
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth, API_URL, GOOGLE_WEB_CLIENT_ID } from "@/firebase";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+import { makeRedirectUri } from "expo-auth-session";
 
 WebBrowser.maybeCompleteAuthSession();
-
-// SDK 55 removed makeRedirectUri proxy support; auth.expo.io proxy still works at runtime
-const redirectUri = "https://auth.expo.io/@ZemonZE/my-app";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -34,6 +35,14 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { setBackendUser } = useAuth();
+
+  // 🌟 إعداد OAuth للموبايل (Expo Go / React Native)
+  const redirectUri = makeRedirectUri({
+    scheme: "nazamly",
+    path: "redirect",
+  });
+
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
     redirectUri,
@@ -41,9 +50,9 @@ export default function LoginScreen() {
 
   useEffect(() => {
     if (request) {
-      console.log("[Login] Google OAuth redirectUri:", request.redirectUri);
+      console.log("[Login] Google OAuth redirectUri:", redirectUri);
     }
-  }, [request]);
+  }, [request, redirectUri]);
 
   const syncWithBackend = async (user: any) => {
     const token = await user.getIdToken();
@@ -56,33 +65,57 @@ export default function LoginScreen() {
     });
     const body = await res.json();
     if (!res.ok) {
+      if (res.status === 401) {
+        Alert.alert("Failed", "You are not authorized to login");
+        router.replace("/(auth)/Login");
+        return;
+      }
       console.error("[Login] /api/auth/sync failed:", res.status, body);
     }
     return body;
   };
 
+  // 🌟 جلب بيانات المستخدم من الباك إند
+  const fetchUserProfile = async (user: any) => {
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${API_URL}/api/auth/get-profile`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const body = await res.json();
+      
+      if (res.ok && body.success) {
+        console.log("[Login] Profile fetched successfully:", body.data);
+        setBackendUser(body.data);
+        return body.data;
+      } else {
+        console.error("[Login] Failed to fetch profile:", body);
+      }
+    } catch (error) {
+      console.error("[Login] Error fetching profile:", error);
+    }
+  };
+
+  // 🌟 معالجة استجابة OAuth للموبايل
   useEffect(() => {
-    console.log(
-      "[Login] AuthSession response:",
-      JSON.stringify(response, null, 2),
-    );
     if (response?.type === "success") {
       const { id_token } = response.params;
-      console.log("[Login] id_token received:", id_token ? "yes" : "no");
+      console.log("[Login] Mobile OAuth - id_token received:", id_token ? "yes" : "no");
       const credential = GoogleAuthProvider.credential(id_token);
       setLoading(true);
       signInWithCredential(auth, credential)
         .then(async (result) => {
           await syncWithBackend(result.user);
+          await fetchUserProfile(result.user);
           Alert.alert("Success", "Login successfully");
           router.replace("/(tabs)/HomePage");
         })
         .catch((error: any) => {
-          console.error(
-            "[Login] Firebase signIn error:",
-            error.code,
-            error.message,
-          );
+          console.error("[Login] Firebase signIn error:", error.code, error.message);
           Alert.alert("Failed", error.message || "Google sign-in failed");
         })
         .finally(() => setLoading(false));
@@ -94,6 +127,7 @@ export default function LoginScreen() {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await syncWithBackend(result.user);
+      await fetchUserProfile(result.user);
       Alert.alert("Success", "Login successfully");
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
@@ -105,6 +139,39 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+
+  // 🌟 دالة تسجيل الدخول بجوجل للويب
+  const handleGoogleWebLogin = async () => {
+    try {
+      setLoading(true);
+      const provider = new GoogleAuthProvider();
+      // 🌟 السطر السحري لإجبار جوجل على إظهار شاشة اختيار الحساب في كل مرة
+      provider.setCustomParameters({ prompt: "select_account" });
+
+      // الدالة دي هتفتح شاشة منبثقة (Popup) وتمنع الشاشة البيضاء اللي بتعلق
+      const result = await signInWithPopup(auth, provider);
+      await syncWithBackend(result.user);
+      await fetchUserProfile(result.user);
+
+      Alert.alert("Success", "Login successfully");
+      router.replace("/(tabs)/HomePage");
+    } catch (error: any) {
+      console.error("[Login] Google Web Sign-in Error:", error);
+      Alert.alert("Failed", error.message || "Google sign-in failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🌟 دالة تسجيل الدخول بجوجل للموبايل (Expo Go / React Native)
+  const handleGoogleMobileLogin = () => {
+    promptAsync();
+  };
+
+  // 🌟 اختيار الدالة المناسبة حسب المنصة
+  const handleGoogleSignIn = Platform.OS === 'web' 
+    ? handleGoogleWebLogin 
+    : handleGoogleMobileLogin;
 
   const notRegistered = () => {
     router.push("/(auth)/Register");
@@ -149,7 +216,7 @@ export default function LoginScreen() {
         <View style={styles.dividerLine} />
       </View>
 
-      <Google_pressable onPress={() => promptAsync()} />
+      <Google_pressable onPress={handleGoogleSignIn} />
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>{"Don't have an account?  "}</Text>
@@ -160,3 +227,4 @@ export default function LoginScreen() {
     </ScrollView>
   );
 }
+

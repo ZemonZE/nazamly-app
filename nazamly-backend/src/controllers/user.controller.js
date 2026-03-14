@@ -1,26 +1,57 @@
 const userRepo = require("../Repos/User_Repo");
 
 const syncUser = async (req, res) => {
-  const { uid, email, name, picture } = req.user;
+  try {
+    const { uid, email, name, picture } = req.user;
+    
+    console.log("[syncUser] Syncing user:", { uid, email, name, picture });
 
-  let user = await userRepo.findByFirebaseUid(uid);
+    let user = await userRepo.findByFirebaseUid(uid);
 
-  const isCollege = email.endsWith("@std.sci.cu.edu.eg");
+    const isCollege = email?.endsWith("@std.sci.cu.edu.eg");
 
-  if (!user) {
-    user = await userRepo.create({
-      firebaseUid: uid,
-      email,
-      displayName: name,
-      photoURL: picture,
-      accessStatus: isCollege ? "active" : "pending",
+    if (!user) {
+      // Create new user in MongoDB
+      console.log("[syncUser] Creating new user in database");
+      user = await userRepo.create({
+        firebaseUid: uid,
+        email: email || "",
+        displayName: name || "",
+        photoURL: picture || "",
+        accessStatus: isCollege ? "active" : "pending",
+      });
+      console.log("[syncUser] User created successfully:", user._id);
+    } else {
+      // Update existing user with latest info from Firebase
+      console.log("[syncUser] User already exists, updating info");
+      const updateData = {};
+      
+      if (name && name !== user.displayName) {
+        updateData.displayName = name;
+      }
+      if (picture && picture !== user.photoURL) {
+        updateData.photoURL = picture;
+      }
+      
+      if (Object.keys(updateData).length > 0) {
+        user = await userRepo.update(user._id, updateData);
+        console.log("[syncUser] User updated with:", updateData);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "User synced successfully",
+      user,
+    });
+  } catch (error) {
+    console.error("[syncUser] Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error syncing user",
+      error: error.message,
     });
   }
-
-  res.json({
-    message: "Authenticated",
-    user,
-  });
 };
 
 /**
@@ -35,7 +66,18 @@ const syncUser = async (req, res) => {
  */
 const setupProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
+    // ✅ Get MongoDB User ID from Firebase UID
+    const firebaseUid = req.user.uid;
+    const dbUser = await userRepo.findByFirebaseUid(firebaseUid);
+    
+    if (!dbUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    
+    const userId = dbUser._id;
     const { currentCGPA, earnedCreditHours } = req.body;
 
     if (currentCGPA === undefined || earnedCreditHours === undefined) {
@@ -69,12 +111,12 @@ const setupProfile = async (req, res) => {
       });
     }
 
-    const user = await userRepo.update(userId, {
+    const updatedUser = await userRepo.update(userId, {
       currentCGPA,
       earnedCreditHours,
     });
 
-    if (!user) {
+    if (!updatedUser) {
       return res.status(404).json({
         success: false,
         message: "User not found",
@@ -84,7 +126,7 @@ const setupProfile = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      data: user,
+      data: updatedUser,
     });
   } catch (error) {
     return res.status(500).json({
@@ -95,4 +137,114 @@ const setupProfile = async (req, res) => {
   }
 };
 
-module.exports = { syncUser, setupProfile };
+const getProfile = async (req, res) => {
+  try {
+    const user = await userRepo.findByFirebaseUid(req.user.uid);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile retrieved successfully",
+      data: user,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error retrieving profile",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * @desc    Update User Photo URL
+ * @route   POST /api/auth/update-photo
+ * @access  Private (Authenticated User)
+ * Business Logic:
+ * 1. Gets Firebase UID from authenticated request
+ * 2. Looks up MongoDB user by Firebase UID
+ * 3. Validates photoURL is provided and is a string
+ * 4. Updates user's photoURL in MongoDB
+ * 5. Returns updated user data
+ */
+const updatePhoto = async (req, res) => {
+  try {
+    // Get Firebase UID from authenticated request
+    const firebaseUid = req.user.uid;
+    const { photoURL } = req.body;
+
+    console.log("[updatePhoto] Request from user:", firebaseUid);
+    console.log("[updatePhoto] New photoURL:", photoURL);
+
+    // Validate photoURL is provided
+    if (!photoURL) {
+      return res.status(400).json({
+        success: false,
+        message: "photoURL is required",
+      });
+    }
+
+    // Validate photoURL is a string
+    if (typeof photoURL !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "photoURL must be a valid string",
+      });
+    }
+
+    // Optional: Validate URL format
+    try {
+      new URL(photoURL);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: "photoURL must be a valid URL",
+      });
+    }
+
+    // Find user by Firebase UID
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Update user's photoURL
+    const updatedUser = await userRepo.update(user._id, {
+      photoURL: photoURL,
+    });
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Failed to update user photo",
+      });
+    }
+
+    console.log("[updatePhoto] Photo updated successfully for user:", user._id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Photo URL updated successfully",
+      data: updatedUser,
+    });
+  } catch (error) {
+    console.error("[updatePhoto] Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error updating photo URL",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = { syncUser, setupProfile, getProfile, updatePhoto };

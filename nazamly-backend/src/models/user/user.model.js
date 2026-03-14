@@ -13,6 +13,12 @@ const userSchema = new mongoose.Schema(
       unique: true,
     },
     displayName: String,
+    photoURL: String,
+    accessStatus: {
+      type: String,
+      enum: ["active", "pending", "suspended"],
+      default: "pending",
+    },
     role: {
       type: String,
       default: "student",

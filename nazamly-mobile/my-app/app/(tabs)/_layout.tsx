@@ -2,7 +2,7 @@ import { Tabs } from "expo-router";
 import React from "react";
 
 import { HapticTab } from "@/components/haptic-tab";
-import { Entypo, AntDesign, MaterialIcons } from "@expo/vector-icons";
+import { Entypo, Feather, MaterialIcons } from "@expo/vector-icons";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
@@ -34,11 +34,8 @@ export default function TabLayout() {
           title: "Profile",
 
           tabBarIcon: ({ color }: { color: string }) => (
-            <MaterialCommunityIcons
-              name="face-man-profile"
-              size={24}
-              color={"black"}
-            />
+           // <MaterialCommunityIcons name="face-man-profile" size={24} color={"black"}/>
+            <Feather name="user" size={24} color={"black"} />
           ),
         }}
       />
@@ -49,6 +46,7 @@ export default function TabLayout() {
 
           tabBarIcon: ({ color }: { color: string }) => (
             <MaterialCommunityIcons name="calendar" size={24} color={"black"} />
+            //<Feather name="calendar" size={24} color={"black"} />
           ),
         }}
       />

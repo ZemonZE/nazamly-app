@@ -8,20 +8,45 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 interface AddClassModalProps {
   visible: boolean;
   onClose: () => void;
+  onAddClass?: (newClass: { title: string; code: string; day: string; time: string; location: string }) => void;
 }
 
-const AddClassModal = ({ visible, onClose }: AddClassModalProps) => {
+const AddClassModal = ({ visible, onClose, onAddClass }: AddClassModalProps) => {
   const [courseName, setCourseName] = useState("");
   const [courseCode, setCourseCode] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");
+  const [selectedDay, setSelectedDay] = useState("Sat");
+  const [showDays, setShowDays] = useState(false);
+
+  const daysOptions = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu"];
+
+  const handleSubmit = () => {
+    if (onAddClass && courseName && startTime && endTime) {
+      onAddClass({
+        title: courseName,
+        code: courseCode,
+        day: selectedDay,
+        time: `${startTime}–${endTime}`,
+        location: location || "TBD"
+      });
+    }
+    setCourseName("");
+    setCourseCode("");
+    setStartTime("");
+    setEndTime("");
+    setLocation("");
+    setSelectedDay("Sat");
+    onClose();
+  };
 
   return (
     <Modal transparent visible={visible} animationType="fade">
@@ -63,10 +88,31 @@ const AddClassModal = ({ visible, onClose }: AddClassModalProps) => {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Day *</Text>
-            <TouchableOpacity style={styles.dropdown}>
-              <Text style={styles.dropdownText}>Saturday</Text>
-              <Feather name="chevron-down" size={20} color="#20E68A" />
+            <TouchableOpacity 
+              style={styles.dropdown}
+              onPress={() => setShowDays(!showDays)}
+            >
+              <Text style={styles.dropdownText}>{selectedDay}</Text>
+              <Feather name={showDays ? "chevron-up" : "chevron-down"} size={20} color="#20E68A" />
             </TouchableOpacity>
+            {showDays && (
+              <View style={styles.dropdownList}>
+                <ScrollView nestedScrollEnabled style={{ maxHeight: 150 }}>
+                  {daysOptions.map((day) => (
+                    <TouchableOpacity
+                      key={day}
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setSelectedDay(day);
+                        setShowDays(false);
+                      }}
+                    >
+                      <Text style={styles.dropdownItemText}>{day}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
 
           <View style={styles.row}>
@@ -104,7 +150,7 @@ const AddClassModal = ({ visible, onClose }: AddClassModalProps) => {
           </View>
 
           {/* Submit Button */}
-          <TouchableOpacity style={styles.submitButton}>
+          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
             <Feather name="plus" size={20} color="#fff" />
             <Text style={styles.submitButtonText}>Add to Timetable</Text>
           </TouchableOpacity>
@@ -162,6 +208,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dropdownText: { fontSize: 15, color: "#0f172a" },
+  dropdownList: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    marginTop: 5,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  dropdownItemText: {
+    fontSize: 15,
+    color: "#0f172a",
+  },
   row: { flexDirection: "row", justifyContent: "space-between" },
 
   submitButton: {

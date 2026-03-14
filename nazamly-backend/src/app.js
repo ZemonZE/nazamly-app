@@ -4,7 +4,7 @@ const cors = require("cors");
 // 1. Route Imports
 const authRoutes = require("./routes/auth.routes");
 const gpaRoutes = require("./routes/gpa.routes");
-const scheduleRoutes = require('./routes/schedule.routes');
+const scheduleRoutes = require('./routes/Schedule.routes');
  
 // Add this in src/app.js alongside your other routes
 const aiRoutes = require('./routes/ai.routes');

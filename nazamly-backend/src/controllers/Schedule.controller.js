@@ -1,5 +1,6 @@
 const scheduleRepo = require("../Repos/Schedule_Repo");
 const sessionsRepo = require("../Repos/Sessions_Repo");
+const userRepo = require("../Repos/User_Repo");
 
 /**
  * Schedule Controller
@@ -22,7 +23,18 @@ const sessionsRepo = require("../Repos/Sessions_Repo");
  */
 const addOrUpdateSchedule = async (req, res) => {
   try {
-    const userId = req.user.id;
+    // ✅ Get MongoDB User ID from Firebase UID
+    const firebaseUid = req.user.uid;
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    
+    const userId = user._id;
     const { entries, title, SemesterId } = req.body;
 
     // ✅ تحقق إن فيه sessions في الـ request
@@ -112,16 +124,28 @@ const addOrUpdateSchedule = async (req, res) => {
  */
 const getMySchedule = async (req, res) => {
   try {
-    const userId = req.user.id;
+    // ✅ Get MongoDB User ID from Firebase UID
+    const firebaseUid = req.user.uid;
+    const userEmail = req.user.email;
+    
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    
+    const userId = user._id;
 
-    // ✅ جيب كل جداول الـ user (محمّلة بالـ sessions والـ timeTable)
     const schedules = await scheduleRepo.findByUserId(userId);
 
-    // ✅ Empty State: لو مفيش جدول، رجع array فاضي مش 404
     if (!schedules || schedules.length === 0) {
       return res.status(200).json({
         success: true,
         message: "No schedule found",
+        userEmail,
         data: [],
       });
     }
@@ -129,6 +153,7 @@ const getMySchedule = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Schedule retrieved successfully",
+      userEmail,
       data: schedules,
     });
   } catch (error) {
@@ -153,7 +178,18 @@ const getMySchedule = async (req, res) => {
  */
 const deleteSession = async (req, res) => {
   try {
-    const userId = req.user.id;
+    // ✅ Get MongoDB User ID from Firebase UID
+    const firebaseUid = req.user.uid;
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    
+    const userId = user._id;
     const { sessionId } = req.params;
 
     // ✅ دور على جدول الـ user

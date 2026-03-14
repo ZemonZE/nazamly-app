@@ -7,8 +7,10 @@ import {
   Alert,
   Pressable,
   View,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
 import styles from "./styles";
 import Email_input from "@/components/ui/Email_input";
 import Password_input from "@/components/ui/Password_input";
@@ -19,16 +21,15 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   signInWithCredential,
+  signInWithPopup,
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth, API_URL, GOOGLE_WEB_CLIENT_ID } from "@/firebase";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
+import { makeRedirectUri } from "expo-auth-session";
 
 WebBrowser.maybeCompleteAuthSession();
-
-// SDK 55 removed makeRedirectUri proxy support; auth.expo.io proxy still works at runtime
-const redirectUri = "https://auth.expo.io/@ZemonZE/my-app";
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
@@ -38,6 +39,13 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { setBackendUser } = useAuth();
+
+  // 🌟 إعداد OAuth للموبايل (Expo Go / React Native)
+  const redirectUri = makeRedirectUri({
+    scheme: "nazamly",
+    path: "redirect",
+  });
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
@@ -46,24 +54,74 @@ export default function RegisterScreen() {
 
   useEffect(() => {
     if (request) {
-      console.log("[Register] Google OAuth redirectUri:", request.redirectUri);
+      console.log("[Register] Google OAuth redirectUri:", redirectUri);
     }
-  }, [request]);
+  }, [request, redirectUri]);
 
   const syncWithBackend = async (user: any) => {
-    const token = await user.getIdToken();
-    const res = await fetch(`${API_URL}/api/auth/sync`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const body = await res.json();
-    if (!res.ok) {
-      console.error("[Register] /api/auth/sync failed:", res.status, body);
+    try {
+      console.log("[Register] Getting fresh token for sync...");
+      const token = await user.getIdToken(true); // Force refresh
+      
+      console.log("[Register] Calling /api/auth/sync...");
+      const res = await fetch(`${API_URL}/api/auth/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      console.log("[Register] Sync response status:", res.status);
+      
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("[Register] Non-JSON response from sync");
+        throw new Error("Invalid response from server");
+      }
+      
+      const body = await res.json();
+      console.log("[Register] Sync response:", body);
+      
+      if (!res.ok) {
+        if (res.status === 401) {
+          Alert.alert("Failed", "You are not authorized to register");
+          router.replace("/(auth)/Login");
+          return null;
+        }
+        throw new Error(body.message || "Failed to sync with backend");
+      }
+      
+      return body;
+    } catch (error: any) {
+      console.error("[Register] Sync error:", error);
+      throw error;
     }
-    return body;
+  };
+
+  // 🌟 جلب بيانات المستخدم من الباك إند
+  const fetchUserProfile = async (user: any) => {
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${API_URL}/api/auth/get-profile`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const body = await res.json();
+      
+      if (res.ok && body.success) {
+        console.log("[Register] Profile fetched successfully:", body.data);
+        setBackendUser(body.data);
+        return body.data;
+      } else {
+        console.error("[Register] Failed to fetch profile:", body);
+      }
+    } catch (error) {
+      console.error("[Register] Error fetching profile:", error);
+    }
   };
 
   useEffect(() => {
@@ -79,6 +137,7 @@ export default function RegisterScreen() {
       signInWithCredential(auth, credential)
         .then(async (result) => {
           await syncWithBackend(result.user);
+          await fetchUserProfile(result.user);
           Alert.alert("Success", "Registration successful");
           router.replace("/(tabs)/HomePage");
         })
@@ -102,23 +161,79 @@ export default function RegisterScreen() {
       ]);
       return;
     }
+    
     setLoading(true);
     try {
+      console.log("[Register] Creating user with email:", email);
+      
+      // 1. Create Firebase user
       const result = await createUserWithEmailAndPassword(
         auth,
         email,
         password,
       );
+      console.log("[Register] Firebase user created:", result.user.uid);
+      
+      // 2. Update Firebase profile with display name
       await updateProfile(result.user, { displayName: name });
-      await syncWithBackend(result.user);
+      console.log("[Register] Firebase profile updated with name:", name);
+      
+      // 3. Force token refresh to include updated profile
+      await result.user.reload();
+      const freshToken = await result.user.getIdToken(true);
+      console.log("[Register] Token refreshed with updated profile");
+      
+      // 4. Sync with backend (creates user in MongoDB)
+      console.log("[Register] Syncing with backend...");
+      const syncResult = await syncWithBackend(result.user);
+      console.log("[Register] Sync result:", syncResult);
+      
+      // 5. Fetch complete profile from backend
+      console.log("[Register] Fetching profile from backend...");
+      await fetchUserProfile(result.user);
+      
       Alert.alert("Success", "Registration successful");
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
+      console.error("[Register] Error:", error);
       Alert.alert("Failed", error.message || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
+
+  // 🌟 دالة تسجيل الدخول بجوجل للويب
+  const handleGoogleWebSignIn = async () => {
+    try {
+      setLoading(true);
+      const provider = new GoogleAuthProvider();
+      // 🌟 السطر السحري لإجبار جوجل على إظهار شاشة اختيار الحساب في كل مرة
+      provider.setCustomParameters({ prompt: "select_account" });
+
+      // الدالة دي هتفتح شاشة منبثقة (Popup) وتمنع الشاشة البيضاء اللي بتعلق
+      const result = await signInWithPopup(auth, provider);
+      await syncWithBackend(result.user);
+      await fetchUserProfile(result.user);
+
+      Alert.alert("Success", "Registration successful");
+      router.replace("/(tabs)/HomePage");
+    } catch (error: any) {
+      console.error("[Register] Google Web Sign-in Error:", error);
+      Alert.alert("Failed", error.message || "Google sign-in failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🌟 دالة تسجيل الدخول بجوجل للموبايل (Expo Go / React Native)
+  const handleGoogleMobileSignIn = () => {
+    promptAsync();
+  };
+
+  // 🌟 اختيار الدالة المناسبة حسب المنصة
+  const handleGoogleSignIn = Platform.OS === 'web' 
+    ? handleGoogleWebSignIn 
+    : handleGoogleMobileSignIn;
 
   const goToLogin = () => {
     router.push("/(auth)/Login");
@@ -180,7 +295,7 @@ export default function RegisterScreen() {
         <View style={styles.dividerLine} />
       </View>
 
-      <Google_pressable onPress={() => promptAsync()} />
+      <Google_pressable onPress={handleGoogleSignIn} />
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>Have Account Already? </Text>

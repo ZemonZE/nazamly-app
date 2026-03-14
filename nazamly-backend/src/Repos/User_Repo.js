@@ -8,6 +8,8 @@ const Schedule = require("../models/schedule/timeTable.model");
  */
 const ALLOWED_UPDATE_FIELDS = [
   "displayName",
+  "photoURL",
+  "accessStatus",
   "role",
   "currentCGPA",
   "earnedCreditHours",
