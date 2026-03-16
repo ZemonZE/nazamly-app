@@ -56,13 +56,13 @@ const syncUser = async (req, res) => {
 
 /**
  * @desc    Onboarding Endpoint (Setup Profile)
- * @route   POST /api/gpa/setup-profile
+ * @route   POST /api/auth/setup-profile
  * @access  Private (Authenticated User)
  * Business Logic:
- * 1. بيجيب الـ userId من الـ authenticated request (req.user.id)
- * 2. بيستخرج currentCGPA و earnedCreditHours من req.body
- * 3. بيعمل validation إن القيم أرقام صالحة
- * 4. بيحدث بيانات الـ user ويرجع 200 OK
+ * 1. Gets userId from authenticated request (req.user.uid)
+ * 2. Extracts currentCGPA and earnedCreditHours from req.body
+ * 3. Validates that values are valid numbers
+ * 4. Updates user data and returns 200 OK
  */
 const setupProfile = async (req, res) => {
   try {
@@ -184,6 +184,7 @@ const updatePhoto = async (req, res) => {
 
     // Validate photoURL is provided
     if (!photoURL) {
+      console.log("[updatePhoto] Error: photoURL is missing");
       return res.status(400).json({
         success: false,
         message: "photoURL is required",
@@ -192,6 +193,7 @@ const updatePhoto = async (req, res) => {
 
     // Validate photoURL is a string
     if (typeof photoURL !== "string") {
+      console.log("[updatePhoto] Error: photoURL is not a string");
       return res.status(400).json({
         success: false,
         message: "photoURL must be a valid string",
@@ -202,6 +204,7 @@ const updatePhoto = async (req, res) => {
     try {
       new URL(photoURL);
     } catch (error) {
+      console.log("[updatePhoto] Error: Invalid URL format");
       return res.status(400).json({
         success: false,
         message: "photoURL must be a valid URL",
@@ -212,11 +215,16 @@ const updatePhoto = async (req, res) => {
     const user = await userRepo.findByFirebaseUid(firebaseUid);
 
     if (!user) {
+      console.log("[updatePhoto] Error: User not found for UID:", firebaseUid);
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
+
+    console.log("[updatePhoto] Found user:", user._id);
+    console.log("[updatePhoto] Current photoURL:", user.photoURL);
+    console.log("[updatePhoto] Updating to:", photoURL);
 
     // Update user's photoURL
     const updatedUser = await userRepo.update(user._id, {
@@ -224,13 +232,15 @@ const updatePhoto = async (req, res) => {
     });
 
     if (!updatedUser) {
+      console.log("[updatePhoto] Error: Update failed");
       return res.status(404).json({
         success: false,
         message: "Failed to update user photo",
       });
     }
 
-    console.log("[updatePhoto] Photo updated successfully for user:", user._id);
+    console.log("[updatePhoto] Photo updated successfully!");
+    console.log("[updatePhoto] New photoURL in DB:", updatedUser.photoURL);
 
     return res.status(200).json({
       success: true,

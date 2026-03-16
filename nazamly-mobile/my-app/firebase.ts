@@ -32,7 +32,16 @@ export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 
 const host = Constants.expoConfig?.hostUri?.split(":")[0] ?? "localhost";
-export const API_URL = `http://localhost:5000`;
+export const API_URL = `http://${host}:5000`;
+
+// Debug: Log API_URL on app start
+console.log("=".repeat(60));
+console.log("🔧 API Configuration");
+console.log("=".repeat(60));
+console.log("📍 API_URL:", API_URL);
+console.log("📍 Host:", host);
+console.log("📍 HostUri:", Constants.expoConfig?.hostUri);
+console.log("=".repeat(60));
 
 export const GOOGLE_WEB_CLIENT_ID =
   "638377043762-pqf4qj29sa2jo502f09pipc0g5e9km3g.apps.googleusercontent.com";
