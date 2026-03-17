@@ -14,6 +14,7 @@ const userSchema = new mongoose.Schema(
     },
     displayName: String,
     photoURL: String,
+    studentCardPhotoURL: String,
     accessStatus: {
       type: String,
       enum: ["active", "pending", "suspended"],

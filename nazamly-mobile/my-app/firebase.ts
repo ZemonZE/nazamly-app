@@ -4,7 +4,7 @@ import { initializeAuth, GoogleAuthProvider, getReactNativePersistence, getAuth 
 import { getStorage } from "firebase/storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
-
+import { Platform } from 'react-native';
 const firebaseConfig = {
   apiKey: "AIzaSyDTCKBYh4EipHXCHOg5RTYuBCwTJFiP-84",
   authDomain: "nazamly-c242c.firebaseapp.com",
@@ -32,8 +32,7 @@ export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 
 const host = Constants.expoConfig?.hostUri?.split(":")[0] ?? "localhost";
-export const API_URL = `http://${host}:5000`;
-
+export const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'http://192.168.1.5:5000'; // استبدل ده بالـ IP بتاعك
 // Debug: Log API_URL on app start
 console.log("=".repeat(60));
 console.log("🔧 API Configuration");
