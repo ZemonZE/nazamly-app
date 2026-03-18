@@ -4,7 +4,8 @@ import { useOutletContext } from "react-router-dom";
 function Settings() {
   const { user, onLogout } = useOutletContext();
 
-  const name = user?.displayName || "—";
+  const rawName = user?.fullName || user?.displayName || user?.name || "—";
+  const name = rawName.trim() || "—";
   const email = user?.email || "—";
   const status = user?.accessStatus || "Active";
   const role = user?.role || "Student";
@@ -22,11 +23,6 @@ function Settings() {
 
   return (
     <div className="dash-home">
-      <div>
-        <h2 className="page-title">Settings</h2>
-        <p className="page-sub">Manage your account and personal preferences</p>
-      </div>
-
       <div className="settings-grid">
         <div className="settings-col">
           {/* ── Account Info ── */}
@@ -79,7 +75,8 @@ function Settings() {
             </div>
 
             <p className="settings-danger-desc">
-              These actions cannot be undone, please be certain before proceeding.
+              These actions cannot be undone, please be certain before
+              proceeding.
             </p>
 
             <div className="settings-danger-actions">
@@ -108,7 +105,9 @@ function Settings() {
             <div className="settings-toggles">
               <div className="settings-toggle-item">
                 <div className="settings-toggle-info">
-                  <span className="settings-toggle-label">🔔 Notifications</span>
+                  <span className="settings-toggle-label">
+                    🔔 Notifications
+                  </span>
                   <span className="settings-toggle-desc">
                     Receive email notifications
                   </span>
@@ -173,7 +172,10 @@ function Settings() {
           <div className="conflict-popup" onClick={(e) => e.stopPropagation()}>
             <div className="conflict-icon">🗑</div>
             <h3 style={{ color: "var(--error)" }}>Delete Account</h3>
-            <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+            <p>
+              Are you sure you want to delete your account? This action cannot
+              be undone.
+            </p>
             <div style={{ display: "flex", gap: "10px", width: "100%" }}>
               <button
                 className="settings-delete-btn"

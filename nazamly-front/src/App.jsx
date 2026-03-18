@@ -52,7 +52,7 @@ function App() {
   }, []);
 
   const handleLogin = (data) => {
-    setUser(data);
+    setUser(data?.user ?? data ?? null);
   };
 
   const handleLogout = () => {
@@ -90,7 +90,14 @@ function App() {
 
   if (authLoading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
         <p style={{ fontSize: 18, opacity: 0.6 }}>Loading...</p>
       </div>
     );

@@ -3,7 +3,7 @@ import { IconTrash } from "../Icons/DashboardIcons";
 import { calculateTermGPA } from "../services/gpaService";
 
 /* mark → grade‑point (same formula the backend uses) */
-const markToGP = (m) => (m < 60 ? 0 : Number(((m / 10) - 5).toFixed(1)));
+const markToGP = (m) => (m < 60 ? 0 : Number((m / 10 - 5).toFixed(1)));
 
 function GpaCalculator() {
   const [courses, setCourses] = useState([]);
@@ -54,7 +54,7 @@ function GpaCalculator() {
           creditHours,
           mark,
           isRetake,
-        }))
+        })),
       );
       setResult(data);
     } catch (err) {
@@ -72,21 +72,13 @@ function GpaCalculator() {
 
   return (
     <div className="dash-home">
-      {/* ── Title ── */}
-      <div>
-        <h2 className="page-title">GPA Calculator</h2>
-        <p className="page-sub">Calculate your semester GPA with grade details</p>
-      </div>
-
       {/* ── GPA Result Card ── */}
       <div className="gpa-result-card">
         <div className="gpa-main">
           <span className="gpa-label">
             {result ? "Semester GPA" : "Current GPA"}
           </span>
-          <span className="gpa-value">
-            {result ? result.termGPA : "—"}
-          </span>
+          <span className="gpa-value">{result ? result.termGPA : "—"}</span>
         </div>
         <div className="gpa-sub-stats">
           <div className="gpa-sub-item">
@@ -112,9 +104,7 @@ function GpaCalculator() {
         </div>
       </div>
 
-      {error && (
-        <div className="planner-alert planner-alert-red">{error}</div>
-      )}
+      {error && <div className="planner-alert planner-alert-red">{error}</div>}
 
       {/* ── Bottom Grid ── */}
       <div className="gpa-grid">
@@ -159,14 +149,19 @@ function GpaCalculator() {
             />
           </div>
 
-          <div className="form-group" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <div
+            className="form-group"
+            style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+          >
             <input
               type="checkbox"
               id="isRetake"
               checked={isRetake}
               onChange={(e) => setIsRetake(e.target.checked)}
             />
-            <label htmlFor="isRetake" style={{ margin: 0 }}>Retake Course</label>
+            <label htmlFor="isRetake" style={{ margin: 0 }}>
+              Retake Course
+            </label>
           </div>
 
           <button className="btn-primary" onClick={addCourse}>
@@ -195,7 +190,8 @@ function GpaCalculator() {
                 <div className="gpa-course-info">
                   <span className="gpa-course-name">{c.courseCode}</span>
                   <span className="gpa-course-detail">
-                    {c.creditHours} hours • grade {c.mark}/100 → {markToGP(c.mark)} GPA
+                    {c.creditHours} hours • grade {c.mark}/100 →{" "}
+                    {markToGP(c.mark)} GPA
                     {c.isRetake ? " (Retake)" : ""}
                   </span>
                 </div>

@@ -46,8 +46,8 @@ function Dashboard() {
 
   const status = user?.accessStatus || "Active";
   const joinDate = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString("ar-EG")
-    : new Date().toLocaleDateString("ar-EG");
+    ? new Date(user.createdAt).toLocaleDateString("en-US")
+    : new Date().toLocaleDateString("en-US");
 
   return (
     <div className="dash-home">
