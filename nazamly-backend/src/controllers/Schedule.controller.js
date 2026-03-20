@@ -1,9 +1,7 @@
 const scheduleRepo = require("../Repos/Schedule_Repo");
 const sessionsRepo = require("../Repos/Sessions_Repo");
 const userRepo = require("../Repos/User_Repo");
-const mongoose = require('mongoose');
-const TimeTable = mongoose.model('TimeTable');
-const TimeTableEntry = mongoose.model('TimeTableEntry');
+const { TimeTable, TimeTableEntry } = require("../models/schedule");
 
 /**
  * Schedule Controller
@@ -34,16 +32,16 @@ const getMySchedule = async (req, res) => {
   try {
     // ✅ Get MongoDB User ID from Firebase UID
     const firebaseUid = req.user.uid;
-    
+
     const user = await userRepo.findByFirebaseUid(firebaseUid);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
-    
+
     const userId = user._id;
 
     const schedules = await scheduleRepo.findByUserId(userId);
@@ -86,14 +84,14 @@ const deleteSession = async (req, res) => {
     // ✅ Get MongoDB User ID from Firebase UID
     const firebaseUid = req.user.uid;
     const user = await userRepo.findByFirebaseUid(firebaseUid);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
-    
+
     const userId = user._id;
     const { sessionId } = req.params;
 
@@ -129,18 +127,30 @@ const deleteSession = async (req, res) => {
 
 /**
  * -----------------------------------------
- * USER'S CUSTOM REQUESTED CONTROLLERS 
+ * USER'S CUSTOM REQUESTED CONTROLLERS
  * -----------------------------------------
  */
 
 // المرحلة الأولى: الباك إند (إنشاء وحفظ المحاضرة)
 const addTimeTableEntry = async (req, res) => {
   try {
-    let { timeTableId, courseId, dayOfWeek, startTime, endTime, sessionType, location, groupNumber } = req.body;
-    
+    let {
+      timeTableId,
+      courseId,
+      dayOfWeek,
+      startTime,
+      endTime,
+      sessionType,
+      location,
+      groupNumber,
+    } = req.body;
+
     // Convert firebaseUid to our mongo ObjectId
     const user = await userRepo.findByFirebaseUid(req.user.uid);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     const userId = user._id;
 
     // IF TIMETABLE ID IS MISSING, FIND OR CREATE IT
@@ -149,21 +159,33 @@ const addTimeTableEntry = async (req, res) => {
       if (existing && existing.length > 0) {
         timeTableId = existing[0]._id;
       } else {
-        const newSched = await TimeTable.create({ userId, entries: [], title: "My Schedule" });
+        const newSched = await TimeTable.create({
+          userId,
+          entries: [],
+          title: "My Schedule",
+        });
         timeTableId = newSched._id;
       }
     }
 
     // 1. إنشاء العنصر الجديد في قاعدة البيانات
     const newEntry = await TimeTableEntry.create({
-      userId, timeTableId, courseId, dayOfWeek, startTime, endTime, sessionType, location, groupNumber
+      userId,
+      timeTableId,
+      courseId,
+      dayOfWeek,
+      startTime,
+      endTime,
+      sessionType,
+      location,
+      groupNumber,
     });
 
     // 2. إضافة الـ ID الخاص بهذا العنصر إلى مصفوفة entries في الجدول الأساسي
     await TimeTable.findByIdAndUpdate(
       timeTableId,
       { $push: { entries: newEntry._id } },
-      { new: true }
+      { new: true },
     );
 
     return res.status(201).json({ success: true, data: newEntry });
@@ -177,17 +199,18 @@ const getTimeTable = async (req, res) => {
   try {
     const { timeTableId } = req.params;
 
-    const timeTable = await TimeTable.findById(timeTableId)
-      .populate({
-        path: 'entries', // جلب تفاصيل المحاضرات
-        populate: {
-          path: 'courseId', // بداخل كل محاضرة، اجلب تفاصيل المادة
-          select: 'courseName courseCode color' // updated to match actual DB fields courseName & courseCode
-        }
-      });
+    const timeTable = await TimeTable.findById(timeTableId).populate({
+      path: "entries", // جلب تفاصيل المحاضرات
+      populate: {
+        path: "courseId", // بداخل كل محاضرة، اجلب تفاصيل المادة
+        select: "courseName courseCode color", // updated to match actual DB fields courseName & courseCode
+      },
+    });
 
     if (!timeTable) {
-        return res.status(404).json({ success: false, message: "Timetable not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Timetable not found" });
     }
 
     return res.status(200).json({ success: true, data: timeTable });
@@ -200,5 +223,5 @@ module.exports = {
   getMySchedule,
   deleteSession,
   addTimeTableEntry,
-  getTimeTable
+  getTimeTable,
 };

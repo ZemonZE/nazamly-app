@@ -41,7 +41,9 @@ export const N = {
 
   bg: '#F5F6FA',
   card: '#FFFFFF',
+  Card: '#000',
   border: '#E2E8F0',
+  Border: '#000',
   divider: '#F1F5F9',
 
   textPrimary: '#1A1F36',

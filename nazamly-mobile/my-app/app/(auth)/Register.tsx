@@ -8,15 +8,16 @@ import {
   Pressable,
   View,
   Platform,
+  StyleSheet,
+  SafeAreaView,
+  ActivityIndicator,
+  Image,
+  KeyboardAvoidingView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
-import styles from "./styles";
-import Email_input from "@/components/ui/Email_input";
-import Password_input from "@/components/ui/Password_input";
-import Google_pressable from "@/components/ui/Google_pressable";
-import Show_toggle from "@/components/ui/Show_toggle";
-import Header from "@/components/ui/Header";
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAppTheme } from '@/constants/theme';
 import {
   createUserWithEmailAndPassword,
   updateProfile,
@@ -40,8 +41,8 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { setBackendUser } = useAuth();
+  const { colors } = useAppTheme();
 
-  // 🌟 إعداد OAuth للموبايل (Expo Go / React Native)
   const redirectUri = makeRedirectUri({
     scheme: "nazamly",
     path: "redirect",
@@ -61,7 +62,7 @@ export default function RegisterScreen() {
   const syncWithBackend = async (user: any) => {
     try {
       console.log("[Register] Getting fresh token for sync...");
-      const token = await user.getIdToken(true); // Force refresh
+      const token = await user.getIdToken(true);
       
       console.log("[Register] Calling /api/auth/sync...");
       const res = await fetch(`${API_URL}/api/auth/sync`, {
@@ -99,7 +100,6 @@ export default function RegisterScreen() {
     }
   };
 
-  // 🌟 جلب بيانات المستخدم من الباك إند
   const fetchUserProfile = async (user: any) => {
     try {
       const token = await user.getIdToken();
@@ -125,10 +125,7 @@ export default function RegisterScreen() {
   };
 
   useEffect(() => {
-    console.log(
-      "[Register] AuthSession response:",
-      JSON.stringify(response, null, 2),
-    );
+    console.log("[Register] AuthSession response:", JSON.stringify(response, null, 2));
     if (response?.type === "success") {
       const { id_token } = response.params;
       console.log("[Register] id_token received:", id_token ? "yes" : "no");
@@ -142,11 +139,7 @@ export default function RegisterScreen() {
           router.replace("/(tabs)/HomePage");
         })
         .catch((error: any) => {
-          console.error(
-            "[Register] Firebase signIn error:",
-            error.code,
-            error.message,
-          );
+          console.error("[Register] Firebase signIn error:", error.code, error.message);
           Alert.alert("Failed", error.message || "Google sign-in failed");
         })
         .finally(() => setLoading(false));
@@ -165,30 +158,20 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       console.log("[Register] Creating user with email:", email);
-      
-      // 1. Create Firebase user
-      const result = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password,
-      );
+      const result = await createUserWithEmailAndPassword(auth, email, password);
       console.log("[Register] Firebase user created:", result.user.uid);
       
-      // 2. Update Firebase profile with display name
       await updateProfile(result.user, { displayName: name });
       console.log("[Register] Firebase profile updated with name:", name);
       
-      // 3. Force token refresh to include updated profile
       await result.user.reload();
       const freshToken = await result.user.getIdToken(true);
       console.log("[Register] Token refreshed with updated profile");
       
-      // 4. Sync with backend (creates user in MongoDB)
       console.log("[Register] Syncing with backend...");
       const syncResult = await syncWithBackend(result.user);
       console.log("[Register] Sync result:", syncResult);
       
-      // 5. Fetch complete profile from backend
       console.log("[Register] Fetching profile from backend...");
       await fetchUserProfile(result.user);
       
@@ -202,19 +185,14 @@ export default function RegisterScreen() {
     }
   };
 
-  // 🌟 دالة تسجيل الدخول بجوجل للويب
   const handleGoogleWebSignIn = async () => {
     try {
       setLoading(true);
       const provider = new GoogleAuthProvider();
-      // 🌟 السطر السحري لإجبار جوجل على إظهار شاشة اختيار الحساب في كل مرة
       provider.setCustomParameters({ prompt: "select_account" });
-
-      // الدالة دي هتفتح شاشة منبثقة (Popup) وتمنع الشاشة البيضاء اللي بتعلق
       const result = await signInWithPopup(auth, provider);
       await syncWithBackend(result.user);
       await fetchUserProfile(result.user);
-
       Alert.alert("Success", "Registration successful");
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
@@ -225,12 +203,10 @@ export default function RegisterScreen() {
     }
   };
 
-  // 🌟 دالة تسجيل الدخول بجوجل للموبايل (Expo Go / React Native)
   const handleGoogleMobileSignIn = () => {
     promptAsync();
   };
 
-  // 🌟 اختيار الدالة المناسبة حسب المنصة
   const handleGoogleSignIn = Platform.OS === 'web' 
     ? handleGoogleWebSignIn 
     : handleGoogleMobileSignIn;
@@ -240,69 +216,294 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContent}>
-      <Header />
-
-      <View style={{ alignItems: "center", marginBottom: 20, marginTop: 4 }}>
-        <Text style={styles.brandName}>Nazamly</Text>
-        <Text style={styles.pageLabel}>Register</Text>
-      </View>
-
-      <Text style={styles.inputLabel}>Full Name</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Your full name"
-        placeholderTextColor="#5a8a6e"
-        value={name}
-        onChangeText={setName}
-      />
-
-      <Email_input email={email} setEmail={setEmail} />
-
-      <Password_input
-        password={password}
-        setPassword={setPassword}
-        showPassword={showPassword}
-        label="Password"
-      />
-
-      <Password_input
-        password={confirmPassword}
-        setPassword={setConfirmPassword}
-        showPassword={showPassword}
-        label="Confirm Password"
-      />
-
-      <Show_toggle
-        showPassword={showPassword}
-        setShowPassword={setShowPassword}
-      />
-
-      <TouchableOpacity
-        style={[styles.button, styles.buttonGradientBg]}
-        onPress={handleRegister}
-        disabled={loading}
-        activeOpacity={0.8}
+    <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
-        <Text style={styles.buttonText}>
-          {loading ? "Loading..." : "Register"}
-        </Text>
-      </TouchableOpacity>
+        <ScrollView 
+          contentContainerStyle={s.scrollContent} 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          
+          <View style={s.heroSection}>
+            <View style={[s.appIconContainer, { backgroundColor: colors.teal }]}>
+              <MaterialCommunityIcons name="account-plus" size={56} color="#fff" />
+            </View>
+            <Text style={[s.welcomeText, { color: colors.textPrimary }]}>Join Nazamly</Text>
+            <Text style={[s.subtitleText, { color: colors.textMuted }]}>Create your account to get started</Text>
+          </View>
 
-      <View style={styles.dividerRow}>
-        <View style={styles.dividerLine} />
-        <Text style={{ color: "#5a8a6e", fontSize: 13 }}>Or Continue With</Text>
-        <View style={styles.dividerLine} />
-      </View>
+          <View style={[s.formCard, { backgroundColor: colors.card }]}>
+            
+            <View style={s.inputGroup}>
+              <Text style={[s.label, { color: colors.textSecondary }]}>Full Name</Text>
+              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                <Feather name="user" size={20} color={colors.textMuted} style={s.inputIcon} />
+                <TextInput
+                  style={[s.textInput, { color: colors.textPrimary }]}
+                  placeholder="Enter your full name"
+                  placeholderTextColor={colors.textMuted}
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                />
+              </View>
+            </View>
 
-      <Google_pressable onPress={handleGoogleSignIn} />
+            <View style={s.inputGroup}>
+              <Text style={[s.label, { color: colors.textSecondary }]}>Email</Text>
+              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                <Feather name="mail" size={20} color={colors.textMuted} style={s.inputIcon} />
+                <TextInput
+                  style={[s.textInput, { color: colors.textPrimary }]}
+                  placeholder="Enter your email"
+                  placeholderTextColor={colors.textMuted}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+            </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Have Account Already? </Text>
-        <Pressable onPress={goToLogin}>
-          <Text style={styles.link}>Login</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+            <View style={s.inputGroup}>
+              <Text style={[s.label, { color: colors.textSecondary }]}>Password</Text>
+              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                <Feather name="lock" size={20} color={colors.textMuted} style={s.inputIcon} />
+                <TextInput
+                  style={[s.textInput, { color: colors.textPrimary }]}
+                  placeholder="Create a password"
+                  placeholderTextColor={colors.textMuted}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity 
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={s.eyeIcon}
+                >
+                  <Feather 
+                    name={showPassword ? "eye" : "eye-off"} 
+                    size={20} 
+                    color={colors.textMuted} 
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={s.inputGroup}>
+              <Text style={[s.label, { color: colors.textSecondary }]}>Confirm Password</Text>
+              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                <Feather name="lock" size={20} color={colors.textMuted} style={s.inputIcon} />
+                <TextInput
+                  style={[s.textInput, { color: colors.textPrimary }]}
+                  placeholder="Confirm your password"
+                  placeholderTextColor={colors.textMuted}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[s.registerButton, { backgroundColor: colors.teal }]}
+              onPress={handleRegister}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={s.registerButtonText}>Create Account</Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={s.dividerContainer}>
+              <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[s.dividerText, { color: colors.textMuted }]}>or</Text>
+              <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
+            </View>
+
+            <TouchableOpacity
+              style={s.googleButton}
+              onPress={handleGoogleSignIn}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              <Image 
+                source={require('@/assets/images/google.png')} 
+                style={s.googleLogo}
+                resizeMode="contain"
+              />
+              <Text style={s.googleButtonText}>Continue with Google</Text>
+            </TouchableOpacity>
+
+          </View>
+
+          <View style={s.footer}>
+            <Text style={[s.footerText, { color: colors.textMuted }]}>
+              Already have an account?{' '}
+            </Text>
+            <Pressable onPress={goToLogin}>
+              <Text style={[s.footerLink, { color: colors.teal }]}>Sign In</Text>
+            </Pressable>
+          </View>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
+
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+  },
+  heroSection: {
+    alignItems: 'center',
+    marginTop: 30,
+    marginBottom: 36,
+  },
+  appIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  welcomeText: {
+    fontSize: 32,
+    fontWeight: '800',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  subtitleText: {
+    fontSize: 16,
+    fontWeight: '400',
+    textAlign: 'center',
+  },
+  formCard: {
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  inputGroup: {
+    marginBottom: 18,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 56,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '400',
+  },
+  eyeIcon: {
+    padding: 4,
+  },
+  registerButton: {
+    height: 56,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    shadowColor: '#26A69A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  registerButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginHorizontal: 16,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 56,
+    backgroundColor: '#000',
+    borderRadius: 12,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  googleLogo: {
+    width: 24,
+    height: 24,
+  },
+  googleButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  footerText: {
+    fontSize: 15,
+    fontWeight: '400',
+  },
+  footerLink: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+});

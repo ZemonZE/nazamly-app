@@ -1,5 +1,4 @@
-const mongoose = require('mongoose');
-const TimeTableEntry = mongoose.model('TimeTableEntry');
+const { TimeTableEntry } = require('../models/schedule');
 const User = require('../models/user/user.model');
 
 /**
