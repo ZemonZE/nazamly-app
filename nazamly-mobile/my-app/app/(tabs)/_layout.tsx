@@ -2,7 +2,7 @@ import { Tabs } from "expo-router";
 import React from "react";
 
 import { HapticTab } from "@/components/haptic-tab";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather, Entypo, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "@/constants/theme";
 
 export default function TabLayout() {
@@ -57,6 +57,11 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Feather name="book-open" size={22} color={color} />,
         }}
       />
+      <Tabs.Screen name="GpaPlanner"
+        options={{
+          title: "GpaPlanner",
+          tabBarIcon: ({ color }) => <Entypo name="calculator" size={24} color={color} />
+        }} />
       <Tabs.Screen
         name="Profile"
         options={{
