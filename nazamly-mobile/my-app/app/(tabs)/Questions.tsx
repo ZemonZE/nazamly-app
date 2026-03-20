@@ -159,7 +159,7 @@ const FOLDER_W = (SCREEN_W - 52) / 2;
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 30 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 },
   headerTitle: { fontSize: 28, fontWeight: '900' },
   headerSub: { fontSize: 13, marginTop: 2 },

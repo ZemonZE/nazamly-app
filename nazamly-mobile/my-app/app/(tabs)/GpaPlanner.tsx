@@ -241,8 +241,8 @@ export default function GpaPlannerScreen() {
             ) : null}
 
             <View style={[s.inputCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={[s.elegantInput, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                <View style={[s.elegantIconWrap, { backgroundColor: colors.indigoPale }]}>
+              <View style={[s.elegantInput, { backgroundColor: colors.indigoPale, borderColor: colors.indigoLight }]}>
+                <View style={[s.elegantIconWrap, { backgroundColor: colors.card }]}>
                   <Feather name="award" size={20} color={colors.indigo} />
                 </View>
                 <View style={s.elegantInputContent}>
@@ -263,8 +263,8 @@ export default function GpaPlannerScreen() {
                 )}
               </View>
 
-              <View style={[s.elegantInput, { backgroundColor: colors.bg, borderColor: colors.border, marginTop: 16 }]}>
-                <View style={[s.elegantIconWrap, { backgroundColor: colors.tealLight }]}>
+              <View style={[s.elegantInput, { backgroundColor: colors.tealLight, borderColor: '#ccfbf1', marginTop: 16 }]}>
+                <View style={[s.elegantIconWrap, { backgroundColor: colors.card }]}>
                   <Feather name="clock" size={20} color={colors.teal} />
                 </View>
                 <View style={s.elegantInputContent}>
@@ -406,7 +406,7 @@ export default function GpaPlannerScreen() {
                 );
               })}
             </View>
-            <View style={{ height: 20 }} />
+            <View style={{ height: 110 }} />
           </>
         )}
 
@@ -417,8 +417,8 @@ export default function GpaPlannerScreen() {
               <Text style={[s.targetTitle, { color: colors.textPrimary }]}>Set Your Target</Text>
               <Text style={[s.targetDesc, { color: colors.textSecondary }]}>Enter the CGPA you want to reach, and we&apos;ll calculate the needed term GPA.</Text>
 
-              <View style={[s.elegantInput, { backgroundColor: colors.bg, borderColor: colors.border, marginVertical: 20 }]}>
-                <View style={[s.elegantIconWrap, { backgroundColor: colors.indigoPale }]}>
+              <View style={[s.elegantInput, { backgroundColor: colors.indigoPale, borderColor: colors.indigoLight, marginVertical: 20 }]}>
+                <View style={[s.elegantIconWrap, { backgroundColor: colors.card }]}>
                   <Feather name="target" size={20} color={colors.indigo} />
                 </View>
                 <View style={s.elegantInputContent}>
@@ -503,7 +503,7 @@ export default function GpaPlannerScreen() {
                 })}
               </View>
             )}
-            <View style={{ height: 40 }} />
+            <View style={{ height: 110 }} />
           </View>
         )}
       </ScrollView>
@@ -514,7 +514,7 @@ export default function GpaPlannerScreen() {
 const s = StyleSheet.create({
   container: { flex: 1 },
   // Onboard
-  onboardCenter: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  onboardCenter: { flexGrow: 1, justifyContent: 'center', padding: 24, paddingBottom: 110 },
   onboardIconWrap: { width: 80, height: 80, borderRadius: 24, backgroundColor: 'rgba(63, 81, 181, 0.1)', justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 20 },
   onboardTitle: { fontSize: 28, fontWeight: '900', textAlign: 'center', marginBottom: 8 },
   onboardSub: { fontSize: 15, textAlign: 'center', lineHeight: 22, marginBottom: 30, paddingHorizontal: 10 },

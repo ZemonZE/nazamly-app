@@ -302,7 +302,7 @@ const ProfileDetail = ({ icon, label, value, colors }: ProfileDetailProps) => (
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110 },
   centered: { alignItems: 'center', paddingTop: 60 },
   loadingText: { marginTop: 10, fontSize: 14 },
   avatarSection: { alignItems: 'center', paddingVertical: 28 },

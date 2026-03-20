@@ -302,7 +302,7 @@ const ScheduleItem = ({ title, type, time, place, accentColor, colors }: Schedul
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 30 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
   greeting: { fontSize: 15, fontWeight: '500' },
   userName: { fontSize: 26, fontWeight: '800', marginTop: 2 },

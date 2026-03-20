@@ -474,7 +474,7 @@ const s = StyleSheet.create({
   emptyAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5 },
   emptyAddBtnText: { fontSize: 14, fontWeight: '700' },
 
-  list: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 30 },
+  list: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 110 },
   daySection: { marginBottom: 26 },
   daySectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   daySectionDot: { width: 8, height: 8, borderRadius: 4 },

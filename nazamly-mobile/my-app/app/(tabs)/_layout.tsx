@@ -2,30 +2,45 @@ import { Tabs } from "expo-router";
 import React from "react";
 
 import { HapticTab } from "@/components/haptic-tab";
-import { Feather, Entypo, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "@/constants/theme";
 
 export default function TabLayout() {
-  const { isDark, colors } = useAppTheme();
+  const { colors } = useAppTheme();
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.indigo,
         tabBarInactiveTintColor: colors.textMuted,
-        headerShown: false,
+        headerShown: true,
+        headerStyle: { backgroundColor: colors.bg, elevation: 0, shadowOpacity: 0 },
+        headerTitleStyle: { fontWeight: '800', fontSize: 18, color: colors.textPrimary },
+        headerShadowVisible: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
+          position: 'absolute',
+          bottom: 20,
+          left: 20,
+          right: 20,
           backgroundColor: colors.card,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          paddingTop: 4,
-          height: 60,
+          borderRadius: 24,
+          height: 68,
+          paddingTop: 8,
+          paddingBottom: 8,
+          borderTopWidth: 0,
+          elevation: 10,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.1,
+          shadowRadius: 20,
         },
+        tabBarShowLabel: true,
+        tabBarItemStyle: {},
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
-          marginBottom: 4,
+          fontWeight: '700',
+          marginTop: 2,
         },
       }}
     >
@@ -59,8 +74,8 @@ export default function TabLayout() {
       />
       <Tabs.Screen name="GpaPlanner"
         options={{
+          href: null,
           title: "GpaPlanner",
-          tabBarIcon: ({ color }) => <Entypo name="calculator" size={24} color={color} />
         }} />
       <Tabs.Screen
         name="Profile"
