@@ -8,6 +8,7 @@ const gpaRoutes = require("./routes/gpa.routes");
 const scheduleRoutes = require('./routes/Schedule.routes');
 const aiRoutes = require('./routes/ai.routes');
 const materialsRoutes = require('./routes/materials.routes');
+const courseRoutes = require('./routes/course.routes');
 
 const app = express();
 
@@ -24,5 +25,6 @@ app.use("/api/gpa", gpaRoutes);
 app.use('/api/schedule', scheduleRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/materials', materialsRoutes);
+app.use('/api/courses', courseRoutes);
 
 module.exports = app;

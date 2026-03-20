@@ -19,6 +19,8 @@ node_modules/
 
 # Expo generated files
 .expo/
+#images-upload
+uploads/
 
 # Root package-lock (not a real project root)
 /package-lock.json

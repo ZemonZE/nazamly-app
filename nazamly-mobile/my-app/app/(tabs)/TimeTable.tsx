@@ -1,487 +1,538 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-  ActivityIndicator,
-  Alert,
-  ToastAndroid,
-  Platform,
-} from "react-native";
-import { Feather, Ionicons } from "@expo/vector-icons";
-import { useAuth } from "@/context/AuthContext";
-import { API_URL } from "@/firebase";
-import AddClassModal from "../../components/ui/AddClassModal";
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
+  ActivityIndicator, Alert, Modal, TextInput,
+} from 'react-native';
+import { Feather, Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAppTheme } from '@/constants/theme';
 
-interface EntryData {
-  _id: string;
-  dayOfWeek: number;
-  startTime: string;
-  endTime: string;
-  location?: string;
-  sessionType?: string;
-  groupNumber?: string;
-  courseId?: { _id: string; name: string; code: string } | string;
-}
+// ─────────────────────────────────────────
+// Constants — mirroring nazamly-front exactly
+// ─────────────────────────────────────────
+const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 
-const DAY_MAP: Record<string, number> = {
-  Sat: 6,
-  Sun: 0,
-  Mon: 1,
-  Tue: 2,
-  Wed: 3,
-  Thu: 4,
+const SLOTS: Record<number, { start: string; end: string }[]> = {
+  2: [
+    { start: '8:00 AM', end: '10:00 AM' },
+    { start: '10:00 AM', end: '12:00 PM' },
+    { start: '12:00 PM', end: '2:00 PM' },
+    { start: '2:00 PM', end: '4:00 PM' },
+    { start: '4:00 PM', end: '6:00 PM' },
+    { start: '6:00 PM', end: '8:00 PM' },
+  ],
+  3: [
+    { start: '8:00 AM', end: '11:00 AM' },
+    { start: '11:00 AM', end: '2:00 PM' },
+    { start: '2:00 PM', end: '5:00 PM' },
+    { start: '5:00 PM', end: '8:00 PM' },
+  ],
 };
 
+const TYPE_LABELS: Record<string, string> = { Lec: 'Lecture', Sec: 'Section', Lab: 'Laboratory' };
 
+const STORAGE_KEY = '@nazamly_schedules';
 
+interface ScheduleEntry {
+  id: number;
+  subject: string;
+  type: string;
+  day: string;
+  slot: { start: string; end: string };
+  group: string;
+  place: string;
+}
+
+interface FormState {
+  subject: string;
+  type: string;
+  day: string;
+  duration: 2 | 3;
+  slotIndex: number;
+  group: string;
+  place: string;
+}
+
+const initialForm: FormState = {
+  subject: '',
+  type: 'Lec',
+  day: 'Saturday',
+  duration: 2,
+  slotIndex: 0,
+  group: '',
+  place: '',
+};
+
+// ─────────────────────────────────────────
+// Main Screen
+// ─────────────────────────────────────────
 const TimetableScreen = () => {
-  const { user } = useAuth();
-  const [selectedDay, setSelectedDay] = useState("Sat");
-  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
-  const [entries, setEntries] = useState<EntryData[]>([]);
+  const { colors } = useAppTheme();
+  const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState<string | null>(null);
+  const [isAddModalVisible, setAddModalVisible] = useState(false);
+  const [form, setForm] = useState<FormState>(initialForm);
+  const [conflict, setConflict] = useState<string | null>(null);
 
-  const fetchSchedule = useCallback(async () => {
-    if (!user) return;
+  const slots = SLOTS[form.duration];
+
+  // ── Load from AsyncStorage (equivalent to localStorage.getItem in web) ──
+  const loadSchedules = useCallback(async () => {
     try {
       setLoading(true);
-      const token = await user.getIdToken();
-      console.log("[TimeTable] Fetching schedule with token:", token ? "✓" : "✗");
-      
-      const res = await fetch(`${API_URL}/api/schedule/my-schedule`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      
-      console.log("[TimeTable] Response status:", res.status);
-      
-      // Check if response is JSON
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        console.error("[TimeTable] Non-JSON response, status:", res.status);
-        return;
-      }
-      
-      const body = await res.json();
-      console.log("[TimeTable] Response body:", body);
-      
-      if (res.ok && body.success) {
-        const allEntries: EntryData[] = [];
-        const schedules = body.data || [];
-        for (const schedule of schedules) {
-          if (schedule.entries && Array.isArray(schedule.entries)) {
-            allEntries.push(...schedule.entries);
-          }
-        }
-        setEntries(allEntries);
-      } else {
-        console.error("[TimeTable] fetch failed:", body);
-      }
+      const saved = await AsyncStorage.getItem(STORAGE_KEY);
+      if (saved) setSchedules(JSON.parse(saved));
     } catch (err) {
-      console.error("[TimeTable] fetch error:", err);
+      console.error('[Timetable] Load error:', err);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
+  useEffect(() => { loadSchedules(); }, [loadSchedules]);
+
+  // ── Save to AsyncStorage whenever schedules change (same as useEffect → localStorage.setItem) ──
   useEffect(() => {
-    fetchSchedule();
-  }, [fetchSchedule]);
-
-  const handleAddClass = async (newClass: {
-    title: string;
-    code: string;
-    day: string;
-    time: string;
-    location: string;
-  }) => {
-    if (!user) return;
-    try {
-      const token = await user.getIdToken();
-      const [startTime, endTime] = newClass.time.split("–");
-      const dayOfWeek = DAY_MAP[newClass.day] ?? 6;
-
-      const entryPayload = {
-        dayOfWeek,
-        startTime: startTime?.trim(),
-        endTime: endTime?.trim(),
-        location: newClass.location || "TBD",
-        sessionType: "Lecture",
-        courseName: newClass.title,
-        courseCode: newClass.code,
-      };
-
-      const res = await fetch(`${API_URL}/api/schedule/add`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          entries: [entryPayload],
-          title: "My Schedule",
-        }),
-      });
-
-      const body = await res.json();
-      if (res.ok && body.success) {
-        if (Platform.OS === "android") {
-          ToastAndroid.showWithGravity(
-            "Class added successfully",
-            ToastAndroid.SHORT,
-            ToastAndroid.BOTTOM,
-          );
-        }
-        await fetchSchedule();
-      } else {
-        Alert.alert("Error", body.message || "Failed to add class");
-      }
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Something went wrong");
+    if (!loading) {
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(schedules)).catch(console.error);
     }
+  }, [schedules, loading]);
+
+  // ── Field updater ──
+  const handleChange = (field: keyof FormState, value: any) => {
+    setForm(prev => ({
+      ...prev,
+      [field]: value,
+      ...(field === 'duration' ? { slotIndex: 0 } : {}),
+    }));
   };
 
-  const handleDeleteEntry = async (entryId: string) => {
-    if (!user) return;
-    Alert.alert("Delete Class", "Are you sure you want to remove this class?", [
-      { text: "Cancel", style: "cancel" },
+  // ── Conflict validation — exact same logic as web Generator.jsx ──
+  const validate = (): boolean => {
+    const slot = slots[form.slotIndex];
+
+    // 1. Time conflict — same day, same slot start
+    const timeConflict = schedules.find(s => s.day === form.day && s.slot.start === slot.start);
+    if (timeConflict) {
+      setConflict(`You already have "${timeConflict.subject}" at this time!`);
+      return false;
+    }
+
+    // 2. Same subject + same type already exists
+    const sameType = schedules.find(
+      s => s.subject.trim().toLowerCase() === form.subject.trim().toLowerCase() && s.type === form.type,
+    );
+    if (sameType) {
+      setConflict(`"${form.subject}" is already registered as a ${TYPE_LABELS[form.type]}!`);
+      return false;
+    }
+
+    // 3. Same subject registered more than twice (max 2 entries)
+    const sameSubjectCount = schedules.filter(
+      s => s.subject.trim().toLowerCase() === form.subject.trim().toLowerCase(),
+    ).length;
+    if (sameSubjectCount >= 2) {
+      setConflict(`"${form.subject}" has reached the maximum limit (two entries only)!`);
+      return false;
+    }
+
+    return true;
+  };
+
+  // ── Add entry ──
+  const addSchedule = () => {
+    if (!form.subject.trim()) {
+      setConflict('Please enter a subject name');
+      return;
+    }
+    if (!validate()) return;
+
+    const slot = slots[form.slotIndex];
+    const newEntry: ScheduleEntry = {
+      id: Date.now(),
+      subject: form.subject.trim(),
+      type: form.type,
+      day: form.day,
+      slot,
+      group: form.group,
+      place: form.place,
+    };
+    setSchedules(prev => [...prev, newEntry]);
+    setForm(initialForm);
+    setAddModalVisible(false);
+  };
+
+  // ── Remove entry ──
+  const removeSchedule = (id: number) => {
+    Alert.alert('Delete Class', 'Are you sure you want to delete this class?', [
+      { text: 'Cancel', style: 'cancel' },
       {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            setDeleting(entryId);
-            const token = await user.getIdToken();
-            const res = await fetch(
-              `${API_URL}/api/schedule/session/${entryId}`,
-              {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` },
-              },
-            );
-            const body = await res.json();
-            if (res.ok && body.success) {
-              setEntries((prev) => prev.filter((e) => e._id !== entryId));
-              if (Platform.OS === "android") {
-                ToastAndroid.showWithGravity(
-                  "Class removed",
-                  ToastAndroid.SHORT,
-                  ToastAndroid.BOTTOM,
-                );
-              }
-            } else {
-              Alert.alert("Error", body.message || "Failed to delete");
-            }
-          } catch (err: any) {
-            Alert.alert("Error", err.message);
-          } finally {
-            setDeleting(null);
-          }
-        },
+        text: 'Delete', style: 'destructive',
+        onPress: () => setSchedules(prev => prev.filter(s => s.id !== id)),
       },
     ]);
   };
 
-  const selectedDayNum = DAY_MAP[selectedDay] ?? 6;
-  const filteredEntries = entries.filter((e) => e.dayOfWeek === selectedDayNum);
+  // ── Group by day ──
+  const scheduleByDay = DAYS.reduce<Record<string, ScheduleEntry[]>>((acc, day) => {
+    acc[day] = schedules.filter(s => s.day === day).sort((a, b) =>
+      a.slot.start.localeCompare(b.slot.start),
+    );
+    return acc;
+  }, {});
 
-  const days = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu"].map((d) => ({
-    id: d,
-    label: d,
-    count: entries.filter((e) => e.dayOfWeek === DAY_MAP[d]).length,
-  }));
-
-  const getEntryTitle = (entry: EntryData) => {
-    if (
-      entry.courseId &&
-      typeof entry.courseId === "object" &&
-      entry.courseId.name
-    ) {
-      return entry.courseId.name;
-    }
-    return (entry as any).courseName || "Untitled";
-  };
-
-  const getEntryCode = (entry: EntryData) => {
-    if (
-      entry.courseId &&
-      typeof entry.courseId === "object" &&
-      entry.courseId.code
-    ) {
-      return entry.courseId.code;
-    }
-    return (entry as any).courseCode || "";
+  const typeAccent: Record<string, string> = {
+    Lec: colors.indigo,
+    Sec: colors.teal,
+    Lab: colors.amber,
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+    <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
+      {/* ── Header ── */}
+      <View style={[s.header, { borderBottomColor: colors.border }]}>
         <View>
-          <Text style={styles.screenTitle}>Timetable</Text>
-          <Text style={styles.subtitle}>
-            {entries.length} {entries.length === 1 ? "class" : "classes"} this
-            semester
+          <Text style={[s.screenTitle, { color: colors.textPrimary }]}>Timetable</Text>
+          <Text style={[s.subtitle, { color: colors.textMuted }]}>
+            {schedules.length} {schedules.length === 1 ? 'class' : 'classes'}
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setIsAddModalVisible(true)}
-        >
-          <Feather name="plus" size={20} color="#fff" />
-          <Text style={styles.addButtonText}>Add Class</Text>
+        <TouchableOpacity style={[s.addButton, { backgroundColor: colors.indigo }]} onPress={() => setAddModalVisible(true)}>
+          <Feather name="plus" size={18} color="#fff" />
+          <Text style={s.addButtonText}>Add Class</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Days Selector */}
-      <View style={styles.daysContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.daysScroll}
-        >
-          {days.map((day) => (
-            <TouchableOpacity
-              key={day.id}
-              onPress={() => setSelectedDay(day.id)}
-              style={[
-                styles.dayTab,
-                selectedDay === day.id && styles.activeDayTab,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.dayText,
-                  selectedDay === day.id && styles.activeDayText,
-                ]}
-              >
-                {day.label}
-              </Text>
-              {day.count > 0 && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{day.count}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Classes List */}
+      {/* ── Content ── */}
       {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#4f46e5" />
-          <Text style={{ color: "#94a3b8", marginTop: 10 }}>
-            Loading schedule...
-          </Text>
+        <View style={s.centered}>
+          <ActivityIndicator size="large" color={colors.indigo} />
         </View>
-      ) : filteredEntries.length === 0 ? (
-        <View style={styles.centered}>
-          <Feather name="calendar" size={48} color="#cbd5e1" />
-          <Text style={styles.emptyText}>No classes on {selectedDay}</Text>
-          <Text style={styles.emptySubtext}>
-            Tap &quot;Add Class&quot; to get started
-          </Text>
+      ) : schedules.length === 0 ? (
+        <View style={s.centered}>
+          <View style={[s.emptyIconWrap, { backgroundColor: colors.indigoPale }]}>
+            <Feather name="calendar" size={40} color={colors.indigoLight} />
+          </View>
+          <Text style={[s.emptyText, { color: colors.textSecondary }]}>Add classes to build your schedule</Text>
+          <Text style={[s.emptySubtext, { color: colors.textMuted }]}>Tap &quot;Add Class&quot; to start</Text>
+          <TouchableOpacity
+            style={[s.emptyAddBtn, { backgroundColor: colors.indigoPale, borderColor: colors.indigo }]}
+            onPress={() => setAddModalVisible(true)}
+          >
+            <Feather name="plus" size={16} color={colors.indigo} />
+            <Text style={[s.emptyAddBtnText, { color: colors.indigo }]}>Add first class</Text>
+          </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.classesList}>
-          {filteredEntries.map((entry) => (
-            <ClassItem
-              key={entry._id}
-              title={getEntryTitle(entry)}
-              code={getEntryCode(entry)}
-              time={`${entry.startTime}–${entry.endTime}`}
-              location={entry.location || "TBD"}
-              sessionType={entry.sessionType}
-              isDeleting={deleting === entry._id}
-              onDelete={() => handleDeleteEntry(entry._id)}
-            />
-          ))}
+        <ScrollView contentContainerStyle={s.list}>
+          {DAYS.map(day => {
+            const items = scheduleByDay[day];
+            if (!items || items.length === 0) return null;
+            return (
+              <View key={day} style={s.daySection}>
+                {/* Day Header */}
+                <View style={s.daySectionHeader}>
+                  <View style={[s.daySectionDot, { backgroundColor: colors.indigo }]} />
+                  <Text style={[s.daySectionTitle, { color: colors.textPrimary }]}>{day}</Text>
+                  <View style={[s.dayCountBadge, { backgroundColor: colors.indigoPale }]}>
+                    <Text style={[s.dayCountText, { color: colors.indigo }]}>{items.length}</Text>
+                  </View>
+                </View>
+
+                {items.map(item => {
+                  const accent = typeAccent[item.type] || colors.indigo;
+                  return (
+                    <View key={item.id} style={[s.classCard, { backgroundColor: colors.card }]}>
+                      <View style={[s.accentBar, { backgroundColor: accent }]} />
+                      <View style={s.cardBody}>
+                        {/* Top row */}
+                        <View style={s.cardTop}>
+                          <View style={s.titleRow}>
+                            <View style={[s.courseIconWrap, { backgroundColor: accent + '20' }]}>
+                              <Feather name="book" size={15} color={accent} />
+                            </View>
+                            <Text style={[s.classTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                              {item.subject}
+                            </Text>
+                          </View>
+                          <View style={[s.typeBadge, { backgroundColor: accent + '20' }]}>
+                            <Text style={[s.typeBadgeText, { color: accent }]}>
+                              {item.type} — {TYPE_LABELS[item.type]}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={[s.cardDivider, { backgroundColor: colors.divider }]} />
+
+                        {/* Bottom row */}
+                        <View style={s.cardFooter}>
+                          <View style={s.infoRow}>
+                            <Feather name="clock" size={13} color={colors.textMuted} />
+                            <Text style={[s.infoText, { color: colors.textSecondary }]}>
+                              {item.slot.start} — {item.slot.end}
+                            </Text>
+                            {item.place ? (
+                              <>
+                                <Ionicons name="location-outline" size={13} color={colors.textMuted} style={{ marginLeft: 10 }} />
+                                <Text style={[s.infoText, { color: colors.textSecondary }]}>{item.place}</Text>
+                              </>
+                            ) : null}
+                            {item.group ? (
+                              <>
+                                <Feather name="users" size={13} color={colors.textMuted} style={{ marginLeft: 10 }} />
+                                <Text style={[s.infoText, { color: colors.textSecondary }]}>{item.group}</Text>
+                              </>
+                            ) : null}
+                          </View>
+                          <TouchableOpacity
+                            style={[s.deleteBtn, { backgroundColor: colors.redLight }]}
+                            onPress={() => removeSchedule(item.id)}
+                          >
+                            <Feather name="trash-2" size={15} color={colors.red} />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })}
         </ScrollView>
       )}
 
-      {/* Add Class Modal */}
-      {isAddModalVisible && (
-        <AddClassModal
-          visible={isAddModalVisible}
-          onClose={() => setIsAddModalVisible(false)}
-          onAddClass={handleAddClass}
-        />
+      {/* ── Conflict Popup ── */}
+      {conflict && (
+        <Modal transparent animationType="fade" visible={!!conflict}>
+          <TouchableOpacity style={s.conflictOverlay} activeOpacity={1} onPress={() => setConflict(null)}>
+            <View style={[s.conflictPopup, { backgroundColor: colors.card }]}>
+              <Text style={s.conflictIcon}>⚠️</Text>
+              <Text style={[s.conflictTitle, { color: colors.textPrimary }]}>Schedule Conflict</Text>
+              <Text style={[s.conflictMsg, { color: colors.textSecondary }]}>{conflict}</Text>
+              <TouchableOpacity style={[s.conflictBtn, { backgroundColor: colors.indigo }]} onPress={() => setConflict(null)}>
+                <Text style={s.conflictBtnText}>Okay</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       )}
+
+      {/* ── Add Modal ── */}
+      <Modal visible={isAddModalVisible} transparent animationType="slide">
+        <View style={s.modalOverlay}>
+          <View style={[s.modalContent, { backgroundColor: colors.card }]}>
+            <View style={[s.modalHandleBar, { backgroundColor: colors.border }]} />
+            <View style={s.modalHeader}>
+              <Text style={[s.modalTitle, { color: colors.textPrimary }]}>Add Class</Text>
+              <TouchableOpacity onPress={() => { setAddModalVisible(false); setForm(initialForm); }}>
+                <Feather name="x" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={s.modalScroll} showsVerticalScrollIndicator={false}>
+              {/* Subject */}
+              <Text style={[s.inputLabel, { color: colors.textSecondary }]}>Subject Name</Text>
+              <TextInput
+                style={[s.modalInput, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.textPrimary }]}
+                value={form.subject}
+                onChangeText={t => handleChange('subject', t)}
+                placeholder="e.g. Operating Systems"
+                placeholderTextColor={colors.textMuted}
+              />
+
+              {/* Type selector */}
+              <Text style={[s.inputLabel, { color: colors.textSecondary }]}>Subject Type</Text>
+              <View style={s.chipRow}>
+                {Object.entries(TYPE_LABELS).map(([key, val]) => {
+                  const active = form.type === key;
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[s.chip, { backgroundColor: active ? colors.indigoPale : colors.divider, borderColor: active ? colors.indigo : 'transparent' }]}
+                      onPress={() => handleChange('type', key)}
+                    >
+                      <Text style={[s.chipCode, { color: active ? colors.indigo : colors.textMuted }]}>{key}</Text>
+                      <Text style={[s.chipVal, { color: active ? colors.indigo : colors.textSecondary }]}>{val}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Day selector */}
+              <Text style={[s.inputLabel, { color: colors.textSecondary }]}>Day</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.scrollRow}>
+                {DAYS.map(day => {
+                  const active = form.day === day;
+                  return (
+                    <TouchableOpacity
+                      key={day}
+                      style={[s.dayChip, { backgroundColor: active ? colors.indigoPale : colors.divider, borderColor: active ? colors.indigo : 'transparent' }]}
+                      onPress={() => handleChange('day', day)}
+                    >
+                      <Text style={[s.dayChipText, { color: active ? colors.indigo : colors.textSecondary, fontWeight: active ? '700' : '500' }]}>
+                        {day}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* Duration selector */}
+              <Text style={[s.inputLabel, { color: colors.textSecondary }]}>
+                Duration {form.type === 'Lec' ? '(Lecture)' : form.type === 'Lab' ? '(Lab)' : '(Section)'}
+              </Text>
+              <View style={s.chipRow}>
+                {([2, 3] as const).map(dur => {
+                  const active = form.duration === dur;
+                  return (
+                    <TouchableOpacity
+                      key={dur}
+                      style={[s.durChip, { backgroundColor: active ? colors.indigoPale : colors.divider, borderColor: active ? colors.indigo : 'transparent' }]}
+                      onPress={() => handleChange('duration', dur)}
+                    >
+                      <Text style={[s.durChipText, { color: active ? colors.indigo : colors.textSecondary }]}>
+                        {dur === 2 ? '2 Hours' : '3 Hours'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Slot selector */}
+              <Text style={[s.inputLabel, { color: colors.textSecondary }]}>Time Slot</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.scrollRow}>
+                {slots.map((slot, i) => {
+                  const active = form.slotIndex === i;
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[s.slotChip, { backgroundColor: active ? colors.indigoPale : colors.divider, borderColor: active ? colors.indigo : 'transparent' }]}
+                      onPress={() => handleChange('slotIndex', i)}
+                    >
+                      <Text style={[s.slotChipText, { color: active ? colors.indigo : colors.textSecondary }]}>
+                        {slot.start}
+                      </Text>
+                      <Text style={[s.slotChipSep, { color: active ? colors.indigoLight : colors.textMuted }]}>↓</Text>
+                      <Text style={[s.slotChipText, { color: active ? colors.indigo : colors.textSecondary }]}>
+                        {slot.end}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* Group */}
+              <Text style={[s.inputLabel, { color: colors.textSecondary }]}>Group Number (Optional)</Text>
+              <TextInput
+                style={[s.modalInput, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.textPrimary }]}
+                value={form.group}
+                onChangeText={t => handleChange('group', t)}
+                placeholder="e.g. G1"
+                placeholderTextColor={colors.textMuted}
+              />
+
+              {/* Place */}
+              <Text style={[s.inputLabel, { color: colors.textSecondary }]}>Location (Optional)</Text>
+              <TextInput
+                style={[s.modalInput, { backgroundColor: colors.bg, borderColor: colors.border, color: colors.textPrimary }]}
+                value={form.place}
+                onChangeText={t => handleChange('place', t)}
+                placeholder="e.g. Hall 101"
+                placeholderTextColor={colors.textMuted}
+              />
+
+              <View style={{ height: 20 }} />
+            </ScrollView>
+
+            <View style={[s.modalActions, { borderTopColor: colors.divider }]}>
+              <TouchableOpacity style={[s.saveButton, { backgroundColor: colors.indigo }]} onPress={addSchedule}>
+                <Text style={s.saveButtonText}>+ Add to Schedule</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
-interface ClassItemProps {
-  title: string;
-  code: string;
-  time: string;
-  location: string;
-  sessionType?: string;
-  isDeleting?: boolean;
-  onDelete: () => void;
-}
-
-const ClassItem = ({
-  title,
-  code,
-  time,
-  location,
-  sessionType,
-  isDeleting,
-  onDelete,
-}: ClassItemProps) => {
-  const accentColors: Record<string, string> = {
-    Lecture: "#f97316",
-    Section: "#4f46e5",
-    Lab: "#10b981",
-  };
-  const accent = accentColors[sessionType || "Lecture"] || "#f97316";
-
-  return (
-    <View style={styles.classCard}>
-      <View style={[styles.orangeAccent, { backgroundColor: accent }]} />
-      <View style={styles.cardMainContent}>
-        <View style={styles.cardHeader}>
-          <View style={styles.titleRow}>
-            <Feather
-              name="book"
-              size={18}
-              color="#1e293b"
-              style={{ marginRight: 8 }}
-            />
-            <Text style={styles.classTitle}>{title}</Text>
-          </View>
-          <View style={{ alignItems: "flex-end" }}>
-            <Text style={styles.classCode}>{code}</Text>
-            {sessionType && (
-              <Text style={[styles.sessionBadge, { color: accent }]}>
-                {sessionType}
-              </Text>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.cardFooter}>
-          <View style={styles.infoRow}>
-            <Feather name="clock" size={14} color="#94a3b8" />
-            <Text style={styles.infoText}>{time}</Text>
-            <Ionicons
-              name="location-outline"
-              size={14}
-              color="#94a3b8"
-              style={{ marginLeft: 10 }}
-            />
-            <Text style={styles.infoText}>{location}</Text>
-          </View>
-          <TouchableOpacity onPress={onDelete} disabled={isDeleting}>
-            {isDeleting ? (
-              <ActivityIndicator size="small" color="#ef4444" />
-            ) : (
-              <Feather name="trash-2" size={18} color="#ef4444" />
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
-};
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f8fafc" },
+const s = StyleSheet.create({
+  container: { flex: 1 },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    marginBottom: 20,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16, borderBottomWidth: 1,
   },
-  screenTitle: { fontSize: 24, fontWeight: "bold", color: "#0f172a" },
-  subtitle: { fontSize: 14, color: "#94a3b8", marginTop: 4 },
-  addButton: {
-    backgroundColor: "#4f46e5",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-  },
-  addButtonText: { color: "#fff", fontWeight: "600", marginLeft: 6 },
-  daysContainer: { paddingHorizontal: 15, marginBottom: 20 },
-  daysScroll: { backgroundColor: "#f1f5f9", borderRadius: 15, padding: 6 },
-  dayTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginRight: 5,
-  },
-  activeDayTab: { backgroundColor: "#fff", elevation: 2, shadowOpacity: 0.1 },
-  dayText: { fontSize: 14, color: "#64748b", fontWeight: "500" },
-  activeDayText: { color: "#0f172a", fontWeight: "bold" },
-  badge: {
-    backgroundColor: "#4f46e5",
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 6,
-    position: "absolute",
-    top: -2,
-    right: 2,
-  },
-  badgeText: { color: "#fff", fontSize: 10, fontWeight: "bold" },
-  classesList: { paddingHorizontal: 20, paddingBottom: 20 },
+  screenTitle: { fontSize: 26, fontWeight: '900' },
+  subtitle: { fontSize: 13, marginTop: 3 },
+  addButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14, gap: 6 },
+  addButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+  emptyIconWrap: { width: 80, height: 80, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  emptyText: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
+  emptySubtext: { fontSize: 13, marginTop: 6, textAlign: 'center' },
+  emptyAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5 },
+  emptyAddBtnText: { fontSize: 14, fontWeight: '700' },
+
+  list: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 30 },
+  daySection: { marginBottom: 26 },
+  daySectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  daySectionDot: { width: 8, height: 8, borderRadius: 4 },
+  daySectionTitle: { fontSize: 17, fontWeight: '800', flex: 1 },
+  dayCountBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  dayCountText: { fontSize: 12, fontWeight: '700' },
+
   classCard: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    flexDirection: "row",
-    marginBottom: 15,
-    overflow: "hidden",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    borderRadius: 16, flexDirection: 'row', marginBottom: 12, overflow: 'hidden',
+    elevation: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 10, shadowOffset: { width: 0, height: 2 },
   },
-  orangeAccent: { width: 6 },
-  cardMainContent: { flex: 1, padding: 16 },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  titleRow: { flexDirection: "row", alignItems: "center", flex: 1 },
-  classTitle: { fontSize: 16, fontWeight: "bold", color: "#1e293b" },
-  classCode: { fontSize: 12, color: "#94a3b8" },
-  sessionBadge: { fontSize: 10, fontWeight: "bold", marginTop: 2 },
-  cardFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  infoRow: { flexDirection: "row", alignItems: "center" },
-  infoText: { fontSize: 13, color: "#64748b", marginLeft: 4 },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: "#64748b",
-    marginTop: 16,
-    fontWeight: "600",
-  },
-  emptySubtext: { fontSize: 13, color: "#94a3b8", marginTop: 4 },
+  accentBar: { width: 5 },
+  cardBody: { flex: 1, padding: 14 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 },
+  courseIconWrap: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  classTitle: { fontSize: 15, fontWeight: '700', flex: 1 },
+  typeBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  typeBadgeText: { fontSize: 11, fontWeight: '700' },
+  cardDivider: { height: 1, marginBottom: 10 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  infoRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  infoText: { fontSize: 12, marginLeft: 4 },
+  deleteBtn: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+
+  // Conflict popup
+  conflictOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
+  conflictPopup: { borderRadius: 20, padding: 28, alignItems: 'center', width: '100%' },
+  conflictIcon: { fontSize: 40, marginBottom: 12 },
+  conflictTitle: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
+  conflictMsg: { fontSize: 14, textAlign: 'center', lineHeight: 21, marginBottom: 20 },
+  conflictBtn: { paddingHorizontal: 28, paddingVertical: 12, borderRadius: 12 },
+  conflictBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+
+  // Add Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '88%', padding: 20 },
+  modalHandleBar: { width: 38, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '800' },
+  modalScroll: { flex: 1 },
+  inputLabel: { fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 14 },
+  modalInput: { borderWidth: 1.5, borderRadius: 12, padding: 12, fontSize: 15 },
+  chipRow: { flexDirection: 'row', gap: 10, marginBottom: 4, flexWrap: 'wrap' },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, flex: 1 },
+  chipCode: { fontSize: 16, fontWeight: '800' },
+  chipVal: { fontSize: 13, fontWeight: '600' },
+  scrollRow: { marginBottom: 4 },
+  dayChip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, marginRight: 8, borderWidth: 1.5 },
+  dayChipText: { fontSize: 13 },
+  durChip: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, flex: 1 },
+  durChipText: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  slotChip: { alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, marginRight: 8, borderWidth: 1.5, minWidth: 90 },
+  slotChipText: { fontSize: 12, fontWeight: '600' },
+  slotChipSep: { fontSize: 14 },
+  modalActions: { paddingTop: 14, borderTopWidth: 1, marginTop: 8 },
+  saveButton: { borderRadius: 14, padding: 16, alignItems: 'center' },
+  saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
 
 export default TimetableScreen;
