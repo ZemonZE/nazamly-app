@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import { IconClose } from '../Icons/Icons';
-import { API_URL, authHeaders } from '../firebase';
+import { API_URL, authHeaders, getAdminToken } from '../firebase';
 import './Users.css';
 
 const SUB_FOLDER_LABELS = {
@@ -49,7 +49,7 @@ function Materials() {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/course-materials`, { headers: authHeaders() });
+      const res = await fetch(`${API_URL}/api/admin/course-materials`, { headers: await authHeaders() });
       const data = await res.json();
       setCourses(data.courses || []);
     } catch (err) {
@@ -62,7 +62,7 @@ function Materials() {
   const fetchFiles = async (courseCode, subFolderType) => {
     setFilesLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/course-materials/${courseCode}/files/${subFolderType}`, { headers: authHeaders() });
+      const res = await fetch(`${API_URL}/api/admin/course-materials/${courseCode}/files/${subFolderType}`, { headers: await authHeaders() });
       const data = await res.json();
       setFiles(data.files || []);
     } catch (err) {
@@ -81,9 +81,7 @@ function Materials() {
       formData.append('file', uploadFile);
       if (uploadTitle.trim()) formData.append('title', uploadTitle.trim());
 
-      const token = localStorage.getItem('adminUserData')
-        ? JSON.parse(localStorage.getItem('adminUserData'))?.token
-        : null;
+      const token = await getAdminToken();
       const res = await fetch(
         `${API_URL}/api/admin/course-materials/${selectedCourse.courseCode}/upload/${activeSubFolder}`,
         {
@@ -109,7 +107,7 @@ function Materials() {
     try {
       const res = await fetch(
         `${API_URL}/api/admin/course-materials/${selectedCourse.courseCode}/files/${activeSubFolder}/${fileId}`,
-        { method: 'DELETE', headers: authHeaders() }
+        { method: 'DELETE', headers: await authHeaders() }
       );
       if (!res.ok) throw new Error('Delete failed');
       fetchFiles(selectedCourse.courseCode, activeSubFolder);
@@ -122,7 +120,7 @@ function Materials() {
     try {
       const res = await fetch(`${API_URL}/api/admin/course-materials/init`, {
         method: 'POST',
-        headers: authHeaders(),
+        headers: await authHeaders(),
         body: JSON.stringify({ courseCode: course.courseCode, courseName: course.courseName }),
       });
       if (!res.ok) throw new Error('Init failed');
@@ -167,7 +165,7 @@ function Materials() {
     try {
       const res = await fetch(`${API_URL}/api/admin/course-materials/sync-drive`, {
         method: 'POST',
-        headers: authHeaders(),
+        headers: await authHeaders(),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Sync failed');

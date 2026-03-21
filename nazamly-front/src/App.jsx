@@ -30,7 +30,7 @@ function App() {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-          const token = await firebaseUser.getIdToken();
+          const token = await firebaseUser.getIdToken(true);
           const res = await fetch(`${API_URL}/api/auth/sync`, {
             method: "POST",
             headers: {

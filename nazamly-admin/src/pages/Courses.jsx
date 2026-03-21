@@ -24,7 +24,7 @@ function Courses() {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/courses`, { headers: authHeaders() });
+      const res = await fetch(`${API_URL}/api/admin/courses`, { headers: await authHeaders() });
       const data = await res.json();
       setCourses(data);
     } catch (err) {
@@ -63,7 +63,7 @@ function Courses() {
       const method = editingCourse ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
-        headers: authHeaders(),
+        headers: await authHeaders(),
         body: JSON.stringify(formData),
       });
       if (!res.ok) {
@@ -82,7 +82,7 @@ function Courses() {
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete course "${name}"?`)) return;
     try {
-      const res = await fetch(`${API_URL}/api/admin/courses/${id}`, { method: 'DELETE', headers: authHeaders() });
+      const res = await fetch(`${API_URL}/api/admin/courses/${id}`, { method: 'DELETE', headers: await authHeaders() });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed to delete');

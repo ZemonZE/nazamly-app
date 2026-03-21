@@ -21,7 +21,7 @@ function Signup({ onSignup, switchToLogin }) {
   const pwdMismatch = password && confirm && password !== confirm;
 
   const syncWithBackend = async (user) => {
-    const token = await user.getIdToken();
+    const token = await user.getIdToken(true);
     const res = await fetch(`${API_URL}/api/auth/sync`, {
       method: "POST",
       headers: {

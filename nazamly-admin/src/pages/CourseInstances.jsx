@@ -33,10 +33,11 @@ function CourseInstances() {
   const fetchAll = async () => {
     setLoading(true);
     try {
+      const headers = await authHeaders();
       const [instRes, courseRes, doctorRes] = await Promise.all([
-        fetch(`${API_URL}/api/admin/course-instances`, { headers: authHeaders() }),
-        fetch(`${API_URL}/api/admin/courses`, { headers: authHeaders() }),
-        fetch(`${API_URL}/api/admin/doctors`, { headers: authHeaders() }),
+        fetch(`${API_URL}/api/admin/course-instances`, { headers }),
+        fetch(`${API_URL}/api/admin/courses`, { headers }),
+        fetch(`${API_URL}/api/admin/doctors`, { headers }),
       ]);
       setInstances(await instRes.json());
       setCourses(await courseRes.json());
@@ -75,7 +76,7 @@ function CourseInstances() {
       const method = editingInstance ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
-        headers: authHeaders(),
+        headers: await authHeaders(),
         body: JSON.stringify(formData),
       });
       if (!res.ok) {
@@ -94,7 +95,7 @@ function CourseInstances() {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this course instance?')) return;
     try {
-      const res = await fetch(`${API_URL}/api/admin/course-instances/${id}`, { method: 'DELETE', headers: authHeaders() });
+      const res = await fetch(`${API_URL}/api/admin/course-instances/${id}`, { method: 'DELETE', headers: await authHeaders() });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed to delete');
@@ -110,7 +111,7 @@ function CourseInstances() {
     try {
       const res = await fetch(`${API_URL}/api/admin/doctors`, {
         method: 'POST',
-        headers: authHeaders(),
+        headers: await authHeaders(),
         body: JSON.stringify({ name: newDoctorName.trim(), email: newDoctorEmail.trim() }),
       });
       if (!res.ok) throw new Error('Failed to create doctor');

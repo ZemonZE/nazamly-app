@@ -38,7 +38,7 @@ const TimetableScreen = () => {
         setEntries([]);
         return;
       }
-      const token = await user.getIdToken();
+      const token = await user.getIdToken(true);
       const res = await fetch(`${API_URL}/api/schedule/my-timetable`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -92,7 +92,7 @@ const TimetableScreen = () => {
           try {
             const user = auth.currentUser;
             if (!user) return;
-            const token = await user.getIdToken();
+            const token = await user.getIdToken(true);
             await fetch(`${API_URL}/api/schedule/session/${entryId}`, {
               method: 'DELETE',
               headers: { Authorization: `Bearer ${token}` },

@@ -12,7 +12,7 @@ function Login({ onLogin, switchToSignup }) {
   const [loading, setLoading] = useState(false);
 
   const syncWithBackend = async (user) => {
-    const token = await user.getIdToken();
+    const token = await user.getIdToken(true);
     const res = await fetch(`${API_URL}/api/auth/sync`, {
       method: "POST",
       headers: {

@@ -37,7 +37,7 @@ function AdminLogin({ onLoginSuccess }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      const token = await user.getIdToken();
+      const token = await user.getIdToken(true);
       
       // Verify admin role with backend
       const response = await fetch(`${API_URL}/api/auth/verify-admin`, {

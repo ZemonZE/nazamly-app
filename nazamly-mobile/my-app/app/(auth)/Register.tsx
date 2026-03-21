@@ -51,7 +51,7 @@ export default function RegisterScreen() {
   }, [request]);
 
   const syncWithBackend = async (user: any) => {
-    const token = await user.getIdToken();
+    const token = await user.getIdToken(true);
     const res = await fetch(`${API_URL}/api/auth/sync`, {
       method: "POST",
       headers: {

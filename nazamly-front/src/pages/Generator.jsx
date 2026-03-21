@@ -703,7 +703,7 @@ function Generator() {
       if (!user) {
         throw new Error("You must login first to generate a schedule");
       }
-      const token = await user.getIdToken();
+      const token = await user.getIdToken(true);
 
       const formData = new FormData();
       aiFiles.forEach((f) => formData.append("scheduleFiles", f));
@@ -762,7 +762,7 @@ function Generator() {
       if (!user) {
         throw new Error("You must login first to save the schedule");
       }
-      const token = await user.getIdToken();
+      const token = await user.getIdToken(true);
 
       const res = await fetch(`${API_URL}/api/schedule/save-ai`, {
         method: "POST",

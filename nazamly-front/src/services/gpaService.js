@@ -6,7 +6,7 @@ import { auth, API_URL } from "../firebase";
 async function authHeaders() {
   const user = auth.currentUser;
   if (!user) throw new Error("Not authenticated");
-  const token = await user.getIdToken();
+  const token = await user.getIdToken(true);
   return {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
