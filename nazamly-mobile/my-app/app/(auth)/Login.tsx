@@ -182,6 +182,18 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
+      {Platform.OS === 'web' && (
+        <style type="text/css">{`
+          input:-webkit-autofill,
+          input:-webkit-autofill:hover, 
+          input:-webkit-autofill:focus, 
+          input:-webkit-autofill:active {
+              -webkit-box-shadow: 0 0 0 30px ${colors.bg} inset !important;
+              -webkit-text-fill-color: ${colors.textPrimary} !important;
+              font-family: inherit !important;
+          }
+        `}</style>
+      )}
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -194,9 +206,11 @@ export default function LoginScreen() {
           
           {/* Hero Section with App Icon */}
           <View style={s.heroSection}>
-            <View style={[s.appIconContainer, { backgroundColor: colors.indigo }]}>
-              <MaterialCommunityIcons name="school" size={56} color="#fff" />
-            </View>
+            <Image 
+              source={require('@/assets/images/Logo design for a mo.png')} 
+              style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 24 }} 
+              resizeMode="contain" 
+            />
             <Text style={[s.welcomeText, { color: colors.textPrimary }]}>Welcome Back</Text>
             <Text style={[s.subtitleText, { color: colors.textMuted }]}>Sign in to continue to Nazamly</Text>
           </View>

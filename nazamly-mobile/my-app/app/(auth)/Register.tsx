@@ -217,6 +217,18 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
+      {Platform.OS === 'web' && (
+        <style type="text/css">{`
+          input:-webkit-autofill,
+          input:-webkit-autofill:hover, 
+          input:-webkit-autofill:focus, 
+          input:-webkit-autofill:active {
+              -webkit-box-shadow: 0 0 0 30px ${colors.bg} inset !important;
+              -webkit-text-fill-color: ${colors.textPrimary} !important;
+              font-family: inherit !important;
+          }
+        `}</style>
+      )}
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
@@ -228,9 +240,11 @@ export default function RegisterScreen() {
         >
           
           <View style={s.heroSection}>
-            <View style={[s.appIconContainer, { backgroundColor: colors.teal }]}>
-              <MaterialCommunityIcons name="account-plus" size={56} color="#fff" />
-            </View>
+            <Image 
+              source={require('@/assets/images/Logo design for a mo.png')} 
+              style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 24 }} 
+              resizeMode="contain" 
+            />
             <Text style={[s.welcomeText, { color: colors.textPrimary }]}>Join Nazamly</Text>
             <Text style={[s.subtitleText, { color: colors.textMuted }]}>Create your account to get started</Text>
           </View>
