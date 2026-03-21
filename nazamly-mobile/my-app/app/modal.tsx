@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+// Removed unused Link import
 import { StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';

@@ -172,7 +172,7 @@ const ProfileScreen = () => {
                 <View style={s.deansListLeft}>
                   <MaterialCommunityIcons name="trophy" size={24} color={colors.teal} />
                   <View>
-                    <Text style={[s.deansListTitle, { color: colors.teal }]}>Dean's List</Text>
+                    <Text style={[s.deansListTitle, { color: colors.teal }]}>{"Dean's List"}</Text>
                     <Text style={[s.deansListSub, { color: colors.teal + 'AA' }]}>Academic Excellence · CGPA {currentGpa.toFixed(2)}</Text>
                   </View>
                 </View>

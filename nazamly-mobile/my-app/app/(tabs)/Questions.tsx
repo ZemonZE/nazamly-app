@@ -93,7 +93,7 @@ export default function MaterialsLibrary() {
         <View style={s.sectionHeader}>
           <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Cloud Folders</Text>
           <TouchableOpacity style={s.driveLink} onPress={() => Linking.openURL('https://drive.google.com')}>
-            <AntDesign name="googleplus" size={14} color={colors.indigo} />
+            <AntDesign name="google-plus" size={14} color={colors.indigo} />
             <Text style={[s.driveLinkText, { color: colors.indigo }]}>Connect Drive</Text>
           </TouchableOpacity>
         </View>
@@ -119,7 +119,7 @@ export default function MaterialsLibrary() {
         {filteredFolders.length === 0 && filteredFiles.length === 0 && (
           <View style={s.emptyState}>
             <Feather name="search" size={40} color={colors.indigoLight} />
-            <Text style={[s.emptyText, { color: colors.textSecondary }]}>No results for "{searchQuery}"</Text>
+            <Text style={[s.emptyText, { color: colors.textSecondary }]}>No results for &quot;{searchQuery}&quot;</Text>
           </View>
         )}
         <View style={{ height: 20 }} />

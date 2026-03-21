@@ -71,7 +71,7 @@ const HomeScreen = () => {
 
   useEffect(() => {
     Animated.spring(progressAnim, { toValue: gpaProgress, useNativeDriver: false, tension: 60, friction: 8 }).start();
-  }, [gpaProgress]);
+  }, [gpaProgress, progressAnim]);
 
 
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   TouchableOpacity,
   ScrollView,
@@ -57,7 +57,7 @@ export default function LoginScreen() {
     }
   }, [request, redirectUri]);
 
-  const syncWithBackend = async (user: any) => {
+  const syncWithBackend = useCallback(async (user: any) => {
     const token = await user.getIdToken();
     const res = await fetch(`${API_URL}/api/auth/sync`, {
       method: "POST",
@@ -76,10 +76,10 @@ export default function LoginScreen() {
       console.error("[Login] /api/auth/sync failed:", res.status, body);
     }
     return body;
-  };
+  }, [router]);
 
   // 🌟 جلب بيانات المستخدم من الباك إند
-  const fetchUserProfile = async (user: any) => {
+  const fetchUserProfile = useCallback(async (user: any) => {
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${API_URL}/api/auth/get-profile`, {
@@ -101,7 +101,7 @@ export default function LoginScreen() {
     } catch (error) {
       console.error("[Login] Error fetching profile:", error);
     }
-  };
+  }, [setBackendUser]);
 
   // 🌟 معالجة استجابة OAuth للموبايل
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function LoginScreen() {
         })
         .finally(() => setLoading(false));
     }
-  }, [response, router]);
+  }, [response, router, syncWithBackend, fetchUserProfile]);
 
   const handleLogin = async () => {
     setLoading(true);

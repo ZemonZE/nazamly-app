@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   TextInput,
   TouchableOpacity,
@@ -59,7 +59,7 @@ export default function RegisterScreen() {
     }
   }, [request, redirectUri]);
 
-  const syncWithBackend = async (user: any) => {
+  const syncWithBackend = useCallback(async (user: any) => {
     try {
       console.log("[Register] Getting fresh token for sync...");
       const token = await user.getIdToken(true);
@@ -98,9 +98,9 @@ export default function RegisterScreen() {
       console.error("[Register] Sync error:", error);
       throw error;
     }
-  };
+  }, [router]);
 
-  const fetchUserProfile = async (user: any) => {
+  const fetchUserProfile = useCallback(async (user: any) => {
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${API_URL}/api/auth/get-profile`, {
@@ -122,7 +122,7 @@ export default function RegisterScreen() {
     } catch (error) {
       console.error("[Register] Error fetching profile:", error);
     }
-  };
+  }, [setBackendUser]);
 
   useEffect(() => {
     console.log("[Register] AuthSession response:", JSON.stringify(response, null, 2));
@@ -144,7 +144,7 @@ export default function RegisterScreen() {
         })
         .finally(() => setLoading(false));
     }
-  }, [response, router]);
+  }, [response, router, syncWithBackend, fetchUserProfile]);
 
   const handleRegister = async () => {
     if (password !== confirmPassword) {
@@ -165,7 +165,7 @@ export default function RegisterScreen() {
       console.log("[Register] Firebase profile updated with name:", name);
       
       await result.user.reload();
-      const freshToken = await result.user.getIdToken(true);
+      await result.user.getIdToken(true);
       console.log("[Register] Token refreshed with updated profile");
       
       console.log("[Register] Syncing with backend...");
