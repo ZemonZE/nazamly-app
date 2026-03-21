@@ -4,6 +4,7 @@
   "description": "> **Nazamly** is a full-stack integrated learning management platform built for university students. It covers course management, quiz generation, GPA tracking, timetables, and more.",
   "main": "index.js",
   "scripts": {
+    "postinstall": "npm install --prefix nazamly-backend && npm install --prefix nazamly-front && npm install --prefix nazamly-admin && npm install --prefix nazamly-mobile/my-app",
     "dev": "node start-dev.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
