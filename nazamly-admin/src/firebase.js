@@ -15,3 +15,24 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+/** Returns the stored admin token or null */
+export const getAdminToken = () => {
+  try {
+    const stored = localStorage.getItem('adminUserData');
+    if (!stored) return null;
+    return JSON.parse(stored)?.token || null;
+  } catch {
+    return null;
+  }
+};
+
+/** Returns headers with Authorization bearer token */
+export const authHeaders = (extra = {}) => {
+  const token = getAdminToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+};

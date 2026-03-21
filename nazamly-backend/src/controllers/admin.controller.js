@@ -2,6 +2,8 @@
 const CourseInstance = require('../models/academic/courseInstance.model');
 const Course = require('../models/academic/course.model');
 const Doctor = require('../models/academic/doctor.model');
+const User = require('../models/user/user.model');
+const admin = require('../config/firebase');
 
 // ═══════════════════════════════════════════
 //  COURSES
@@ -179,5 +181,152 @@ exports.deleteCourseInstance = async (req, res) => {
   } catch (error) {
     console.error('Error deleting course instance:', error.message);
     res.status(500).json({ error: 'Failed to delete course instance' });
+  }
+};
+
+// ═══════════════════════════════════════════
+//  USERS
+// ═══════════════════════════════════════════
+
+/** GET /api/admin/users */
+exports.getUsers = async (req, res) => {
+  try {
+    const { search, role, status } = req.query;
+
+    // 1. Fetch all users from Firebase Auth (handles pagination)
+    let firebaseUsers = [];
+    let pageToken;
+    do {
+      const result = await admin.auth().listUsers(1000, pageToken);
+      firebaseUsers = firebaseUsers.concat(result.users);
+      pageToken = result.pageToken;
+    } while (pageToken);
+
+    // 2. Fetch all MongoDB users indexed by firebaseUid for O(1) lookup
+    const mongoUsers = await User.find({});
+    const mongoByUid = {};
+    for (const u of mongoUsers) mongoByUid[u.firebaseUid] = u;
+
+    // 3. Merge: Firebase is source of truth for identity, MongoDB for role/accessStatus
+    let merged = firebaseUsers.map(fbUser => {
+      const mongo = mongoByUid[fbUser.uid] || {};
+      return {
+        _id: mongo._id || null,
+        firebaseUid: fbUser.uid,
+        email: fbUser.email || '',
+        displayName: fbUser.displayName || '',
+        photoURL: fbUser.photoURL || '',
+        role: mongo.role || 'student',
+        accessStatus: mongo.accessStatus || 'pending',
+        createdAt: fbUser.metadata.creationTime,
+        updatedAt: mongo.updatedAt || fbUser.metadata.lastSignInTime || fbUser.metadata.creationTime,
+      };
+    });
+
+    // 4. Apply filters
+    if (search) {
+      const regex = new RegExp(search, 'i');
+      merged = merged.filter(u => regex.test(u.email) || regex.test(u.displayName));
+    }
+    if (role) merged = merged.filter(u => u.role === role);
+    if (status) merged = merged.filter(u => u.accessStatus === status);
+
+    // 5. Sort newest first
+    merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json(merged);
+  } catch (error) {
+    console.error('Error fetching users:', error.message);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+};
+
+/** PUT /api/admin/users/:id */
+exports.updateUser = async (req, res) => {
+  try {
+    const { email, displayName, role, accessStatus } = req.body;
+
+    const validRoles = ['student', 'admin'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: `role must be one of: ${validRoles.join(', ')}` });
+    }
+
+    const validStatuses = ['active', 'pending', 'blocked'];
+    if (!validStatuses.includes(accessStatus)) {
+      return res.status(400).json({ error: `accessStatus must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    // req.params.id may be a MongoDB _id or a firebaseUid (for users not yet in MongoDB)
+    let user = await User.findById(req.params.id).catch(() => null);
+    if (!user) user = await User.findOne({ firebaseUid: req.params.id });
+
+    // Resolve the firebaseUid we'll use to update Firebase Auth
+    const firebaseUid = user ? user.firebaseUid : req.params.id;
+
+    if (user) {
+      const conflict = await User.findOne({ email, _id: { $ne: user._id } });
+      if (conflict) return res.status(409).json({ error: 'Email already in use' });
+      user = await User.findByIdAndUpdate(
+        user._id,
+        { email, displayName, role, accessStatus },
+        { new: true, runValidators: true }
+      );
+    } else {
+      const conflict = await User.findOne({ email });
+      if (conflict) return res.status(409).json({ error: 'Email already in use' });
+      user = await User.create({ firebaseUid, email, displayName, role, accessStatus });
+    }
+
+    // Sync to Firebase Auth: email, displayName, disabled flag, and admin custom claim
+    await admin.auth().updateUser(firebaseUid, {
+      email,
+      displayName,
+      disabled: accessStatus === 'blocked',
+    });
+    await admin.auth().setCustomUserClaims(firebaseUid, { admin: role === 'admin' });
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error updating user:', error.message);
+    res.status(500).json({ error: 'Failed to update user', details: error.message });
+  }
+};
+
+/** PATCH /api/admin/users/:id/status */
+exports.updateUserStatus = async (req, res) => {
+  try {
+    const { accessStatus } = req.body;
+
+    const validStatuses = ['active', 'pending', 'blocked'];
+    if (!validStatuses.includes(accessStatus)) {
+      return res.status(400).json({ error: `accessStatus must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    // Try by MongoDB _id first, then by firebaseUid
+    let user = await User.findByIdAndUpdate(
+      req.params.id,
+      { accessStatus },
+      { new: true, runValidators: true }
+    ).catch(() => null);
+
+    if (!user) {
+      user = await User.findOneAndUpdate(
+        { firebaseUid: req.params.id },
+        { accessStatus },
+        { new: true, runValidators: true }
+      );
+    }
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // Sync disabled flag to Firebase Auth
+    await admin.auth().updateUser(user.firebaseUid, {
+      disabled: accessStatus === 'blocked',
+    });
+
+    res.json(user);
+  } catch (error) {
+    console.error('Error updating user status:', error.message);
+    res.status(500).json({ error: 'Failed to update user status', details: error.message });
   }
 };

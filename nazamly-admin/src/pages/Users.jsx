@@ -1,8 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import { IconStudent, IconAdmin, IconClose } from '../Icons/Icons';
+import { auth, API_URL } from '../firebase';
 import './Users.css';
+
+async function fetchWithAuth(url, options = {}) {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('Not authenticated');
+  }
+
+  const token = await user.getIdToken();
+
+  const response = await fetch(`${API_URL}${url}`, {
+    ...options,
+    headers: {
+      ...options.headers,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw { status: response.status, message: errorBody.error };
+  }
+
+  return response.json();
+}
 
 function Users() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -11,30 +37,85 @@ function Users() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [editedUser, setEditedUser] = useState(null);
 
-  const [users, setUsers] = useState([
-    { id: 1, name: 'Waleed', email: 'waleed@example.com', role: 'admin', status: 'pending', lastLogin: '3/2/2026' },
-    { id: 2, name: 'Hazem', email: 'hazem@example.com', role: 'admin', status: 'active', lastLogin: '3/2/2026' },
-    { id: 3, name: 'Abdo', email: 'abdo@example.com', role: 'student', status: 'active', lastLogin: '3/2/2026' },
-    { id: 4, name: 'Youssef', email: 'youssef@example.com', role: 'student', status: 'active', lastLogin: '3/2/2026' },
-    { id: 5, name: 'Amr', email: 'amr@example.com', role: 'student', status: 'active', lastLogin: '3/2/2026' },
-    { id: 6, name: 'Eid', email: 'mostafa@example.com', role: 'student', status: 'pending', lastLogin: '3/1/2026' },
-    { id: 7, name: 'User 7', email: 'user7@example.com', role: 'student', status: 'active', lastLogin: '3/2/2026' },
-    { id: 8, name: 'User 8', email: 'user8@example.com', role: 'student', status: 'blocked', lastLogin: '3/2/2026' },
-    { id: 9, name: 'User 9', email: 'user9@example.com', role: 'student', status: 'active', lastLogin: '3/1/2026' },
-    { id: 10, name: 'User 10', email: 'user10@example.com', role: 'student', status: 'active', lastLogin: '3/2/2026' },
-    { id: 11, name: 'User 11', email: 'user11@example.com', role: 'student', status: 'pending', lastLogin: '3/1/2026' },
-  ]);
+  //users state
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = searchTerm === '' || 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-    
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+  const isFirstRender = useRef(true);
+
+  // fetch all users from Firebase and MongoDB
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Search handling
+      const params = new URLSearchParams();
+      if (searchTerm) params.set('search', searchTerm);
+      if (roleFilter !== 'all') params.set('role', roleFilter);
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+
+      const data = await fetchWithAuth('/api/admin/users?' + params.toString());
+      setUsers(data.map(u => ({
+        id: u._id || u.firebaseUid,
+        name: u.displayName || u.email,
+        email: u.email,
+        role: u.role,
+        status: u.accessStatus,
+        lastLogin: u.updatedAt,
+      })));
+    } catch (err) {
+      if (err && err.status) {
+        switch (err.status) {
+          case 401:
+            window.location.href = '/login';
+            return;
+          case 403:
+            setError('Insufficient permissions');
+            break;
+          case 404:
+            setError('User not found');
+            break;
+          case 409:
+            setError(err.message);
+            break;
+          case 500:
+            setError('Server error, please try again');
+            break;
+          default:
+            setError('Network error, please check your connection');
+        }
+      } else {
+        setError('Network error, please check your connection');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [searchTerm, roleFilter, statusFilter]);
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (isFirstRender.current) return;
+    const timer = setTimeout(() => {
+      fetchUsers();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Immediate fetch on filter change
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    fetchUsers();
+  }, [roleFilter, statusFilter]);
 
   const getRoleIcon = (role) => {
     return role === 'student' ? <IconStudent /> : <IconAdmin />;
@@ -54,16 +135,55 @@ function Users() {
     setEditedUser({ ...editedUser, [field]: value });
   };
 
-  const handleSaveChanges = () => {
-    setUsers(users.map(u => u.id === editedUser.id ? editedUser : u));
-    handleCloseModal();
+  // save user changes using API
+  const handleSaveChanges = async () => {
+    setSaving(true);
+    try {
+      await fetchWithAuth('/api/admin/users/' + editedUser.id, {
+        method: 'PUT',
+        body: JSON.stringify({
+          email: editedUser.email,
+          displayName: editedUser.name,
+          role: editedUser.role,
+          accessStatus: editedUser.status,
+        }),
+      });
+      await fetchUsers();
+      handleCloseModal();
+    } catch (err) {
+      setError(err.message || 'Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleBanUser = () => {
+  // ban or unban a user
+  const handleBanUser = async () => {
     const newStatus = editedUser.status === 'blocked' ? 'active' : 'blocked';
-    setEditedUser({ ...editedUser, status: newStatus });
+    setSaving(true);
+    try {
+      const updated = await fetchWithAuth('/api/admin/users/' + editedUser.id + '/status', {
+        method: 'PATCH',
+        body: JSON.stringify({ accessStatus: newStatus }),
+      });
+      const mappedUser = {
+        id: updated._id,
+        name: updated.displayName || updated.email,
+        email: updated.email,
+        role: updated.role,
+        status: updated.accessStatus,
+        lastLogin: updated.updatedAt,
+      };
+      setUsers(users.map(u => u.id === mappedUser.id ? mappedUser : u));
+      setEditedUser({ ...editedUser, status: newStatus });
+    } catch (err) {
+      setError(err.message || 'Failed to update user status');
+    } finally {
+      setSaving(false);
+    }
   };
 
+  // check if any user fields were modified
   const hasChanges = () => {
     if (!selectedUser || !editedUser) return false;
     return (
@@ -110,6 +230,13 @@ function Users() {
         </select>
       </div>
 
+      {error && (
+        <div className="error-banner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', marginBottom: '12px', backgroundColor: '#fde8e8', border: '1px solid #f5c6c6', borderRadius: '6px', color: '#c0392b' }}>
+          <span>{error}</span>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#c0392b', marginLeft: '12px' }}>✕</button>
+        </div>
+      )}
+
       <div className="table-container">
         <table className="data-table">
           <thead>
@@ -122,31 +249,41 @@ function Users() {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map(user => (
-              <tr key={user.id}>
-                <td>
-                  <div className="user-cell">
-                    <div className="user-email">{user.email}</div>
-                    <div className="user-name">{user.name}</div>
-                  </div>
-                </td>
-                <td>
-                  <span className="role-badge">
-                    {getRoleIcon(user.role)}
-                    {user.role}
-                  </span>
-                </td>
-                <td>
-                  <StatusBadge status={user.status} />
-                </td>
-                <td>{user.lastLogin}</td>
-                <td>
-                  <button className="action-btn" onClick={() => handleManageClick(user)}>
-                    Manage
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {loading ? (
+              <tr><td colSpan="5" style={{ textAlign: 'center' }}>Loading users...</td></tr>
+            ) : (
+              users.map(user => {
+                const lastLoginDate = user.lastLogin ? new Date(user.lastLogin) : null;
+                const lastLoginDisplay = lastLoginDate && !isNaN(lastLoginDate)
+                  ? lastLoginDate.toLocaleDateString()
+                  : 'Never';
+                return (
+                  <tr key={user.id}>
+                    <td>
+                      <div className="user-cell">
+                        <div className="user-email">{user.email}</div>
+                        <div className="user-name">{user.name}</div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="role-badge">
+                        {getRoleIcon(user.role)}
+                        {user.role}
+                      </span>
+                    </td>
+                    <td>
+                      <StatusBadge status={user.status} />
+                    </td>
+                    <td>{lastLoginDisplay}</td>
+                    <td>
+                      <button className="action-btn" onClick={() => handleManageClick(user)}>
+                        Manage
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -226,6 +363,7 @@ function Users() {
               <button 
                 className={`ban-btn ${editedUser.status === 'blocked' ? 'unban' : ''}`}
                 onClick={handleBanUser}
+                disabled={saving}
               >
                 {editedUser.status === 'blocked' ? 'Unban User' : 'Ban User'}
               </button>
@@ -236,7 +374,7 @@ function Users() {
                 <button 
                   className="save-btn" 
                   onClick={handleSaveChanges}
-                  disabled={!hasChanges()}
+                  disabled={saving || !hasChanges()}
                 >
                   Save Changes
                 </button>

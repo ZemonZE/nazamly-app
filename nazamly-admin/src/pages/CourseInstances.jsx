@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import { IconClose } from '../Icons/Icons';
-import { API_URL } from '../firebase';
+import { API_URL, authHeaders } from '../firebase';
 import './Users.css';
 
 function CourseInstances() {
@@ -34,9 +34,9 @@ function CourseInstances() {
     setLoading(true);
     try {
       const [instRes, courseRes, doctorRes] = await Promise.all([
-        fetch(`${API_URL}/api/admin/course-instances`),
-        fetch(`${API_URL}/api/admin/courses`),
-        fetch(`${API_URL}/api/admin/doctors`),
+        fetch(`${API_URL}/api/admin/course-instances`, { headers: authHeaders() }),
+        fetch(`${API_URL}/api/admin/courses`, { headers: authHeaders() }),
+        fetch(`${API_URL}/api/admin/doctors`, { headers: authHeaders() }),
       ]);
       setInstances(await instRes.json());
       setCourses(await courseRes.json());
@@ -75,7 +75,7 @@ function CourseInstances() {
       const method = editingInstance ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(formData),
       });
       if (!res.ok) {
@@ -94,7 +94,7 @@ function CourseInstances() {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this course instance?')) return;
     try {
-      const res = await fetch(`${API_URL}/api/admin/course-instances/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/api/admin/course-instances/${id}`, { method: 'DELETE', headers: authHeaders() });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed to delete');
@@ -110,7 +110,7 @@ function CourseInstances() {
     try {
       const res = await fetch(`${API_URL}/api/admin/doctors`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ name: newDoctorName.trim(), email: newDoctorEmail.trim() }),
       });
       if (!res.ok) throw new Error('Failed to create doctor');

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import { IconClose } from '../Icons/Icons';
-import { API_URL } from '../firebase';
+import { API_URL, authHeaders } from '../firebase';
 import './Users.css';
 
 function Courses() {
@@ -24,7 +24,7 @@ function Courses() {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/courses`);
+      const res = await fetch(`${API_URL}/api/admin/courses`, { headers: authHeaders() });
       const data = await res.json();
       setCourses(data);
     } catch (err) {
@@ -63,7 +63,7 @@ function Courses() {
       const method = editingCourse ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(formData),
       });
       if (!res.ok) {
@@ -82,7 +82,7 @@ function Courses() {
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete course "${name}"?`)) return;
     try {
-      const res = await fetch(`${API_URL}/api/admin/courses/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_URL}/api/admin/courses/${id}`, { method: 'DELETE', headers: authHeaders() });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Failed to delete');
