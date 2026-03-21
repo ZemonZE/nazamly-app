@@ -1,6 +1,8 @@
 // src/controllers/admin.controller.js
 const CourseInstance = require('../models/academic/courseInstance.model');
 const Course = require('../models/academic/course.model');
+const CourseMaterial = require('../models/materials/courseMaterial.model');
+const driveService = require('../services/drive.service');
 const Doctor = require('../models/academic/doctor.model');
 const User = require('../models/user/user.model');
 const admin = require('../config/firebase');
@@ -63,6 +65,14 @@ exports.deleteCourse = async (req, res) => {
     }
     const course = await Course.findByIdAndDelete(req.params.id);
     if (!course) return res.status(404).json({ error: 'Course not found' });
+
+    const cm = await CourseMaterial.findOneAndDelete({ courseCode: course.courseCode });
+    if (cm?.driveFolderId) {
+      try { await driveService.deleteFile(cm.driveFolderId); } catch (e) {
+        console.warn(`Could not delete Drive folder for ${course.courseCode}:`, e.message);
+      }
+    }
+
     res.json({ message: 'Course deleted successfully' });
   } catch (error) {
     console.error('Error deleting course:', error.message);
