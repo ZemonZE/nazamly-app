@@ -11,7 +11,6 @@ import { auth, API_URL } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'expo-router';
 import { useAppTheme } from '@/constants/theme';
-
 interface ProfileDetailProps {
   icon: keyof typeof Feather.glyphMap;
   label: string;
@@ -23,6 +22,7 @@ const ProfileScreen = () => {
   const router = useRouter();
   const { colors, isDark, toggleTheme } = useAppTheme();
   const { user, backendUser, setBackendUser, refreshProfile } = useAuth();
+
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [profileLoading, setProfileLoading] = useState(!backendUser);
   const [isEditModalVisible, setEditModalVisible] = useState(false);
@@ -71,8 +71,8 @@ const ProfileScreen = () => {
   const handleSaveProfile = async () => {
     const cgpa = parseFloat(cgpaInput);
     const credits = parseFloat(creditsInput);
-    if (isNaN(cgpa) || isNaN(credits)) return Alert.alert('Invalid Input', 'CGPA and Credit Hours must be valid numbers.');
-    if (cgpa < 0 || cgpa > 5.0) return Alert.alert('Invalid Input', 'CGPA must be between 0.0 and 5.0.');
+    if (isNaN(cgpa) || isNaN(credits)) return Alert.alert('Invalid Input', 'Please enter valid numbers');
+    if (cgpa < 0 || cgpa > 5.0) return Alert.alert('Invalid Input', 'CGPA must be between 0 and 5.0.');
     if (credits < 0) return Alert.alert('Invalid Input', 'Credit hours cannot be negative.');
     setIsSaving(true);
     try {
@@ -84,7 +84,7 @@ const ProfileScreen = () => {
       const data = await res.json();
       if (res.ok && data.success) {
         await refreshProfile(); setEditModalVisible(false);
-        if (Platform.OS === 'android') { ToastAndroid.showWithGravity('Profile updated', ToastAndroid.SHORT, ToastAndroid.BOTTOM); }
+        if (Platform.OS === 'android') { ToastAndroid.showWithGravity('Profile updated successfully', ToastAndroid.SHORT, ToastAndroid.BOTTOM); }
         else { Alert.alert('Success', 'Profile updated successfully'); }
       } else { throw new Error(data.message || 'Failed to save profile'); }
     } catch (err: any) { Alert.alert('Error', err.message || 'Failed to update profile'); }
@@ -133,7 +133,7 @@ const ProfileScreen = () => {
         {profileLoading ? (
           <View style={s.centered}>
             <ActivityIndicator size="large" color={colors.indigo} />
-            <Text style={[s.loadingText, { color: colors.textMuted }]}>Loading profile...</Text>
+            <Text style={[s.loadingText, { color: colors.textMuted }]}>Loading Profile...</Text>
           </View>
         ) : (
           <>
@@ -152,7 +152,7 @@ const ProfileScreen = () => {
                   <Feather name="camera" size={14} color="#fff" />
                 </View>
               </TouchableOpacity>
-              <View style={[s.studentIdBadge, { backgroundColor: colors.indigoPale }]}>
+              <View style={[s.studentIdBadge, { backgroundColor: colors.indigoPale, flexDirection: 'row' }]}>
                 <MaterialCommunityIcons name="card-account-details" size={13} color={colors.indigo} />
                 <Text style={[s.studentIdText, { color: colors.indigo }]}>Student ID · {(user?.uid.substring(0, 8) || 'N/A').toUpperCase()}</Text>
               </View>
@@ -168,12 +168,12 @@ const ProfileScreen = () => {
 
             {/* Dean's List Badge */}
             {isDeansList && (
-              <View style={[s.deansListCard, { backgroundColor: colors.tealLight, borderColor: colors.teal + '40' }]}>
-                <View style={s.deansListLeft}>
+              <View style={[s.deansListCard, { backgroundColor: colors.tealLight, borderColor: colors.teal + '40', flexDirection: 'row' }]}>
+                <View style={[s.deansListLeft, { flexDirection: 'row' }]}>
                   <MaterialCommunityIcons name="trophy" size={24} color={colors.teal} />
                   <View>
-                    <Text style={[s.deansListTitle, { color: colors.teal }]}>{"Dean's List"}</Text>
-                    <Text style={[s.deansListSub, { color: colors.teal + 'AA' }]}>Academic Excellence · CGPA {currentGpa.toFixed(2)}</Text>
+                    <Text style={[s.deansListTitle, { color: colors.teal }]}>Dean&apos;s List</Text>
+                    <Text style={[s.deansListSub, { color: colors.teal + 'AA' }]}>Academic Excellence · GPA {currentGpa.toFixed(2)}</Text>
                   </View>
                 </View>
                 <Feather name="award" size={20} color={colors.teal} />
@@ -181,11 +181,11 @@ const ProfileScreen = () => {
             )}
 
             {/* Info Grid */}
-            <View style={s.infoGrid}>
+            <View style={[s.infoGrid, { flexDirection: 'row' }]}>
               {[
-                { icon: 'book', label: 'CGPA', value: currentGpa.toFixed(2), color: colors.indigo },
-                { icon: 'clock', label: 'Credit Hours', value: (backendUser?.earnedCreditHours ?? 0).toString(), color: colors.teal },
-                { icon: 'layers', label: 'Department', value: 'Comp. Sci.', color: colors.amber },
+                { icon: 'book', label: 'GPA', value: currentGpa.toFixed(2), color: colors.indigo },
+                { icon: 'clock', label: 'Earned Hrs', value: (backendUser?.earnedCreditHours ?? 0).toString(), color: colors.teal },
+                { icon: 'layers', label: 'Department', value: 'CS', color: colors.amber },
                 { icon: 'calendar', label: 'Year', value: 'Year 3', color: colors.green },
               ].map(item => (
                 <View key={item.label} style={[s.infoGridItem, { backgroundColor: colors.card }]}>
@@ -211,14 +211,14 @@ const ProfileScreen = () => {
               <Text style={[s.detailsCardTitle, { color: colors.textMuted }]}>Preferences</Text>
 
               {/* Notifications Toggle */}
-              <View style={s.settingRow}>
-                <View style={s.settingLeft}>
+              <View style={[s.settingRow, { flexDirection: 'row' }]}>
+                <View style={[s.settingLeft, { flexDirection: 'row' }]}>
                   <View style={[s.settingIcon, { backgroundColor: colors.indigoPale }]}>
                     <Feather name="bell" size={16} color={colors.indigo} />
                   </View>
                   <View>
                     <Text style={[s.settingLabel, { color: colors.textPrimary }]}>Notifications</Text>
-                    <Text style={[s.settingSub, { color: colors.textMuted }]}>Exam reminders & alerts</Text>
+                    <Text style={[s.settingSub, { color: colors.textMuted }]}>Stay updated on schedule changes</Text>
                   </View>
                 </View>
                 <Switch value={notifEnabled} onValueChange={setNotifEnabled}
@@ -228,33 +228,36 @@ const ProfileScreen = () => {
 
               <View style={[s.divider, { backgroundColor: colors.divider }]} />
 
-              {/* Dark Mode Toggle — wired to actual ThemeContext */}
-              <View style={s.settingRow}>
-                <View style={s.settingLeft}>
+              {/* Dark Mode Toggle */}
+              <View style={[s.settingRow, { flexDirection: 'row' }]}>
+                <View style={[s.settingLeft, { flexDirection: 'row' }]}>
                   <View style={[s.settingIcon, { backgroundColor: colors.amberLight }]}>
                     <Feather name={isDark ? 'sun' : 'moon'} size={16} color={colors.amber} />
                   </View>
                   <View>
                     <Text style={[s.settingLabel, { color: colors.textPrimary }]}>Dark Mode</Text>
-                    <Text style={[s.settingSub, { color: colors.textMuted }]}>{isDark ? 'Currently: Dark' : 'Currently: Light'}</Text>
+                    <Text style={[s.settingSub, { color: colors.textMuted }]}>{isDark ? 'Dark Mode' : 'Light Mode'}</Text>
                   </View>
                 </View>
                 <Switch value={isDark} onValueChange={toggleTheme}
                   trackColor={{ false: colors.border, true: colors.amberLight }}
                   thumbColor={isDark ? colors.amber : colors.textMuted} />
               </View>
+
+              <View style={[s.divider, { backgroundColor: colors.divider }]} />
+
             </View>
 
             {/* Edit & Logout */}
-            <TouchableOpacity style={[s.editButton, { borderColor: colors.indigo, backgroundColor: colors.indigoPale }]}
+            <TouchableOpacity style={[s.editButton, { borderColor: colors.indigo, backgroundColor: colors.indigoPale, flexDirection: 'row' }]}
               onPress={() => { setCgpaInput(backendUser?.currentCGPA?.toString() || ''); setCreditsInput(backendUser?.earnedCreditHours?.toString() || ''); setEditModalVisible(true); }}>
               <Feather name="edit-2" size={18} color={colors.indigo} />
               <Text style={[s.editButtonText, { color: colors.indigo }]}>Edit Academic Info</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[s.logoutButton, { borderColor: colors.red + '40', backgroundColor: colors.redLight }]} onPress={handleSignOut} disabled={isSigningOut}>
+            <TouchableOpacity style={[s.logoutButton, { borderColor: colors.red + '40', backgroundColor: colors.redLight, flexDirection: 'row' }]} onPress={handleSignOut} disabled={isSigningOut}>
               {isSigningOut ? <ActivityIndicator color={colors.red} size="small" /> : <Feather name="log-out" size={18} color={colors.red} />}
-              <Text style={[s.logoutText, { color: colors.red }]}>{isSigningOut ? 'Signing out...' : 'Logout from Nazamly'}</Text>
+              <Text style={[s.logoutText, { color: colors.red }]}>{isSigningOut ? 'Logging out...' : 'Logout'}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -265,22 +268,22 @@ const ProfileScreen = () => {
         <View style={s.modalOverlay}>
           <View style={[s.modalContent, { backgroundColor: colors.card }]}>
             <View style={[s.modalHandleBar, { backgroundColor: colors.border }]} />
-            <View style={s.modalHeader}>
-              <Text style={[s.modalTitle, { color: colors.textPrimary }]}>Edit Academic Info</Text>
+            <View style={[s.modalHeader, { flexDirection: 'row' }]}>
+              <Text style={[s.modalTitle, { color: colors.textPrimary }]}>Edit Profile</Text>
               <TouchableOpacity onPress={() => setEditModalVisible(false)}><Feather name="x" size={22} color={colors.textSecondary} /></TouchableOpacity>
             </View>
             <Text style={[s.inputLabel, { color: colors.textSecondary }]}>Current CGPA</Text>
             <TextInput style={[s.modalInput, { borderColor: colors.border, backgroundColor: colors.bg, color: colors.textPrimary }]}
-              value={cgpaInput} onChangeText={setCgpaInput} keyboardType="numeric" placeholder="e.g. 3.5" placeholderTextColor={colors.textMuted} />
-            <Text style={[s.inputLabel, { color: colors.textSecondary }]}>Earned Credit Hours</Text>
+              value={cgpaInput} onChangeText={setCgpaInput} keyboardType="numeric" placeholder="e.g. 3.75" placeholderTextColor={colors.textMuted} />
+            <Text style={[s.inputLabel, { color: colors.textSecondary }]}>Credit Hours Earned</Text>
             <TextInput style={[s.modalInput, { borderColor: colors.border, backgroundColor: colors.bg, color: colors.textPrimary }]}
               value={creditsInput} onChangeText={setCreditsInput} keyboardType="numeric" placeholder="e.g. 60" placeholderTextColor={colors.textMuted} />
-            <View style={s.modalActions}>
+            <View style={[s.modalActions, { flexDirection: 'row' }]}>
               <TouchableOpacity style={[s.cancelBtn, { backgroundColor: colors.bg }]} onPress={() => setEditModalVisible(false)} disabled={isSaving}>
                 <Text style={[s.cancelBtnText, { color: colors.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.saveBtn, { backgroundColor: colors.indigo }]} onPress={handleSaveProfile} disabled={isSaving}>
-                {isSaving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.saveBtnText}>Save</Text>}
+                {isSaving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.saveBtnText}>Save Choices</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -291,12 +294,12 @@ const ProfileScreen = () => {
 };
 
 const ProfileDetail = ({ icon, label, value, colors }: ProfileDetailProps) => (
-  <View style={s.detailRow}>
-    <View style={s.detailLeft}>
+  <View style={[s.detailRow, { flexDirection: 'row' }]}>
+    <View style={[s.detailLeft, { flexDirection: 'row' }]}>
       <Feather name={icon} size={16} color={colors.textMuted} />
       <Text style={[s.detailLabel, { color: colors.textSecondary }]}>{label}</Text>
     </View>
-    <Text style={[s.detailValue, { color: colors.textPrimary }]} numberOfLines={1}>{value}</Text>
+    <Text style={[s.detailValue, { color: colors.textPrimary, textAlign: 'right' }]} numberOfLines={1}>{value}</Text>
   </View>
 );
 
@@ -318,43 +321,47 @@ const s = StyleSheet.create({
   profileEmail: { fontSize: 14 },
   progressBarOuter: { height: 4, borderRadius: 2, marginBottom: 16, overflow: 'hidden' },
   progressBarInner: { height: '100%', borderRadius: 2 },
-  deansListCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1 },
-  deansListLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  deansListCard: { alignItems: 'center', justifyContent: 'space-between', borderRadius: 16, padding: 18, marginBottom: 16, borderWidth: 1 },
+  deansListLeft: { alignItems: 'center', gap: 14 },
   deansListTitle: { fontSize: 15, fontWeight: '800' },
   deansListSub: { fontSize: 12, marginTop: 2 },
-  infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 16 },
-  infoGridItem: { width: '47%', borderRadius: 16, padding: 16, alignItems: 'flex-start', gap: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
-  infoGridLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 },
-  infoGridValue: { fontSize: 18, fontWeight: '800' },
+  infoGrid: { flexWrap: 'wrap', gap: 12, marginBottom: 16 },
+  infoGridItem: { width: '47%', borderRadius: 16, padding: 16, alignItems: 'center', gap: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 2 },
+  infoGridLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6, textAlign: 'center' },
+  infoGridValue: { fontSize: 18, fontWeight: '800', textAlign: 'center' },
   detailsCard: { borderRadius: 16, padding: 18, marginBottom: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
   detailsCardTitle: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14 },
   divider: { height: 1, marginVertical: 12 },
-  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  detailLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  detailRow: { justifyContent: 'space-between', alignItems: 'center' },
+  detailLeft: { alignItems: 'center', gap: 10 },
   detailLabel: { fontSize: 14 },
-  detailValue: { fontSize: 14, fontWeight: '600', maxWidth: '55%', textAlign: 'right' },
+  detailValue: { fontSize: 14, fontWeight: '600', maxWidth: '55%' },
   settingsCard: { borderRadius: 16, padding: 18, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
-  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  settingLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  settingRow: { alignItems: 'center', justifyContent: 'space-between' },
+  settingLeft: { alignItems: 'center', gap: 12 },
   settingIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   settingLabel: { fontSize: 14, fontWeight: '600' },
   settingSub: { fontSize: 12, marginTop: 1 },
-  editButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 15, borderRadius: 16, borderWidth: 1.5, marginBottom: 12 },
+  editButton: { alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 15, borderRadius: 16, borderWidth: 1.5, marginBottom: 12 },
   editButtonText: { fontSize: 15, fontWeight: '700' },
-  logoutButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 15, borderRadius: 16, borderWidth: 1.5 },
+  logoutButton: { alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 15, borderRadius: 16, borderWidth: 1.5 },
   logoutText: { fontSize: 15, fontWeight: '700' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 34 },
   modalHandleBar: { width: 38, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalHeader: { justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 20, fontWeight: '800' },
   inputLabel: { fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 14 },
   modalInput: { borderWidth: 1.5, borderRadius: 10, padding: 12, fontSize: 15 },
-  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 20, gap: 10 },
+  modalActions: { justifyContent: 'flex-start', marginTop: 20, gap: 10 },
   cancelBtn: { paddingVertical: 12, paddingHorizontal: 20, borderRadius: 10 },
   cancelBtnText: { fontWeight: '600' },
   saveBtn: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10 },
   saveBtnText: { color: '#fff', fontWeight: '700' },
+  modalOverlayCentered: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  dropdownContent: { width: '100%', borderRadius: 20, padding: 24, elevation: 5, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  dropdownOption: { padding: 16, borderRadius: 14, marginBottom: 10, alignItems: 'center' },
+  dropdownText: { fontSize: 16, fontWeight: '700' },
 });
 
 export default ProfileScreen;

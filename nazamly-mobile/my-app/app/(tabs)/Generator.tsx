@@ -37,13 +37,13 @@ const generateSchedule = (intensity: Intensity, subjects: string[]): TimelineBlo
   hours.forEach(h => {
     const timeStr = `${h.toString().padStart(2, '0')}:00 – ${(h + 1).toString().padStart(2, '0')}:00`;
     if (subjectIdx < subjectQueue.length) {
-      schedule.push({ time: timeStr, label: `${subjectQueue[subjectIdx]} Study`, type: 'Deep Work', subject: subjectQueue[subjectIdx] });
+      schedule.push({ time: timeStr, label: `Study ${subjectQueue[subjectIdx]}`, type: 'Deep Work', subject: subjectQueue[subjectIdx] });
       subjectIdx++;
     } else if (h >= 18) {
-      schedule.push({ time: timeStr, label: 'Review & Recap', type: 'Admin' });
+      schedule.push({ time: timeStr, label: 'Review & Solve', type: 'Admin' });
     }
   });
-  schedule.push({ time: '22:00 – 23:00', label: 'Wind Down', type: 'Free' });
+  schedule.push({ time: '22:00 – 23:00', label: 'Relax & Sleep', type: 'Free' });
   return schedule;
 };
 
@@ -64,34 +64,36 @@ export default function GeneratorScreen() {
   };
 
   const intensityMeta: Record<Intensity, { color: string; bg: string; desc: string }> = {
-    Low: { color: colors.teal, bg: colors.tealLight, desc: '2 deep work blocks' },
-    Medium: { color: colors.indigo, bg: colors.indigoPale, desc: '3 deep work blocks' },
-    High: { color: colors.amber, bg: colors.amberLight, desc: '5 deep work blocks' },
+    Low: { color: colors.teal, bg: colors.tealLight, desc: 'Casual Study' },
+    Medium: { color: colors.indigo, bg: colors.indigoPale, desc: 'Balanced Focus' },
+    High: { color: colors.amber, bg: colors.amberLight, desc: 'Intense Grind' },
   };
+
+  const LVL_LABELS = { Low: 'Low', Medium: 'Medium', High: 'High' };
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
 
-        <View style={[s.header, { backgroundColor: colors.indigoPale }]}>
+        <View style={[s.header, { backgroundColor: colors.indigoPale, flexDirection: 'row' }]}>
           <MaterialCommunityIcons name="lightning-bolt" size={28} color={colors.indigo} />
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={[s.headerTitle, { color: colors.textPrimary }]}>Optimize Your Flow</Text>
-            <Text style={[s.headerSub, { color: colors.textSecondary }]}>AI-curated 24h schedule built around you</Text>
+            <Text style={[s.headerTitle, { color: colors.textPrimary }]}>Smart Generator</Text>
+            <Text style={[s.headerSub, { color: colors.textSecondary }]}>AI powered daily plan</Text>
           </View>
         </View>
 
         {/* Study Intensity */}
         <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Study Intensity</Text>
-          <View style={s.intensityRow}>
+          <View style={[s.intensityRow, { flexDirection: 'row' }]}>
             {(['Low', 'Medium', 'High'] as Intensity[]).map(lvl => {
               const meta = intensityMeta[lvl];
               const active = intensity === lvl;
               return (
                 <TouchableOpacity key={lvl} style={[s.intensityBtn, { borderColor: active ? meta.color : colors.border }, active && { backgroundColor: meta.bg }]}
                   onPress={() => { setIntensity(lvl); setGenerated(null); }} activeOpacity={0.75}>
-                  <Text style={[s.intensityLabel, { color: active ? meta.color : colors.textSecondary }]}>{lvl}</Text>
+                  <Text style={[s.intensityLabel, { color: active ? meta.color : colors.textSecondary }]}>{LVL_LABELS[lvl]}</Text>
                   {active && <Text style={[s.intensityDesc, { color: meta.color }]}>{meta.desc}</Text>}
                 </TouchableOpacity>
               );
@@ -101,9 +103,9 @@ export default function GeneratorScreen() {
 
         {/* Priority Subjects */}
         <View style={[s.card, { backgroundColor: colors.card }]}>
-          <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Priority Subjects</Text>
-          <Text style={[s.cardSub, { color: colors.textMuted }]}>Select subjects to focus on today</Text>
-          <View style={s.chipsWrap}>
+          <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Select Subjects</Text>
+          <Text style={[s.cardSub, { color: colors.textMuted }]}>Choose subjects to focus on today</Text>
+          <View style={[s.chipsWrap, { flexDirection: 'row' }]}>
             {SUBJECTS.map(sub => {
               const active = selectedSubjects.includes(sub);
               return (
@@ -119,21 +121,22 @@ export default function GeneratorScreen() {
 
 
         {/* CTA */}
-        <TouchableOpacity style={[s.generateBtn, { backgroundColor: colors.indigo, opacity: isGenerating ? 0.7 : 1 }]}
+        <TouchableOpacity style={[s.generateBtn, { backgroundColor: colors.indigo, opacity: isGenerating ? 0.7 : 1, flexDirection: 'row' }]}
           onPress={handleGenerate} activeOpacity={0.85} disabled={isGenerating || selectedSubjects.length === 0}>
           <MaterialCommunityIcons name="lightning-bolt" size={22} color="#fff" />
-          <Text style={s.generateBtnText}>{isGenerating ? 'Generating...' : '✨ Generate Schedule'}</Text>
+          <Text style={s.generateBtnText}>{isGenerating ? 'Generating...' : `✨ Generate Schedule`}</Text>
         </TouchableOpacity>
 
         {/* Legend */}
         {generated && (
-          <View style={s.legendRow}>
+          <View style={[s.legendRow, { flexDirection: 'row' }]}>
             {(['Deep Work', 'Cognitive Reset', 'Admin', 'Free'] as BlockType[]).map(type => {
               const meta = getBlockMeta(type, colors)!;
+              const typeLabel = type === 'Deep Work' ? 'Deep Work' : type === 'Cognitive Reset' ? 'Cognitive Reset' : type === 'Admin' ? 'Assignment' : 'Break';
               return (
-                <View key={type} style={s.legendItem}>
+                <View key={type} style={[s.legendItem, { flexDirection: 'row' }]}>
                   <View style={[s.legendDot, { backgroundColor: meta.border }]} />
-                  <Text style={[s.legendText, { color: colors.textSecondary }]}>{type}</Text>
+                  <Text style={[s.legendText, { color: colors.textSecondary }]}>{typeLabel}</Text>
                 </View>
               );
             })}
@@ -143,20 +146,22 @@ export default function GeneratorScreen() {
         {/* Timeline */}
         {generated && (
           <View style={s.timelineContainer}>
-            <Text style={[s.timelineTitle, { color: colors.textPrimary }]}>🗓 Curated 24h Timetable</Text>
+            <Text style={[s.timelineTitle, { color: colors.textPrimary }]}>🗓 Generated AI Schedule</Text>
             {generated.map((block, i) => {
               const meta = getBlockMeta(block.type, colors)!;
               return (
-                <View key={i} style={s.timelineRow}>
-                  <View style={s.timelineLeft}>
-                    <Text style={[s.blockTime, { color: colors.textMuted }]}>{block.time}</Text>
-                  </View>
-                  <View style={[s.timelineBlock, { backgroundColor: meta.bg, borderLeftColor: meta.border }]}>
-                    <View style={s.timelineBlockHeader}>
+                <View key={i} style={[s.timelineRow, { flexDirection: 'row' }]}>
+                  <View style={[s.timelineBlock, { backgroundColor: meta.bg, borderLeftWidth: 3, borderLeftColor: meta.border }]}>
+                    <View style={[s.timelineBlockHeader, { flexDirection: 'row' }]}>
                       <MaterialCommunityIcons name={meta.icon as any} size={15} color={meta.text} />
                       <Text style={[s.blockLabel, { color: meta.text }]}>{block.label}</Text>
                     </View>
-                    <Text style={[s.blockType, { color: meta.text + 'AA' }]}>{block.type}</Text>
+                    <Text style={[s.blockType, { color: meta.text + 'AA', marginLeft: 22 }]}>
+                      {block.type === 'Deep Work' ? 'Deep Work' : block.type === 'Cognitive Reset' ? 'Cognitive Reset' : block.type === 'Admin' ? 'Assignment' : 'Break'}
+                    </Text>
+                  </View>
+                  <View style={s.timelineLeft}>
+                    <Text style={[s.blockTime, { color: colors.textMuted }]}>{block.time}</Text>
                   </View>
                 </View>
               );
@@ -172,17 +177,17 @@ export default function GeneratorScreen() {
 const s = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110 },
-  header: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, padding: 18, marginBottom: 20 },
+  header: { alignItems: 'center', borderRadius: 16, padding: 18, marginBottom: 20 },
   headerTitle: { fontSize: 20, fontWeight: '800' },
   headerSub: { fontSize: 13, marginTop: 2 },
   card: { borderRadius: 16, padding: 18, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
   cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
   cardSub: { fontSize: 12, marginBottom: 14 },
-  intensityRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  intensityRow: { gap: 10, marginTop: 10 },
   intensityBtn: { flex: 1, paddingVertical: 12, paddingHorizontal: 8, borderRadius: 10, borderWidth: 1.5, alignItems: 'center' },
-  intensityLabel: { fontSize: 14, fontWeight: '700' },
-  intensityDesc: { fontSize: 10, fontWeight: '500', marginTop: 3 },
-  chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  intensityLabel: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  intensityDesc: { fontSize: 10, fontWeight: '500', marginTop: 3, textAlign: 'center' },
+  chipsWrap: { flexWrap: 'wrap', gap: 8 },
   subjectChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5 },
   subjectChipText: { fontSize: 13 },
   slotRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderRadius: 10, marginBottom: 6, paddingHorizontal: 4, gap: 12 },
@@ -190,19 +195,19 @@ const s = StyleSheet.create({
   slotLabel: { fontSize: 14, fontWeight: '600' },
   slotTime: { fontSize: 12, marginTop: 1 },
   slotCheck: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  generateBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 17, borderRadius: 24, gap: 10, marginBottom: 20, shadowColor: '#3F51B5', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6 },
+  generateBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 17, borderRadius: 24, gap: 10, marginBottom: 20, shadowColor: '#3F51B5', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6 },
   generateBtnText: { fontSize: 17, fontWeight: '800', color: '#fff' },
-  legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendRow: { flexWrap: 'wrap', gap: 10, marginBottom: 16 },
+  legendItem: { alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 12, fontWeight: '500' },
   timelineContainer: { marginBottom: 10 },
   timelineTitle: { fontSize: 16, fontWeight: '800', marginBottom: 16 },
-  timelineRow: { flexDirection: 'row', gap: 12, marginBottom: 6 },
-  timelineLeft: { width: 92, alignItems: 'flex-end', paddingTop: 8 },
-  blockTime: { fontSize: 11, fontWeight: '600', textAlign: 'right' },
-  timelineBlock: { flex: 1, borderRadius: 10, padding: 12, borderLeftWidth: 3, marginBottom: 4 },
-  timelineBlockHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 },
+  timelineRow: { gap: 12, marginBottom: 6 },
+  timelineLeft: { width: 92, alignItems: 'center', paddingTop: 8 },
+  blockTime: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  timelineBlock: { flex: 1, borderRadius: 10, padding: 12, marginBottom: 4 },
+  timelineBlockHeader: { alignItems: 'center', gap: 7, marginBottom: 3 },
   blockLabel: { fontSize: 14, fontWeight: '700', flex: 1 },
-  blockType: { fontSize: 11, fontWeight: '500', marginLeft: 22 },
+  blockType: { fontSize: 11, fontWeight: '500' },
 });

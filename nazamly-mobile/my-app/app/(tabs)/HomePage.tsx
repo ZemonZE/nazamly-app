@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/context/AuthContext';
 import { API_URL } from '@/firebase';
 import { useAppTheme } from '@/constants/theme';
+
 import { useRouter } from 'expo-router';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -45,15 +46,18 @@ interface LocalEntry {
 }
 
 const SCHEDULE_STORAGE_KEY = '@nazamly_schedules';
-const TYPE_LABELS: Record<string, string> = { Lec: 'Lecture', Sec: 'Section', Lab: 'Laboratory' };
 
-const DAY_FULL_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DB_DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+
 
 
 const HomeScreen = () => {
   const { colors } = useAppTheme();
   const { user, backendUser, setBackendUser } = useAuth();
   const router = useRouter();
+
+
   const [todayClasses, setTodayClasses] = useState<LocalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUploadingCard, setIsUploadingCard] = useState(false);
@@ -82,8 +86,12 @@ const HomeScreen = () => {
       const saved = await AsyncStorage.getItem(SCHEDULE_STORAGE_KEY);
       if (saved) {
         const all: LocalEntry[] = JSON.parse(saved);
-        const todayDayName = DAY_FULL_NAMES[currentDayIndex];
-        const todayEntries = all.filter(e => e.day === todayDayName);
+        // We match by DB_DAY_NAMES or fallback to index.
+        const todayDayNameEN = DB_DAY_NAMES[currentDayIndex];
+        // In case old data is saved in Arabic.
+        const allDaysAr = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        const todayDayNameAR = allDaysAr[currentDayIndex];
+        const todayEntries = all.filter(e => e.day === todayDayNameEN || e.day === todayDayNameAR);
         todayEntries.sort((a, b) => a.slot.start.localeCompare(b.slot.start));
         setTodayClasses(todayEntries);
       } else {
@@ -111,9 +119,14 @@ const HomeScreen = () => {
 
   const getGreeting = () => {
     const h = today.getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return 'Good Morning,';
+    if (h < 18) return 'Good Afternoon,';
+    return 'Good Evening,';
+  };
+
+  const getDayDisplayName = () => {
+    const arr = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    return arr[(currentDayIndex + 1) % 7];
   };
 
   const getTotalCourses = () => todayClasses.length;
@@ -123,7 +136,7 @@ const HomeScreen = () => {
   const handleStudentCardUpload = async () => {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) return Alert.alert('Permission Required', 'Please allow access to your photo library.');
+      if (!permission.granted) return Alert.alert('Permission Required', 'Camera roll permissions are required to upload a card.');
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', allowsEditing: true, aspect: [16, 10], quality: 0.7 });
       if (result.canceled) return;
       const imageUri = result.assets[0].uri;
@@ -140,14 +153,14 @@ const HomeScreen = () => {
       const res = await fetch(`${API_URL}/api/auth/upload-student-card`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
       setCardUploadProgress(90);
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || 'Upload failed');
+      if (!res.ok || !data.success) throw new Error(data.message || 'فشل الرفع');
       setCardUploadProgress(100);
       if (data.data?.studentCardPhotoURL) setStudentCardUrl(data.data.studentCardPhotoURL);
       if (backendUser) setBackendUser({ ...backendUser, studentCardPhotoURL: data.data?.studentCardPhotoURL });
       setLocalCardUri(null);
-      if (Platform.OS === 'android') { ToastAndroid.showWithGravity('Student card uploaded', ToastAndroid.SHORT, ToastAndroid.BOTTOM); }
-      else { Alert.alert('Success', 'Student card uploaded'); }
-    } catch (err: any) { setLocalCardUri(null); Alert.alert('Upload Failed', err.message || 'Failed to upload.'); }
+      if (Platform.OS === 'android') { ToastAndroid.showWithGravity('Updated!', ToastAndroid.SHORT, ToastAndroid.BOTTOM); }
+      else { Alert.alert('Saved', 'Saved'); }
+    } catch (err: any) { setLocalCardUri(null); Alert.alert('Error', err.message); }
     finally { setIsUploadingCard(false); setCardUploadProgress(0); }
   };
 
@@ -160,51 +173,51 @@ const HomeScreen = () => {
 
         {/* Header */}
         <View style={s.header}>
-          <View>
-            <Text style={[s.greeting, { color: colors.textSecondary }]}>{getGreeting()}, 👋</Text>
+          <View style={{ alignItems: 'flex-start' }}>
+            <Text style={[s.greeting, { color: colors.textSecondary }]}>{getGreeting()} 👋</Text>
             <Text style={[s.userName, { color: colors.textPrimary }]}>{firstName}</Text>
             <Text style={[s.dateText, { color: colors.textMuted }]}>{todayStr}</Text>
           </View>
-          <View style={[s.focusChip, { backgroundColor: colors.indigoPale }]}>
+          <View style={[s.focusChip, { backgroundColor: colors.indigoPale, flexDirection: 'row' }]}>
             <MaterialCommunityIcons name="brain" size={14} color={colors.indigo} />
-            <Text style={[s.focusChipText, { color: colors.indigo }]}>Focus: Deep Work</Text>
+            <Text style={[s.focusChipText, { color: colors.indigo }]}>Deep Work</Text>
           </View>
         </View>
 
         {/* GPA Hero Card */}
         <TouchableOpacity style={[s.gpaCard, { backgroundColor: colors.indigo }]} activeOpacity={0.85} onPress={navigateToGpa}>
           <View style={s.gpaCardTop}>
-            <View>
-              <Text style={s.gpaLabel}>Current Standing</Text>
+            <View style={{ alignItems: 'flex-start', flex: 1 }}>
+              <Text style={s.gpaLabel}>GPA Overview</Text>
               <Text style={s.gpaValue}>{currentGpa.toFixed(2)}</Text>
-              <Text style={s.gpaSubLabel}>of {targetGpa.toFixed(1)} target</Text>
+              <Text style={s.gpaSubLabel}>Target {targetGpa.toFixed(1)}</Text>
             </View>
-            <View style={s.gpaBadge}>
+            <View style={[s.gpaBadge, { flexDirection: 'row' }]}>
               <Feather name="award" size={20} color={colors.teal} />
-              <Text style={s.gpaBadgeText}>{"Dean's List"}</Text>
+              <Text style={s.gpaBadgeText}>Dean&apos;s List</Text>
             </View>
           </View>
           <View style={s.progressTrack}>
             <Animated.View style={[s.progressFill, { backgroundColor: colors.teal, width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
           </View>
-          <View style={s.gpaCardFooter}>
-            <Text style={s.progressLabel}>{Math.round(gpaProgress * 100)}% to target GPA</Text>
-            <Text style={s.tapHint}>Tap to simulate →</Text>
+          <View style={[s.gpaCardFooter, { flexDirection: 'row' }]}>
+            <Text style={s.progressLabel}>{Math.round(gpaProgress * 100)}%</Text>
+            <Text style={s.tapHint}>View Details -{'>'}</Text>
           </View>
         </TouchableOpacity>
 
         {/* Stats */}
-        <View style={s.statsRow}>
-          <StatCard icon="book-open" label="Courses" value={getTotalCourses().toString()} color={colors.indigo} bgColor={colors.indigoPale} />
-          <StatCard icon="clock" label="Credit Hrs" value={(backendUser?.earnedCreditHours ?? 0).toString()} color={colors.teal} bgColor={colors.tealLight} />
+        <View style={[s.statsRow, { flexDirection: 'row' }]}>
+          <StatCard icon="book-open" label="Schedule" value={getTotalCourses().toString()} color={colors.indigo} bgColor={colors.indigoPale} />
+          <StatCard icon="clock" label="Total Earned Hrs" value={(backendUser?.earnedCreditHours ?? 0).toString()} color={colors.teal} bgColor={colors.tealLight} />
           <StatCard icon="trending-up" label="CGPA" value={currentGpa.toFixed(2)} color={colors.amber} bgColor={colors.amberLight} onPress={navigateToGpa} />
         </View>
 
         {/* Schedule */}
-        <View style={s.sectionHeader}>
-          <View>
-            <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>{'Today\'s Schedule'}</Text>
-            <Text style={[s.sectionSub, { color: colors.textMuted }]}>{DAY_FULL_NAMES[currentDayIndex]}</Text>
+        <View style={[s.sectionHeader, { flexDirection: 'row' }]}>
+          <View style={{ alignItems: 'flex-start', flex: 1 }}>
+            <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Upcoming Classes</Text>
+            <Text style={[s.sectionSub, { color: colors.textMuted }]}>{getDayDisplayName()}</Text>
           </View>
           <TouchableOpacity style={[s.addButton, { backgroundColor: colors.indigo }]} onPress={navigateToTimetable}>
             <Feather name="plus" size={16} color="#fff" />
@@ -212,32 +225,36 @@ const HomeScreen = () => {
         </View>
 
         {loading ? (
-          <View style={s.loadingContainer}><ActivityIndicator size="large" color={colors.indigo} /><Text style={[s.loadingText, { color: colors.textMuted }]}>Loading schedule...</Text></View>
+          <View style={s.loadingContainer}><ActivityIndicator size="large" color={colors.indigo} /><Text style={[s.loadingText, { color: colors.textMuted }]}>...</Text></View>
         ) : todayClasses.length === 0 ? (
           <View style={[s.emptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Feather name="calendar" size={36} color={colors.indigoLight} />
             <Text style={[s.emptyText, { color: colors.textSecondary }]}>No classes today</Text>
-            <Text style={[s.emptySubtext, { color: colors.textMuted }]}>Enjoy your free day! 🎉</Text>
+            <Text style={[s.emptySubtext, { color: colors.textMuted }]}>Enjoy your free time!</Text>
           </View>
         ) : (
           todayClasses.slice(0, 3).map(entry => {
             const accent = typeAccent[entry.type] || colors.indigo;
+            let displayType = entry.type;
+            if (entry.type === 'Lec') displayType = 'Lecture';
+            else if (entry.type === 'Sec') displayType = 'Section';
+            else if (entry.type === 'Lab') displayType = 'Lab';
             return (
               <ScheduleItem key={entry.id} title={entry.subject}
-                type={entry.type} time={`${entry.slot.start} – ${entry.slot.end}`}
-                place={entry.place || 'TBA'} accentColor={accent} colors={colors} />
+                type={displayType} time={`${entry.slot.start} – ${entry.slot.end}`}
+                place={entry.place || 'TBD'} accentColor={accent} colors={colors} rowDir="row" alignText="left" />
             );
           })
         )}
 
         {/* Quick Actions */}
         <Text style={[s.sectionTitle, { marginTop: 24, marginBottom: 14, color: colors.textPrimary }]}>Quick Actions</Text>
-        <View style={s.quickGrid}>
+        <View style={[s.quickGrid, { flexDirection: 'row' }]}>
           {[
-            { icon: 'calendar', label: 'Timetable', color: colors.indigo, onPress: navigateToTimetable },
-            { icon: 'pie-chart', label: 'GPA Planner', color: colors.teal, onPress: navigateToGpa },
-            { icon: 'check-square', label: 'Add Task', color: colors.green, onPress: () => {} },
-            { icon: 'book', label: 'Library', color: colors.amber, onPress: () => {} },
+            { icon: 'calendar', label: 'Schedule', color: colors.indigo, onPress: navigateToTimetable },
+            { icon: 'pie-chart', label: 'Planner', color: colors.teal, onPress: navigateToGpa },
+            { icon: 'check-square', label: 'Generator', color: colors.green, onPress: () => router.push('/(tabs)/Generator' as any) },
+            { icon: 'book', label: 'Library', color: colors.amber, onPress: () => router.push('/(tabs)/Questions' as any) },
           ].map(({ icon, label, color, onPress }) => (
             <TouchableOpacity key={label} style={[s.quickCard, { backgroundColor: color }]} activeOpacity={0.85} onPress={onPress}>
               <Feather name={icon as any} size={22} color="#fff" />
@@ -252,21 +269,21 @@ const HomeScreen = () => {
           {(localCardUri || studentCardUrl) ? (
             <View style={[s.studentCardWithPhoto, { backgroundColor: colors.card }]}>
               <Image source={{ uri: localCardUri || studentCardUrl! }} style={s.studentCardImage} />
-              <TouchableOpacity style={[s.updateCardButton, { backgroundColor: colors.indigo }]} onPress={handleStudentCardUpload} disabled={isUploadingCard}>
-                {isUploadingCard ? <><ActivityIndicator size="small" color="#fff" /><Text style={s.updateCardButtonText}>{cardUploadProgress}%</Text></> : <><Feather name="upload" size={16} color="#fff" /><Text style={s.updateCardButtonText}>Update</Text></>}
+              <TouchableOpacity style={[s.updateCardButton, { backgroundColor: colors.indigo, flexDirection: 'row' }]} onPress={handleStudentCardUpload} disabled={isUploadingCard}>
+                {isUploadingCard ? <><ActivityIndicator size="small" color="#fff" /><Text style={s.updateCardButtonText}>{cardUploadProgress}%</Text></> : <><Feather name="upload" size={16} color="#fff" /><Text style={s.updateCardButtonText}>Save</Text></>}
               </TouchableOpacity>
               {isUploadingCard && <View style={[s.progressBarOuter, { backgroundColor: colors.border }]}><View style={[s.progressBarInner, { backgroundColor: colors.indigo, width: `${cardUploadProgress}%` as any }]} /></View>}
             </View>
           ) : (
-            <TouchableOpacity style={[s.studentCard, { backgroundColor: colors.card }]} onPress={handleStudentCardUpload} disabled={isUploadingCard}>
+            <TouchableOpacity style={[s.studentCard, { backgroundColor: colors.card, flexDirection: 'row' }]} onPress={handleStudentCardUpload} disabled={isUploadingCard}>
               <View style={[s.cardIconContainer, { backgroundColor: colors.indigoPale }]}>
                 {isUploadingCard ? <ActivityIndicator size={24} color={colors.indigo} /> : <Ionicons name="card-outline" size={24} color={colors.indigo} />}
               </View>
-              <View>
+              <View style={{ alignItems: 'flex-start', flex: 1 }}>
                 <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Student Card</Text>
-                <Text style={[s.cardSubtitle, { color: colors.textMuted }]}>{isUploadingCard ? 'Uploading...' : 'Tap to upload your card'}</Text>
+                <Text style={[s.cardSubtitle, { color: colors.textMuted }]}>{isUploadingCard ? '...' : ''}</Text>
               </View>
-              <Feather name="chevron-right" size={16} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+              <Feather name="chevron-right" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -284,26 +301,26 @@ const StatCard = ({ icon, label, value, color, bgColor, onPress }: StatCardProps
   </TouchableOpacity>
 );
 
-const ScheduleItem = ({ title, type, time, place, accentColor, colors }: ScheduleItemProps) => (
-  <View style={[s.scheduleItem, { backgroundColor: colors.card }]}>
-    <View style={[s.accentBar, { backgroundColor: accentColor }]} />
+const ScheduleItem = ({ title, type, time, place, accentColor, colors, rowDir, alignText }: ScheduleItemProps & { rowDir: any, alignText: any }) => (
+  <View style={[s.scheduleItem, { backgroundColor: colors.card, flexDirection: 'row' }]}>
     <View style={s.scheduleContent}>
-      <View style={s.scheduleHeaderRow}>
+      <View style={[s.scheduleHeaderRow, { flexDirection: 'row' }]}>
         <Text style={[s.scheduleTitle, { color: colors.textPrimary }]} numberOfLines={1}>{title}</Text>
-        <View style={[s.sessionBadge, { backgroundColor: accentColor + '18' }]}><Text style={[s.sessionBadgeText, { color: accentColor }]}>{type} — {TYPE_LABELS[type]}</Text></View>
+        <View style={[s.sessionBadge, { backgroundColor: accentColor + '18' }]}><Text style={[s.sessionBadgeText, { color: accentColor }]}>{type}</Text></View>
       </View>
-      <View style={s.scheduleDetails}>
-        <View style={s.detailRow}><Feather name="clock" size={12} color={colors.textMuted} /><Text style={[s.detailText, { color: colors.textSecondary }]}>{time}</Text></View>
-        <View style={s.detailRow}><Ionicons name="location-outline" size={12} color={colors.textMuted} /><Text style={[s.detailText, { color: colors.textSecondary }]}>{place}</Text></View>
+      <View style={[s.scheduleDetails, { flexDirection: 'row' }]}>
+        <View style={[s.detailRow, { flexDirection: 'row' }]}><Feather name="clock" size={12} color={colors.textMuted} /><Text style={[s.detailText, { color: colors.textSecondary }]}>{time}</Text></View>
+        <View style={[s.detailRow, { flexDirection: 'row' }]}><Ionicons name="location-outline" size={12} color={colors.textMuted} /><Text style={[s.detailText, { color: colors.textSecondary }]}>{place}</Text></View>
       </View>
     </View>
+    <View style={[s.accentBar, { backgroundColor: accentColor }]} />
   </View>
 );
 
 const s = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
+  header: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
   greeting: { fontSize: 15, fontWeight: '500' },
   userName: { fontSize: 26, fontWeight: '800', marginTop: 2 },
   dateText: { fontSize: 13, marginTop: 2 },
@@ -339,7 +356,7 @@ const s = StyleSheet.create({
   accentBar: { width: 5 },
   scheduleContent: { flex: 1, padding: 14 },
   scheduleHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  scheduleTitle: { fontSize: 15, fontWeight: '700', flex: 1, marginRight: 8 },
+  scheduleTitle: { fontSize: 15, fontWeight: '700', flex: 1, marginLeft: 8 },
   scheduleCode: { fontSize: 12, marginBottom: 8 },
   sessionBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   sessionBadgeText: { fontSize: 11, fontWeight: '700' },

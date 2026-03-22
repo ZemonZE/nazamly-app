@@ -9,39 +9,39 @@ import { useAppTheme } from '@/constants/theme';
 
 const STORAGE_KEY = '@nazamly_gpa_profile';
 
-const GRADE_OPTIONS = [
-  { value: 4.0, label: 'High Distinction' },
-  { value: 3.5, label: 'Distinction' },
-  { value: 3.0, label: 'High Very Good' },
-  { value: 2.5, label: 'Very Good' },
-  { value: 2.0, label: 'High Good' },
-  { value: 1.5, label: 'Good' },
+const getGradeOptions = () => [
+  { value: 4.0, label: 'A+' },
+  { value: 3.5, label: 'A' },
+  { value: 3.0, label: 'B+' },
+  { value: 2.5, label: 'B' },
+  { value: 2.0, label: 'C+' },
+  { value: 1.5, label: 'C' },
 ];
 
 const MOCK_SCHEDULE = [
-  { id: 1, name: 'Analytical Math', code: 'MATH 232', credits: 4 },
-  { id: 2, name: 'Advanced Programming', code: 'CS 301', credits: 4 },
-  { id: 3, name: 'Databases', code: 'CS 302', credits: 3 },
-  { id: 4, name: 'Linear Algebra', code: 'MATH 211', credits: 3 },
-  { id: 5, name: 'Management Principles', code: 'MGT 101', credits: 2 },
+  { id: 1, name: 'رياضيات تحليلية', code: 'MATH 232', credits: 4 },
+  { id: 2, name: 'برمجة متقدمة', code: 'CS 301', credits: 4 },
+  { id: 3, name: 'قواعد بيانات', code: 'CS 302', credits: 3 },
+  { id: 4, name: 'جبر خطي', code: 'MATH 211', credits: 3 },
+  { id: 5, name: 'مبادئ إدارة', code: 'MGT 101', credits: 2 },
 ];
 
 function classifyGpa(v: number | string) {
   const n = typeof v === 'string' ? parseFloat(v) : v;
   if (isNaN(n) || n < 0) return { label: '', color: 'transparent' };
-  if (n === 0) return { label: 'Fail', color: '#ef4444' };
+  if (n === 0) return { label: 'F', color: '#ef4444' };
   if (n < 1.5) return { label: 'Pass', color: '#ef4444' };
-  if (n < 2.0) return { label: 'Good', color: '#f97316' };
-  if (n < 2.5) return { label: 'High Good', color: '#eab308' };
-  if (n < 3.0) return { label: 'Very Good', color: '#f59e0b' };
-  if (n < 3.5) return { label: 'High Very Good', color: '#38bdf8' };
-  if (n < 4.0) return { label: 'Distinction', color: '#3b82f6' };
-  if (n <= 5.0) return { label: 'High Distinction', color: '#22c55e' };
+  if (n < 2.0) return { label: 'C+', color: '#f97316' };
+  if (n < 2.5) return { label: 'B', color: '#eab308' };
+  if (n < 3.0) return { label: 'B+', color: '#f59e0b' };
+  if (n < 3.5) return { label: 'A', color: '#38bdf8' };
+  if (n < 4.0) return { label: 'A+', color: '#3b82f6' };
+  if (n <= 5.0) return { label: 'A+ (Honors)', color: '#22c55e' };
   return { label: '', color: 'transparent' };
 }
 
 function gradeLabel(val: number) {
-  const g = GRADE_OPTIONS.find(o => o.value === val);
+  const g = getGradeOptions().find(o => o.value === val);
   return g ? g.label : classifyGpa(val).label;
 }
 
@@ -66,7 +66,7 @@ function computeStrategy(courses: any[], grades: Record<string, number>, oldCgpa
       requiredTermGpa: '0.00',
       maxCgpa: Math.min(maxCgpa, 5.0).toFixed(2),
       plan: courses.map((c) => ({ ...c, requiredGrade: 1.5 })),
-      note: 'Your current CGPA already exceeds the target! Any passing grade will do.',
+      note: 'Target already met without taking exams.',
     };
   }
 
@@ -150,8 +150,8 @@ export default function GpaPlannerScreen() {
     const cgpa = parseFloat(cgpaInput);
     const hours = parseInt(hoursInput, 10);
     setProfileError('');
-    if (isNaN(cgpa) || cgpa < 0 || cgpa > 5) return setProfileError('CGPA must be between 0 and 5');
-    if (isNaN(hours) || hours < 0 || hours > 300) return setProfileError('Invalid earned hours');
+    if (isNaN(cgpa) || cgpa < 0 || cgpa > 5) return setProfileError('Invalid CGPA range (0-5)');
+    if (isNaN(hours) || hours < 0 || hours > 300) return setProfileError('Invalid hours range (0-300)');
     
     const data = { cgpa, hours };
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -211,7 +211,7 @@ export default function GpaPlannerScreen() {
   const computeTarget = useCallback(() => {
     const target = parseFloat(targetCgpa);
     if (!profile || isNaN(target) || target < 0 || target > 5) {
-      setStrategy({ error: 'Please enter a target CGPA between 0 and 5' });
+      setStrategy({ error: 'Invalid Target CGPA' });
       return;
     }
     setStrategy(computeStrategy(MOCK_SCHEDULE, grades, profile.cgpa, profile.hours, target));
@@ -232,7 +232,7 @@ export default function GpaPlannerScreen() {
               <Text style={{ fontSize: 44 }}>🎓</Text>
             </View>
             <Text style={[s.onboardTitle, { color: colors.textPrimary }]}>Smart GPA Planner</Text>
-            <Text style={[s.onboardSub, { color: colors.textSecondary }]}>Enter your current academic standing to start planning your grades.</Text>
+            <Text style={[s.onboardSub, { color: colors.textSecondary }]}>Plan and calculate your target CGPA accurately.</Text>
 
             {profileError ? (
               <View style={[s.errorBox, { backgroundColor: colors.redLight }]}>
@@ -241,16 +241,16 @@ export default function GpaPlannerScreen() {
             ) : null}
 
             <View style={[s.inputCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={[s.elegantInput, { backgroundColor: colors.indigoPale, borderColor: colors.indigoLight }]}>
+              <View style={[s.elegantInput, { backgroundColor: colors.indigoPale, borderColor: colors.indigoLight, flexDirection: 'row' }]}>
                 <View style={[s.elegantIconWrap, { backgroundColor: colors.card }]}>
                   <Feather name="award" size={20} color={colors.indigo} />
                 </View>
-                <View style={s.elegantInputContent}>
+                <View style={[s.elegantInputContent, { marginLeft: 12 }]}>
                   <Text style={[s.elegantLabel, { color: colors.textSecondary }]}>Current CGPA</Text>
                   <TextInput
                     style={[s.elegantField, { color: colors.textPrimary }]}
                     keyboardType="decimal-pad"
-                    placeholder="e.g. 3.75"
+                    placeholder="e.g., 3.75"
                     placeholderTextColor={colors.textMuted}
                     value={cgpaInput}
                     onChangeText={setCgpaInput}
@@ -263,16 +263,16 @@ export default function GpaPlannerScreen() {
                 )}
               </View>
 
-              <View style={[s.elegantInput, { backgroundColor: colors.tealLight, borderColor: '#ccfbf1', marginTop: 16 }]}>
+              <View style={[s.elegantInput, { backgroundColor: colors.tealLight, borderColor: '#ccfbf1', marginTop: 16, flexDirection: 'row' }]}>
                 <View style={[s.elegantIconWrap, { backgroundColor: colors.card }]}>
                   <Feather name="clock" size={20} color={colors.teal} />
                 </View>
-                <View style={s.elegantInputContent}>
+                <View style={[s.elegantInputContent, { marginLeft: 12 }]}>
                   <Text style={[s.elegantLabel, { color: colors.textSecondary }]}>Total Earned Hours</Text>
                   <TextInput
                     style={[s.elegantField, { color: colors.textPrimary }]}
                     keyboardType="number-pad"
-                    placeholder="e.g. 90"
+                    placeholder="e.g., 90"
                     placeholderTextColor={colors.textMuted}
                     value={hoursInput}
                     onChangeText={setHoursInput}
@@ -295,8 +295,8 @@ export default function GpaPlannerScreen() {
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
       {/* Header */}
-      <View style={[s.header, { borderBottomColor: colors.border }]}>
-        <View style={{ flex: 1 }}>
+      <View style={[s.header, { borderBottomColor: colors.border, flexDirection: 'row' }]}>
+        <View style={{ flex: 1, paddingRight: 20 }}>
           <Text style={[s.screenTitle, { color: colors.textPrimary }]}>Smart GPA Planner</Text>
           <Text style={[s.screenSubtitle, { color: colors.textMuted }]} numberOfLines={1}>Plan your academics</Text>
         </View>
@@ -306,7 +306,7 @@ export default function GpaPlannerScreen() {
       </View>
 
       {/* Profile Strip */}
-      <View style={[s.strip, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      <View style={[s.strip, { backgroundColor: colors.card, borderBottomColor: colors.border, flexDirection: 'row' }]}>
         <View style={s.stripItem}>
           <Text style={[s.stripLabel, { color: colors.textSecondary }]}>CGPA</Text>
           <Text style={[s.stripVal, { color: colors.textPrimary }]}>{profile.cgpa}</Text>
@@ -330,7 +330,7 @@ export default function GpaPlannerScreen() {
       </View>
 
       {/* Tabs */}
-      <View style={s.tabsRow}>
+      <View style={[s.tabsRow, { flexDirection: 'row' }]}>
         <TouchableOpacity
           style={[s.tabBtn, activeTab === 'calculator' ? { borderBottomColor: colors.indigo } : { borderBottomColor: 'transparent' }]}
           onPress={() => setActiveTab('calculator')}
@@ -348,7 +348,7 @@ export default function GpaPlannerScreen() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
         {activeTab === 'calculator' && calculations && (
           <>
-            <View style={[s.resultCardsRow]}>
+            <View style={[s.resultCardsRow, { flexDirection: 'row' }]}>
               <View style={[s.resultCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Text style={[s.resultLabel, { color: colors.textSecondary }]}>Expected CGPA</Text>
                 <Text style={[s.resultVal, { color: classifyGpa(calculations.expectedCgpa).color }]}>
@@ -370,7 +370,7 @@ export default function GpaPlannerScreen() {
             </View>
 
             <View style={[s.courseListCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={[s.courseListHeader, { borderBottomColor: colors.divider }]}>
+              <View style={[s.courseListHeader, { borderBottomColor: colors.divider, flexDirection: 'row' }]}>
                 <Text style={[s.courseListTitle, { color: colors.textPrimary }]}>Current Courses</Text>
                 <View style={[s.courseCountBadge, { backgroundColor: colors.indigoPale }]}>
                   <Text style={{ color: colors.indigo, fontSize: 12, fontWeight: '700' }}>{MOCK_SCHEDULE.length}</Text>
@@ -380,13 +380,13 @@ export default function GpaPlannerScreen() {
                 const gVal = grades[c.id];
                 const gCls = classifyGpa(gVal);
                 return (
-                  <View key={c.id} style={[s.courseRow, { borderBottomColor: colors.divider }]}>
-                    <View style={{ flex: 1, paddingRight: 10 }}>
+                  <View key={c.id} style={[s.courseRow, { borderBottomColor: colors.divider, flexDirection: 'row' }]}>
+                    <View style={{ flex: 1, paddingLeft: 10 }}>
                       <Text style={[s.courseName, { color: colors.textPrimary }]} numberOfLines={1}>{c.name}</Text>
-                      <Text style={[s.courseMeta, { color: colors.textMuted }]}>{c.code} • {c.credits} hrs</Text>
+                      <Text style={[s.courseMeta, { color: colors.textMuted }]}>{c.code} • {c.credits} Hrs</Text>
                     </View>
                     <View style={s.courseControls}>
-                      <View style={[s.stepperWrap, { borderColor: colors.border, backgroundColor: colors.bg }]}>
+                      <View style={[s.stepperWrap, { borderColor: colors.border, backgroundColor: colors.bg, flexDirection: 'row' }]}>
                         <TouchableOpacity style={s.stepperBtn} onPress={() => decrementGrade(c.id)}>
                           <Text style={{ color: colors.textSecondary, fontSize: 18 }}>−</Text>
                         </TouchableOpacity>
@@ -400,7 +400,7 @@ export default function GpaPlannerScreen() {
                           <Text style={{ color: colors.textSecondary, fontSize: 18 }}>+</Text>
                         </TouchableOpacity>
                       </View>
-                      <Text style={[s.coursePts, { color: gCls.color }]}>{(gVal * c.credits).toFixed(1)} pts</Text>
+                      <Text style={[s.coursePts, { color: gCls.color }]}>{(gVal * c.credits).toFixed(1)} Pts</Text>
                     </View>
                   </View>
                 );
@@ -415,18 +415,18 @@ export default function GpaPlannerScreen() {
             <View style={[s.targetCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[s.targetIcon]}>🎯</Text>
               <Text style={[s.targetTitle, { color: colors.textPrimary }]}>Set Your Target</Text>
-              <Text style={[s.targetDesc, { color: colors.textSecondary }]}>Enter the CGPA you want to reach, and we&apos;ll calculate the needed term GPA.</Text>
+              <Text style={[s.targetDesc, { color: colors.textSecondary }]}>Find out what grades you need to achieve your target CGPA.</Text>
 
-              <View style={[s.elegantInput, { backgroundColor: colors.indigoPale, borderColor: colors.indigoLight, marginVertical: 20 }]}>
+              <View style={[s.elegantInput, { backgroundColor: colors.indigoPale, borderColor: colors.indigoLight, marginVertical: 20, flexDirection: 'row' }]}>
                 <View style={[s.elegantIconWrap, { backgroundColor: colors.card }]}>
                   <Feather name="target" size={20} color={colors.indigo} />
                 </View>
-                <View style={s.elegantInputContent}>
+                <View style={[s.elegantInputContent, { marginLeft: 12 }]}>
                   <Text style={[s.elegantLabel, { color: colors.textSecondary }]}>Target CGPA</Text>
                   <TextInput
                     style={[s.elegantField, { color: colors.textPrimary }]}
                     keyboardType="decimal-pad"
-                    placeholder="e.g. 4.50"
+                    placeholder="e.g., 4.5"
                     placeholderTextColor={colors.textMuted}
                     value={targetCgpa}
                     onChangeText={setTargetCgpa}
@@ -460,19 +460,19 @@ export default function GpaPlannerScreen() {
                 <Text style={{ fontSize: 30, textAlign: 'center', marginBottom: 10 }}>⚠️</Text>
                 <Text style={[s.alertTitle, { color: colors.red }]}>Target Impossible</Text>
                 <Text style={[s.alertText, { color: colors.red }]}>
-                  The maximum CGPA you can reach is <Text style={{ fontWeight: '800' }}>{strategy.maxCgpa}</Text>. Try a lower target.
+                  Even with straight A+s, the highest you can reach is <Text style={{ fontWeight: '800' }}>{strategy.maxCgpa}</Text>. Try a lower target.
                 </Text>
               </View>
             )}
 
             {strategy && strategy.possible && strategy.plan && (
               <View style={[s.strategyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={s.stratHead}>
-                  <Text style={{ fontSize: 24, marginRight: 12 }}>✅</Text>
+                <View style={[s.stratHead, { flexDirection: 'row' }]}>
+                  <Text style={{ fontSize: 24, paddingRight: 10 }}>✅</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.stratTitle, { color: colors.textPrimary }]}>Target is Achievable!</Text>
+                    <Text style={[s.stratTitle, { color: colors.textPrimary }]}>Target Achievable</Text>
                     <Text style={[s.stratSub, { color: colors.textSecondary }]}>
-                      You need a Term GPA of <Text style={{ fontWeight: '800', color: colors.textPrimary }}>{strategy.requiredTermGpa}</Text> to reach your target.
+                      Need term GPA of <Text style={{ fontWeight: '800', color: colors.textPrimary }}>{strategy.requiredTermGpa}</Text> to reach your target.
                     </Text>
                   </View>
                 </View>
@@ -483,20 +483,20 @@ export default function GpaPlannerScreen() {
                   </View>
                 )}
 
-                <View style={[s.courseListHeader, { borderBottomColor: colors.divider, paddingHorizontal: 20 }]}>
+                <View style={[s.courseListHeader, { borderBottomColor: colors.divider, paddingHorizontal: 20, flexDirection: 'row' }]}>
                   <Text style={[s.courseListTitle, { color: colors.textPrimary }]}>Suggested Grades</Text>
                 </View>
                 {strategy.plan.map((c: any) => {
                   const gi = classifyGpa(c.requiredGrade);
                   return (
-                    <View key={c.id} style={[s.courseRow, { borderBottomColor: colors.divider, paddingHorizontal: 20 }]}>
+                    <View key={c.id} style={[s.courseRow, { borderBottomColor: colors.divider, paddingHorizontal: 20, flexDirection: 'row' }]}>
                       <View style={{ flex: 1 }}>
                         <Text style={[s.courseName, { color: colors.textPrimary }]} numberOfLines={1}>{c.name}</Text>
-                        <Text style={[s.courseMeta, { color: colors.textMuted }]}>{c.code} • {c.credits} hrs</Text>
+                        <Text style={[s.courseMeta, { color: colors.textMuted }]}>{c.code} • {c.credits} Hrs</Text>
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={[s.stratReqGrade, { color: gi.color || colors.textPrimary }]}>{c.requiredGrade}</Text>
-                        <Text style={[s.stratReqName, { color: colors.textSecondary }]}>{gradeLabel(c.requiredGrade)}</Text>
+                        <Text style={[s.stratReqGrade, { color: gi.color || colors.textPrimary, textAlign: 'right' }]}>{c.requiredGrade}</Text>
+                        <Text style={[s.stratReqName, { color: colors.textSecondary, textAlign: 'right' }]}>{gradeLabel(c.requiredGrade)}</Text>
                       </View>
                     </View>
                   );
@@ -521,7 +521,7 @@ const s = StyleSheet.create({
   inputCard: { borderWidth: 1, borderRadius: 24, padding: 24, elevation: 4, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
   elegantInput: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 16, padding: 8, paddingRight: 16, shadowColor: '#000', shadowOpacity: 0.02, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
   elegantIconWrap: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  elegantInputContent: { flex: 1, marginLeft: 12 },
+  elegantInputContent: { flex: 1, marginRight: 12 },
   elegantLabel: { fontSize: 13, fontWeight: '700', marginBottom: 2 },
   elegantField: { fontSize: 17, fontWeight: '800', padding: 0 },
   badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
@@ -531,41 +531,41 @@ const s = StyleSheet.create({
   errorBox: { padding: 14, borderRadius: 12, marginBottom: 20 },
   
   // Dashboard / Layout
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, borderBottomWidth: 1 },
+  header: { alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 16, borderBottomWidth: 1 },
   screenTitle: { fontSize: 22, fontWeight: '800' },
   screenSubtitle: { fontSize: 13, marginTop: 2 },
   editBtn: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   editBtnText: { fontSize: 12, fontWeight: '700' },
   
-  strip: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 20, borderBottomWidth: 1 },
+  strip: { justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 20, borderBottomWidth: 1 },
   stripItem: { alignItems: 'center', flex: 1 },
   stripLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4 },
   stripVal: { fontSize: 16, fontWeight: '800', marginBottom: 2 },
   stripDiv: { width: 1, height: 24 },
   
-  tabsRow: { flexDirection: 'row', paddingHorizontal: 20, paddingTop: 10 },
+  tabsRow: { paddingHorizontal: 20, paddingTop: 10 },
   tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2 },
   tabText: { fontSize: 14, fontWeight: '700' },
   
   // Calculator
-  resultCardsRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
+  resultCardsRow: { gap: 12, marginBottom: 20 },
   resultCard: { flex: 1, borderWidth: 1, borderRadius: 20, padding: 16, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   resultLabel: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
   resultVal: { fontSize: 32, fontWeight: '900', marginBottom: 4 },
   resultCls: { fontSize: 12, fontWeight: '700' },
   
   courseListCard: { borderWidth: 1, borderRadius: 20, overflow: 'hidden' },
-  courseListHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
+  courseListHeader: { justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
   courseListTitle: { fontSize: 16, fontWeight: '800' },
   courseCountBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  courseRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
+  courseRow: { justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
   courseName: { fontSize: 14, fontWeight: '700', marginBottom: 4 },
   courseMeta: { fontSize: 12 },
-  courseControls: { alignItems: 'flex-end', width: 110 },
-  stepperWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 10, overflow: 'hidden', marginBottom: 6 },
+  courseControls: { alignItems: 'center', width: 110 },
+  stepperWrap: { alignItems: 'center', borderWidth: 1, borderRadius: 10, overflow: 'hidden', marginBottom: 6 },
   stepperBtn: { paddingHorizontal: 10, paddingVertical: 6 },
   stepperInput: { width: 40, textAlign: 'center', fontSize: 14, fontWeight: '700', paddingVertical: 4 },
-  coursePts: { fontSize: 11, fontWeight: '700', marginRight: 4 },
+  coursePts: { fontSize: 11, fontWeight: '700', marginLeft: 4 },
 
   // Target Planner
   targetCard: { borderWidth: 1, borderRadius: 20, padding: 20, alignItems: 'center', marginBottom: 20 },
@@ -577,7 +577,7 @@ const s = StyleSheet.create({
   alertTitle: { fontSize: 18, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
   alertText: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
   strategyCard: { borderWidth: 1, borderRadius: 20, overflow: 'hidden' },
-  stratHead: { flexDirection: 'row', alignItems: 'center', padding: 20 },
+  stratHead: { alignItems: 'center', padding: 20 },
   stratTitle: { fontSize: 18, fontWeight: '800', marginBottom: 4 },
   stratSub: { fontSize: 13 },
   stratReqGrade: { fontSize: 18, fontWeight: '900' },

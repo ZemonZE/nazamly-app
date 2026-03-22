@@ -16,7 +16,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+
+import { Feather } from '@expo/vector-icons';
 import { useAppTheme } from '@/constants/theme';
 import {
   signInWithEmailAndPassword,
@@ -39,6 +40,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const { setBackendUser } = useAuth();
   const { colors } = useAppTheme();
+
 
   // 🌟 إعداد OAuth للموبايل (Expo Go / React Native)
   const redirectUri = makeRedirectUri({
@@ -69,7 +71,7 @@ export default function LoginScreen() {
     const body = await res.json();
     if (!res.ok) {
       if (res.status === 401) {
-        Alert.alert("Failed", "You are not authorized to login");
+        Alert.alert('Cancel', 'Cancel');
         router.replace("/(auth)/Login");
         return;
       }
@@ -114,12 +116,12 @@ export default function LoginScreen() {
         .then(async (result) => {
           await syncWithBackend(result.user);
           await fetchUserProfile(result.user);
-          Alert.alert("Success", "Login successfully");
+          Alert.alert("Success", "Logged in"); // Can omit translations for alerts or add to dict
           router.replace("/(tabs)/HomePage");
         })
         .catch((error: any) => {
           console.error("[Login] Firebase signIn error:", error.code, error.message);
-          Alert.alert("Failed", error.message || "Google sign-in failed");
+          Alert.alert("Error", error.message || "Login failed");
         })
         .finally(() => setLoading(false));
     }
@@ -131,12 +133,11 @@ export default function LoginScreen() {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await syncWithBackend(result.user);
       await fetchUserProfile(result.user);
-      Alert.alert("Success", "Login successfully");
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
       Alert.alert(
-        "Failed",
-        error.message || "Failed to login, check your data",
+        "Error",
+        error.message || "Login failed",
       );
     } finally {
       setLoading(false);
@@ -156,11 +157,10 @@ export default function LoginScreen() {
       await syncWithBackend(result.user);
       await fetchUserProfile(result.user);
 
-      Alert.alert("Success", "Login successfully");
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
       console.error("[Login] Google Web Sign-in Error:", error);
-      Alert.alert("Failed", error.message || "Google sign-in failed");
+      Alert.alert("Error", error.message);
     } finally {
       setLoading(false);
     }
@@ -212,7 +212,7 @@ export default function LoginScreen() {
               resizeMode="contain" 
             />
             <Text style={[s.welcomeText, { color: colors.textPrimary }]}>Welcome Back</Text>
-            <Text style={[s.subtitleText, { color: colors.textMuted }]}>Sign in to continue to Nazamly</Text>
+            <Text style={[s.subtitleText, { color: colors.textMuted }]}>Log in to continue organizing your academic life</Text>
           </View>
 
           {/* Login Form Card */}
@@ -221,11 +221,11 @@ export default function LoginScreen() {
             {/* Email Input */}
             <View style={s.inputGroup}>
               <Text style={[s.label, { color: colors.textSecondary }]}>Email</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                <Feather name="mail" size={20} color={colors.textMuted} style={s.inputIcon} />
+              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
+                <Feather name="mail" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
-                  placeholder="Enter your email"
+                  placeholder="Email"
                   placeholderTextColor={colors.textMuted}
                   value={email}
                   onChangeText={setEmail}
@@ -239,11 +239,11 @@ export default function LoginScreen() {
             {/* Password Input */}
             <View style={s.inputGroup}>
               <Text style={[s.label, { color: colors.textSecondary }]}>Password</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                <Feather name="lock" size={20} color={colors.textMuted} style={s.inputIcon} />
+              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
+                <Feather name="lock" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
-                  placeholder="Enter your password"
+                  placeholder="Password"
                   placeholderTextColor={colors.textMuted}
                   value={password}
                   onChangeText={setPassword}
@@ -278,15 +278,15 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             {/* Divider */}
-            <View style={s.dividerContainer}>
+            <View style={[s.dividerContainer, { flexDirection: 'row' }]}>
               <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[s.dividerText, { color: colors.textMuted }]}>or</Text>
+              <Text style={[s.dividerText, { color: colors.textMuted }]}>Or</Text>
               <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
             {/* Google Sign In Button - Black with Colored Logo */}
             <TouchableOpacity
-              style={s.googleButton}
+              style={[s.googleButton, { flexDirection: 'row' }]}
               onPress={handleGoogleSignIn}
               disabled={loading}
               activeOpacity={0.8}
@@ -302,12 +302,12 @@ export default function LoginScreen() {
           </View>
 
           {/* Footer */}
-          <View style={s.footer}>
+          <View style={[s.footer, { flexDirection: 'row' }]}>
             <Text style={[s.footerText, { color: colors.textMuted }]}>
-              {"Don't have an account?"}{' '}
+              Don&apos;t have an account? 
             </Text>
             <Pressable onPress={notRegistered}>
-              <Text style={[s.footerLink, { color: colors.indigo }]}>Sign Up</Text>
+              <Text style={[s.footerLink, { color: colors.indigo }]}>Sign up now</Text>
             </Pressable>
           </View>
 
@@ -372,10 +372,8 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    marginLeft: 4,
   },
   inputContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
     borderRadius: 12,
@@ -383,7 +381,7 @@ const s = StyleSheet.create({
     height: 56,
   },
   inputIcon: {
-    marginRight: 12,
+    marginLeft: 12,
   },
   textInput: {
     flex: 1,
@@ -412,7 +410,6 @@ const s = StyleSheet.create({
     letterSpacing: 0.3,
   },
   dividerContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 28,
   },
@@ -426,7 +423,6 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
   },
   googleButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     height: 56,
@@ -449,7 +445,6 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
   footer: {
-    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 32,

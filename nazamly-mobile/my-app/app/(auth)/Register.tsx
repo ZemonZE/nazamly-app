@@ -16,7 +16,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+
+import { Feather } from '@expo/vector-icons';
 import { useAppTheme } from '@/constants/theme';
 import {
   createUserWithEmailAndPassword,
@@ -42,6 +43,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { setBackendUser } = useAuth();
   const { colors } = useAppTheme();
+
 
   const redirectUri = makeRedirectUri({
     scheme: "nazamly",
@@ -86,7 +88,7 @@ export default function RegisterScreen() {
       
       if (!res.ok) {
         if (res.status === 401) {
-          Alert.alert("Failed", "You are not authorized to register");
+          Alert.alert('Cancel', 'Cancel');
           router.replace("/(auth)/Login");
           return null;
         }
@@ -135,12 +137,12 @@ export default function RegisterScreen() {
         .then(async (result) => {
           await syncWithBackend(result.user);
           await fetchUserProfile(result.user);
-          Alert.alert("Success", "Registration successful");
+          Alert.alert("Success", "Account created successfully");
           router.replace("/(tabs)/HomePage");
         })
         .catch((error: any) => {
           console.error("[Register] Firebase signIn error:", error.code, error.message);
-          Alert.alert("Failed", error.message || "Google sign-in failed");
+          Alert.alert("Error", error.message);
         })
         .finally(() => setLoading(false));
     }
@@ -148,9 +150,8 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (password !== confirmPassword) {
-      Alert.alert("Failed", "Passwords do not match", [
-        { text: "Ok", onPress: () => console.log("ok") },
-        { text: "Try again", onPress: () => router.reload() },
+      Alert.alert("Error", "Passwords do not match", [
+        { text: "OK", onPress: () => console.log("ok") },
       ]);
       return;
     }
@@ -175,11 +176,11 @@ export default function RegisterScreen() {
       console.log("[Register] Fetching profile from backend...");
       await fetchUserProfile(result.user);
       
-      Alert.alert("Success", "Registration successful");
+      Alert.alert("Success", "Account created successfully");
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
       console.error("[Register] Error:", error);
-      Alert.alert("Failed", error.message || "Registration failed");
+      Alert.alert("Error", error.message || "Failed to create account. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -193,11 +194,11 @@ export default function RegisterScreen() {
       const result = await signInWithPopup(auth, provider);
       await syncWithBackend(result.user);
       await fetchUserProfile(result.user);
-      Alert.alert("Success", "Registration successful");
+      Alert.alert("Success", "Account created successfully");
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
       console.error("[Register] Google Web Sign-in Error:", error);
-      Alert.alert("Failed", error.message || "Google sign-in failed");
+      Alert.alert("Error", error.message);
     } finally {
       setLoading(false);
     }
@@ -245,19 +246,19 @@ export default function RegisterScreen() {
               style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 24 }} 
               resizeMode="contain" 
             />
-            <Text style={[s.welcomeText, { color: colors.textPrimary }]}>Join Nazamly</Text>
-            <Text style={[s.subtitleText, { color: colors.textMuted }]}>Create your account to get started</Text>
+            <Text style={[s.welcomeText, { color: colors.textPrimary }]}>Create Account</Text>
+            <Text style={[s.subtitleText, { color: colors.textMuted }]}>Join Nazamly and take control of your study schedule</Text>
           </View>
 
           <View style={[s.formCard, { backgroundColor: colors.card }]}>
             
             <View style={s.inputGroup}>
               <Text style={[s.label, { color: colors.textSecondary }]}>Full Name</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                <Feather name="user" size={20} color={colors.textMuted} style={s.inputIcon} />
+              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
+                <Feather name="user" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
-                  placeholder="Enter your full name"
+                  placeholder="Full Name"
                   placeholderTextColor={colors.textMuted}
                   value={name}
                   onChangeText={setName}
@@ -268,11 +269,11 @@ export default function RegisterScreen() {
 
             <View style={s.inputGroup}>
               <Text style={[s.label, { color: colors.textSecondary }]}>Email</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                <Feather name="mail" size={20} color={colors.textMuted} style={s.inputIcon} />
+              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
+                <Feather name="mail" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
-                  placeholder="Enter your email"
+                  placeholder="Email"
                   placeholderTextColor={colors.textMuted}
                   value={email}
                   onChangeText={setEmail}
@@ -285,11 +286,11 @@ export default function RegisterScreen() {
 
             <View style={s.inputGroup}>
               <Text style={[s.label, { color: colors.textSecondary }]}>Password</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                <Feather name="lock" size={20} color={colors.textMuted} style={s.inputIcon} />
+              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
+                <Feather name="lock" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
-                  placeholder="Create a password"
+                  placeholder="Password"
                   placeholderTextColor={colors.textMuted}
                   value={password}
                   onChangeText={setPassword}
@@ -311,11 +312,11 @@ export default function RegisterScreen() {
 
             <View style={s.inputGroup}>
               <Text style={[s.label, { color: colors.textSecondary }]}>Confirm Password</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                <Feather name="lock" size={20} color={colors.textMuted} style={s.inputIcon} />
+              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
+                <Feather name="lock" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
-                  placeholder="Confirm your password"
+                  placeholder="Confirm Password"
                   placeholderTextColor={colors.textMuted}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -334,18 +335,18 @@ export default function RegisterScreen() {
               {loading ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={s.registerButtonText}>Create Account</Text>
+                <Text style={s.registerButtonText}>Sign Up</Text>
               )}
             </TouchableOpacity>
 
-            <View style={s.dividerContainer}>
+            <View style={[s.dividerContainer, { flexDirection: 'row' }]}>
               <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[s.dividerText, { color: colors.textMuted }]}>or</Text>
+              <Text style={[s.dividerText, { color: colors.textMuted }]}>Or</Text>
               <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
             <TouchableOpacity
-              style={s.googleButton}
+              style={[s.googleButton, { flexDirection: 'row' }]}
               onPress={handleGoogleSignIn}
               disabled={loading}
               activeOpacity={0.8}
@@ -360,12 +361,12 @@ export default function RegisterScreen() {
 
           </View>
 
-          <View style={s.footer}>
+          <View style={[s.footer, { flexDirection: 'row' }]}>
             <Text style={[s.footerText, { color: colors.textMuted }]}>
-              Already have an account?{' '}
+              Already have an account? 
             </Text>
             <Pressable onPress={goToLogin}>
-              <Text style={[s.footerLink, { color: colors.teal }]}>Sign In</Text>
+              <Text style={[s.footerLink, { color: colors.teal }]}>Log in now</Text>
             </Pressable>
           </View>
 
@@ -430,10 +431,8 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    marginLeft: 4,
   },
   inputContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
     borderRadius: 12,
@@ -441,7 +440,7 @@ const s = StyleSheet.create({
     height: 56,
   },
   inputIcon: {
-    marginRight: 12,
+    marginLeft: 12,
   },
   textInput: {
     flex: 1,
@@ -470,7 +469,6 @@ const s = StyleSheet.create({
     letterSpacing: 0.3,
   },
   dividerContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 24,
   },
@@ -484,7 +482,6 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
   },
   googleButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     height: 56,
@@ -507,7 +504,6 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
   footer: {
-    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 32,

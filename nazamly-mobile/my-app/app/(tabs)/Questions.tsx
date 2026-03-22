@@ -36,17 +36,17 @@ export default function MaterialsLibrary() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const FOLDERS = [
-    { name: 'Biology',     fileCount: 12, colorAccent: colors.teal,   iconName: 'leaf' },
-    { name: 'Calculus',    fileCount: 8,  colorAccent: colors.indigo, iconName: 'calculator' },
-    { name: 'CS Concepts', fileCount: 15, colorAccent: colors.amber,  iconName: 'laptop' },
-    { name: 'History',     fileCount: 6,  colorAccent: colors.green,  iconName: 'book-open-variant' },
+    { name: 'Biology',         fileCount: 12, colorAccent: colors.teal,   iconName: 'leaf' },
+    { name: 'Calculus',   fileCount: 8,  colorAccent: colors.indigo, iconName: 'calculator' },
+    { name: 'CS Concepts',    fileCount: 15, colorAccent: colors.amber,  iconName: 'laptop' },
+    { name: 'History',         fileCount: 6,  colorAccent: colors.green,  iconName: 'book-open-variant' },
   ];
 
   const RECENT_FILES = [
-    { name: 'Syllabus Spring 2024', ext: 'pdf'  as const, openedAt: '2h ago' },
-    { name: 'Midterm Notes',        ext: 'docx' as const, openedAt: '5h ago' },
-    { name: 'Lab Report #3',        ext: 'pdf'  as const, openedAt: 'Yesterday' },
-    { name: 'Data Structures Slides', ext: 'pptx' as const, openedAt: 'Mon' },
+    { name: 'Spring 2024 Plan',         ext: 'pdf'  as const, openedAt: '2 hours ago' },
+    { name: 'Midterm Notes',        ext: 'docx' as const, openedAt: '5 hours ago' },
+    { name: 'Lab #3 Report',        ext: 'pdf'  as const, openedAt: 'Yesterday' },
+    { name: 'DS Slides', ext: 'pptx' as const, openedAt: 'Monday' },
   ];
 
   const filteredFolders = FOLDERS.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -56,10 +56,10 @@ export default function MaterialsLibrary() {
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
 
-        <View style={s.header}>
-          <View>
+        <View style={[s.header, { flexDirection: 'row' }]}>
+          <View style={{ flex: 1, paddingRight: 16 }}>
             <Text style={[s.headerTitle, { color: colors.textPrimary }]}>Library</Text>
-            <Text style={[s.headerSub, { color: colors.textMuted }]}>Your academic materials archive</Text>
+            <Text style={[s.headerSub, { color: colors.textMuted }]}>Access your study materials</Text>
           </View>
           <View style={[s.headerBadge, { backgroundColor: colors.indigoPale }]}>
             <Feather name="archive" size={18} color={colors.indigo} />
@@ -67,11 +67,11 @@ export default function MaterialsLibrary() {
         </View>
 
         {/* Search */}
-        <View style={[s.searchWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Feather name="search" size={16} color={colors.textMuted} style={s.searchIcon} />
+        <View style={[s.searchWrap, { backgroundColor: colors.card, borderColor: colors.border, flexDirection: 'row' }]}>
+          <Feather name="search" size={16} color={colors.textMuted} style={s.searchIconLtr} />
           <TextInput
             style={[s.searchInput, { color: colors.textPrimary }]}
-            placeholder="Search files and subjects..."
+            placeholder="Search files..."
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -84,30 +84,30 @@ export default function MaterialsLibrary() {
         </View>
 
         {/* Upload */}
-        <TouchableOpacity style={[s.uploadBtn, { backgroundColor: colors.indigo }]} activeOpacity={0.85}>
+        <TouchableOpacity style={[s.uploadBtn, { backgroundColor: colors.indigo, flexDirection: 'row' }]} activeOpacity={0.85}>
           <Feather name="upload-cloud" size={20} color="#fff" />
           <Text style={s.uploadBtnText}>Upload File</Text>
         </TouchableOpacity>
 
         {/* Folders */}
-        <View style={s.sectionHeader}>
+        <View style={[s.sectionHeader, { flexDirection: 'row' }]}>
           <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Cloud Folders</Text>
-          <TouchableOpacity style={s.driveLink} onPress={() => Linking.openURL('https://drive.google.com')}>
+          <TouchableOpacity style={[s.driveLink, { flexDirection: 'row' }]} onPress={() => Linking.openURL('https://drive.google.com')}>
             <AntDesign name="google-plus" size={14} color={colors.indigo} />
             <Text style={[s.driveLinkText, { color: colors.indigo }]}>Connect Drive</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={s.foldersGrid}>
+        <View style={[s.foldersGrid, { flexDirection: 'row' }]}>
           {filteredFolders.map(folder => (
             <FolderCard key={folder.name} {...folder} colors={colors} />
           ))}
         </View>
 
         {/* Recent Files */}
-        <View style={s.sectionHeader}>
+        <View style={[s.sectionHeader, { flexDirection: 'row' }]}>
           <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Recently Viewed</Text>
-          <Text style={[s.seeAll, { color: colors.indigo }]}>See all</Text>
+          <Text style={[s.seeAll, { color: colors.indigo, textAlign: 'right' }]}>See All</Text>
         </View>
 
         <View style={[s.recentList, { backgroundColor: colors.card }]}>
@@ -119,7 +119,7 @@ export default function MaterialsLibrary() {
         {filteredFolders.length === 0 && filteredFiles.length === 0 && (
           <View style={s.emptyState}>
             <Feather name="search" size={40} color={colors.indigoLight} />
-            <Text style={[s.emptyText, { color: colors.textSecondary }]}>No results for &quot;{searchQuery}&quot;</Text>
+            <Text style={[s.emptyText, { color: colors.textSecondary }]}>No results found for &quot;{searchQuery}&quot;</Text>
           </View>
         )}
         <View style={{ height: 20 }} />
@@ -129,24 +129,24 @@ export default function MaterialsLibrary() {
 }
 
 const FolderCard = ({ name, fileCount, colorAccent, iconName, colors }: FolderCardProps) => (
-  <TouchableOpacity style={[s.folderCard, { backgroundColor: colors.card, borderTopColor: colorAccent }]} activeOpacity={0.8}>
+  <TouchableOpacity style={[s.folderCard, { backgroundColor: colors.card, borderTopColor: colorAccent, alignItems: 'flex-start' }]} activeOpacity={0.8}>
     <View style={[s.folderIconWrap, { backgroundColor: colorAccent + '18' }]}>
       <MaterialCommunityIcons name={iconName as any} size={26} color={colorAccent} />
     </View>
     <Text style={[s.folderName, { color: colors.textPrimary }]} numberOfLines={1}>{name}</Text>
     <Text style={[s.folderCount, { color: colors.textMuted }]}>{fileCount} files</Text>
-    <View style={s.folderArrow}><Feather name="chevron-right" size={14} color={colors.textMuted} /></View>
+    <View style={[s.folderArrow, { right: 14 }]}><Feather name="chevron-right" size={14} color={colors.textMuted} /></View>
   </TouchableOpacity>
 );
 
 const RecentFile = ({ name, ext, openedAt, colors, isLast }: RecentFileProps) => {
   const meta = EXT_META[ext] || EXT_META.pdf;
   return (
-    <View style={[s.recentRow, !isLast && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}>
+    <View style={[s.recentRow, { flexDirection: 'row' }, !isLast && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}>
       <View style={[s.fileIconWrap, { backgroundColor: meta.color + '12' }]}>
         <AntDesign name={meta.icon as any} size={22} color={meta.color} />
       </View>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, alignItems: 'flex-start' }}>
         <Text style={[s.fileName, { color: colors.textPrimary }]} numberOfLines={1}>{name}.{ext}</Text>
         <Text style={[s.fileTime, { color: colors.textMuted }]}>Opened {openedAt}</Text>
       </View>
@@ -160,33 +160,34 @@ const FOLDER_W = (SCREEN_W - 52) / 2;
 const s = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 },
+  header: { justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 },
   headerTitle: { fontSize: 28, fontWeight: '900' },
   headerSub: { fontSize: 13, marginTop: 2 },
   headerBadge: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', borderRadius: 16, paddingHorizontal: 14, marginBottom: 16, borderWidth: 1 },
-  searchIcon: { marginRight: 10 },
+  searchWrap: { alignItems: 'center', borderRadius: 16, paddingHorizontal: 14, marginBottom: 16, borderWidth: 1 },
+  searchIcon: { marginLeft: 10 },
+  searchIconLtr: { marginRight: 10 },
   searchInput: { flex: 1, fontSize: 14, paddingVertical: 13 },
   searchClear: { padding: 5 },
-  uploadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: 16, gap: 10, marginBottom: 26, shadowColor: '#3F51B5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
+  uploadBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: 16, gap: 10, marginBottom: 26, shadowColor: '#3F51B5', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
   uploadBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  sectionHeader: { justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   sectionTitle: { fontSize: 17, fontWeight: '700' },
   seeAll: { fontSize: 13, fontWeight: '600' },
-  driveLink: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  driveLink: { alignItems: 'center', gap: 5 },
   driveLinkText: { fontSize: 12, fontWeight: '600' },
-  foldersGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 26 },
+  foldersGrid: { flexWrap: 'wrap', gap: 12, marginBottom: 26 },
   folderCard: { width: FOLDER_W, borderRadius: 16, padding: 16, borderTopWidth: 3, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6 },
   folderIconWrap: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   folderName: { fontSize: 14, fontWeight: '700', marginBottom: 4 },
   folderCount: { fontSize: 12 },
-  folderArrow: { position: 'absolute', top: 14, right: 14 },
+  folderArrow: { position: 'absolute', top: 14 },
   recentList: { borderRadius: 16, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6 },
-  recentRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, paddingHorizontal: 16, gap: 14 },
+  recentRow: { alignItems: 'center', paddingVertical: 13, paddingHorizontal: 16, gap: 14 },
   fileIconWrap: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   fileName: { fontSize: 14, fontWeight: '600', marginBottom: 2 },
   fileTime: { fontSize: 11 },
   moreBtn: { padding: 4 },
   emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { fontSize: 15, marginTop: 14, fontWeight: '500' },
+  emptyText: { fontSize: 15, marginTop: 14, fontWeight: '500', textAlign: 'center' },
 });
