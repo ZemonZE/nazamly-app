@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { IconTrash } from "../Icons/DashboardIcons";
-import { auth, API_URL } from "../firebase";
+import { fetchWithAuth } from "../services/api";
 
 /* ═══════════════════════════════════
    SHARED CONSTANTS
@@ -699,12 +699,6 @@ function Generator() {
     setAiResults(null);
 
     try {
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error("You must login first to generate a schedule");
-      }
-      const token = await user.getIdToken();
-
       const formData = new FormData();
       aiFiles.forEach((f) => formData.append("scheduleFiles", f));
       if (aiCourses.trim()) {
@@ -715,16 +709,12 @@ function Generator() {
         formData.append("targetCourses", JSON.stringify(arr));
       }
 
-      const res = await fetch(`${API_URL}/api/ai/generate`, {
+      const data = await fetchWithAuth("/api/ai/generate", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
       });
-      const data = await res.json();
 
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.message || "Failed to generate schedules");
       }
       setAiResults(data);
@@ -758,27 +748,15 @@ function Generator() {
     setSaveSuccess("");
 
     try {
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error("You must login first to save the schedule");
-      }
-      const token = await user.getIdToken();
-
-      const res = await fetch(`${API_URL}/api/schedule/save-ai`, {
+      const data = await fetchWithAuth("/api/schedule/save-ai", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify({
           schedule: chosen,
           title: `Smart Schedule #${aiSelected + 1}`,
         }),
       });
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.message || "Failed to save the schedule");
       }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import { IconClose } from '../Icons/Icons';
-import { API_URL, authHeaders } from '../firebase';
+import { fetchWithAuth } from '../../services/api';
 import './Users.css';
 
 function CourseInstances() {
@@ -33,14 +33,14 @@ function CourseInstances() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [instRes, courseRes, doctorRes] = await Promise.all([
-        fetch(`${API_URL}/api/admin/course-instances`, { headers: authHeaders() }),
-        fetch(`${API_URL}/api/admin/courses`, { headers: authHeaders() }),
-        fetch(`${API_URL}/api/admin/doctors`, { headers: authHeaders() }),
+      const [instances, courses, doctors] = await Promise.all([
+        fetchWithAuth('/api/admin/course-instances'),
+        fetchWithAuth('/api/admin/courses'),
+        fetchWithAuth('/api/admin/doctors'),
       ]);
-      setInstances(await instRes.json());
-      setCourses(await courseRes.json());
-      setDoctors(await doctorRes.json());
+      setInstances(instances);
+      setCourses(courses);
+      setDoctors(doctors);
     } catch (err) {
       setError('Failed to load data');
     } finally {
@@ -69,19 +69,11 @@ function CourseInstances() {
     if (!formData.courseId || !formData.doctorId || !formData.academicYear || !formData.semester) return;
     setActionLoading(true);
     try {
-      const url = editingInstance
-        ? `${API_URL}/api/admin/course-instances/${editingInstance._id}`
-        : `${API_URL}/api/admin/course-instances`;
+      const endpoint = editingInstance
+        ? `/api/admin/course-instances/${editingInstance._id}`
+        : '/api/admin/course-instances';
       const method = editingInstance ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: authHeaders(),
-        body: JSON.stringify(formData),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to save');
-      }
+      await fetchWithAuth(endpoint, { method, body: JSON.stringify(formData) });
       setShowModal(false);
       fetchAll();
     } catch (err) {
@@ -94,11 +86,7 @@ function CourseInstances() {
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this course instance?')) return;
     try {
-      const res = await fetch(`${API_URL}/api/admin/course-instances/${id}`, { method: 'DELETE', headers: authHeaders() });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to delete');
-      }
+      await fetchWithAuth(`/api/admin/course-instances/${id}`, { method: 'DELETE' });
       fetchAll();
     } catch (err) {
       setError(err.message);
@@ -108,13 +96,10 @@ function CourseInstances() {
   const handleAddDoctor = async () => {
     if (!newDoctorName.trim()) return;
     try {
-      const res = await fetch(`${API_URL}/api/admin/doctors`, {
+      const doctor = await fetchWithAuth('/api/admin/doctors', {
         method: 'POST',
-        headers: authHeaders(),
         body: JSON.stringify({ name: newDoctorName.trim(), email: newDoctorEmail.trim() }),
       });
-      if (!res.ok) throw new Error('Failed to create doctor');
-      const doctor = await res.json();
       setDoctors([...doctors, doctor]);
       setFormData({ ...formData, doctorId: doctor._id });
       setNewDoctorName('');

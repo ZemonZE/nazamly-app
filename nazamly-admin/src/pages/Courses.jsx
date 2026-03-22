@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import { IconClose } from '../Icons/Icons';
-import { API_URL, authHeaders } from '../firebase';
+import { fetchWithAuth } from '../../services/api';
 import './Users.css';
 
 function Courses() {
@@ -24,8 +24,7 @@ function Courses() {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/courses`, { headers: authHeaders() });
-      const data = await res.json();
+      const data = await fetchWithAuth('/api/admin/courses');
       setCourses(data);
     } catch (err) {
       setError('Failed to load courses');
@@ -57,19 +56,11 @@ function Courses() {
     if (!formData.courseCode.trim() || !formData.courseName.trim()) return;
     setActionLoading(true);
     try {
-      const url = editingCourse
-        ? `${API_URL}/api/admin/courses/${editingCourse._id}`
-        : `${API_URL}/api/admin/courses`;
+      const endpoint = editingCourse
+        ? `/api/admin/courses/${editingCourse._id}`
+        : '/api/admin/courses';
       const method = editingCourse ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: authHeaders(),
-        body: JSON.stringify(formData),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to save course');
-      }
+      await fetchWithAuth(endpoint, { method, body: JSON.stringify(formData) });
       setShowModal(false);
       fetchCourses();
     } catch (err) {
@@ -82,11 +73,7 @@ function Courses() {
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete course "${name}"?`)) return;
     try {
-      const res = await fetch(`${API_URL}/api/admin/courses/${id}`, { method: 'DELETE', headers: authHeaders() });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to delete');
-      }
+      await fetchWithAuth(`/api/admin/courses/${id}`, { method: 'DELETE' });
       fetchCourses();
     } catch (err) {
       setError(err.message);

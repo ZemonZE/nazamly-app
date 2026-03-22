@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import { IconClose } from '../Icons/Icons';
-import { API_URL, authHeaders } from '../firebase';
+import { fetchWithAuth } from '../../services/api';
 import './Users.css';
 
 const SUB_FOLDER_LABELS = {
@@ -49,8 +49,7 @@ function Materials() {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/course-materials`, { headers: authHeaders() });
-      const data = await res.json();
+      const data = await fetchWithAuth('/api/admin/course-materials');
       setCourses(data.courses || []);
     } catch (err) {
       setError('Failed to load courses');
@@ -62,8 +61,7 @@ function Materials() {
   const fetchFiles = async (courseCode, subFolderType) => {
     setFilesLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/course-materials/${courseCode}/files/${subFolderType}`, { headers: authHeaders() });
-      const data = await res.json();
+      const data = await fetchWithAuth(`/api/admin/course-materials/${courseCode}/files/${subFolderType}`);
       setFiles(data.files || []);
     } catch (err) {
       setError('Failed to load files');
@@ -81,18 +79,10 @@ function Materials() {
       formData.append('file', uploadFile);
       if (uploadTitle.trim()) formData.append('title', uploadTitle.trim());
 
-      const token = localStorage.getItem('adminUserData')
-        ? JSON.parse(localStorage.getItem('adminUserData'))?.token
-        : null;
-      const res = await fetch(
-        `${API_URL}/api/admin/course-materials/${selectedCourse.courseCode}/upload/${activeSubFolder}`,
-        {
-          method: 'POST',
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-          body: formData,
-        }
+      await fetchWithAuth(
+        `/api/admin/course-materials/${selectedCourse.courseCode}/upload/${activeSubFolder}`,
+        { method: 'POST', body: formData }
       );
-      if (!res.ok) throw new Error('Upload failed');
       setUploadTitle('');
       setUploadFile(null);
       setShowUpload(false);
@@ -107,11 +97,10 @@ function Materials() {
   const handleDeleteFile = async (fileId) => {
     if (!window.confirm('Delete this file from Google Drive?')) return;
     try {
-      const res = await fetch(
-        `${API_URL}/api/admin/course-materials/${selectedCourse.courseCode}/files/${activeSubFolder}/${fileId}`,
-        { method: 'DELETE', headers: authHeaders() }
+      await fetchWithAuth(
+        `/api/admin/course-materials/${selectedCourse.courseCode}/files/${activeSubFolder}/${fileId}`,
+        { method: 'DELETE' }
       );
-      if (!res.ok) throw new Error('Delete failed');
       fetchFiles(selectedCourse.courseCode, activeSubFolder);
     } catch (err) {
       setError('Failed to delete file');
@@ -120,12 +109,10 @@ function Materials() {
 
   const handleInitCourse = async (course) => {
     try {
-      const res = await fetch(`${API_URL}/api/admin/course-materials/init`, {
+      await fetchWithAuth('/api/admin/course-materials/init', {
         method: 'POST',
-        headers: authHeaders(),
         body: JSON.stringify({ courseCode: course.courseCode, courseName: course.courseName }),
       });
-      if (!res.ok) throw new Error('Init failed');
       fetchCourses();
     } catch (err) {
       setError('Failed to initialize course folders');
@@ -165,12 +152,7 @@ function Materials() {
     if (!window.confirm('Sync existing folders from Google Drive? This will create missing courses in the database.')) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/course-materials/sync-drive`, {
-        method: 'POST',
-        headers: authHeaders(),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Sync failed');
+      const data = await fetchWithAuth('/api/admin/course-materials/sync-drive', { method: 'POST' });
       alert(data.message);
       fetchCourses();
     } catch (err) {
