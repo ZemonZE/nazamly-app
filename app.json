@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "6983afbc-fe56-4ded-9bb3-f98bc8c39568"
+      }
+    },
+    "android": {
+      "package": "com.nazamly.app"
+    }
+  }
+}

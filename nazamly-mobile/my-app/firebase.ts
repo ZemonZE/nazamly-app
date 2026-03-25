@@ -14,6 +14,7 @@ const firebaseConfig = {
   appId: "1:229323424819:web:d76eb25051941b42784f46",
   measurementId: "G-JX83Q6LDVD"
 };
+export const Google_Android_Id="638377043762-n5vj87iuahfahdrvpefreaaahj9c9mel.apps.googleusercontent.com";
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 

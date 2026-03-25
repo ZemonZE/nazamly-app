@@ -25,7 +25,7 @@ import {
   signInWithCredential,
   GoogleAuthProvider,
 } from "firebase/auth";
-import { auth, API_URL, GOOGLE_WEB_CLIENT_ID } from "@/firebase";
+import { auth, API_URL, GOOGLE_WEB_CLIENT_ID,Google_Android_Id } from "@/firebase";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
@@ -50,6 +50,7 @@ export default function LoginScreen() {
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
+    androidClientId:Google_Android_Id,
     redirectUri,
   });
 
