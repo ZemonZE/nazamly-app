@@ -36,8 +36,6 @@ function mapAIType(type) {
  * LEGACY CONTROLLERS (Retained for Critical Usage)
  * -----------------------------------------
  */
-<<<<<<< HEAD
-=======
 const addOrUpdateSchedule = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -115,7 +113,6 @@ const addOrUpdateSchedule = async (req, res) => {
     });
   }
 };
->>>>>>> origin/main
 
 /**
  * @desc    Retrieve Schedule (Read)
@@ -499,11 +496,8 @@ const getTimeTable = async (req, res) => {
 module.exports = {
   getMySchedule,
   deleteSession,
-<<<<<<< HEAD
   addTimeTableEntry,
   getTimeTable,
-=======
   saveAISchedule,
   getMyTimetable,
->>>>>>> origin/main
 };
