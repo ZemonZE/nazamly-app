@@ -1,8 +1,8 @@
-import { Tabs } from "expo-router";
-import React from "react";
+import { Tabs } from 'expo-router';
+import React from 'react';
+import { Feather, Ionicons, MaterialCommunityIcons} from '@expo/vector-icons';
 
 import { HapticTab } from "@/components/haptic-tab";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "@/constants/theme";
 
 export default function TabLayout() {
@@ -112,6 +112,14 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="Profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+        }}
+      />
+
     </Tabs>
   );
 }

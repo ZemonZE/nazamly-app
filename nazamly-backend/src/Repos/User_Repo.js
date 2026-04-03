@@ -1,10 +1,11 @@
 const Base_Repo = require("./Base_Repo");
-const User = require("../models/user/user.model");
+const User = require("../models/User/user.model");
 const Schedule = require("../models/schedule/timeTable.model");
 
 /**
  * الحقول المسموح تعديلها - أي حقل مش هنا مش هيتعدل
  * firebaseUid و email ممنوع تعديلهم عشان دول بيانات حساسة
+ * the 'role' is removed for security reasons 
  */
 const ALLOWED_UPDATE_FIELDS = [
   "displayName",

@@ -17,6 +17,8 @@ function getLocalIP() {
   return 'localhost';
 }
 
+const PORT = process.env.PORT || 5000;
+
 connectDB()
   .then(() => {
     const PORT = process.env.PORT || 5000;

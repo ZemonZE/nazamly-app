@@ -16,6 +16,7 @@ node_modules/
 # IDE and editor files
 .vscode/
 .idea/
+.kiro/
 
 # Expo generated files
 .expo/

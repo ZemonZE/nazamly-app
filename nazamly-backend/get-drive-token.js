@@ -5,7 +5,8 @@
 require('dotenv').config();
 const { google } = require('googleapis');
 const http = require('http');
-const url = require('url');
+const fs = require('fs');
+const path = require('path');
 
 const CLIENT_ID = process.env.DRIVE_CLIENT_ID;
 const CLIENT_SECRET = process.env.DRIVE_CLIENT_SECRET;
@@ -25,15 +26,35 @@ console.log('\n⏳ Waiting for you to sign in...\n');
 
 // Start a temporary server to catch the callback
 const server = http.createServer(async (req, res) => {
-  const queryParams = url.parse(req.url, true).query;
+  const url = new URL(req.url, 'http://localhost:3000');
+  const queryParams = Object.fromEntries(url.searchParams);
   
   if (queryParams.code) {
     try {
       const { tokens } = await oauth2Client.getToken(queryParams.code);
       
       console.log('✅ Authentication successful!\n');
-      console.log('📋 Copy this refresh token and paste it in your .env file:\n');
-      console.log(`DRIVE_REFRESH_TOKEN=${tokens.refresh_token}`);
+      console.log(`📋 Obtained refresh token: ${tokens.refresh_token}`);
+      
+      // Automatically update .env file
+      const envPath = path.join(__dirname, '.env');
+      if (fs.existsSync(envPath)) {
+        let envContent = fs.readFileSync(envPath, 'utf8');
+        const tokenRegex = /^DRIVE_REFRESH_TOKEN=.*$/m;
+        
+        if (tokenRegex.test(envContent)) {
+          envContent = envContent.replace(tokenRegex, `DRIVE_REFRESH_TOKEN='${tokens.refresh_token}'`);
+        } else {
+          envContent += `\nDRIVE_REFRESH_TOKEN='${tokens.refresh_token}'\n`;
+        }
+        
+        fs.writeFileSync(envPath, envContent);
+        console.log('📝 .env file updated automatically!\n');
+      } else {
+        console.log('⚠️ .env file not found. Please update it manually:\n');
+        console.log(`DRIVE_REFRESH_TOKEN='${tokens.refresh_token}'`);
+      }
+      
       console.log('\n');
       
       res.writeHead(200, { 'Content-Type': 'text/html' });

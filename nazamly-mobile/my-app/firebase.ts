@@ -32,6 +32,25 @@ export const storage = getStorage(app);
 
 export const googleProvider = new GoogleAuthProvider();
 
+// ── OLD BRANCH CODE (commented out — duplicates lines 19-31 above) ──────────
+// const app = initializeApp(firebaseConfig);
+//
+// let auth: ReturnType<typeof initializeAuth>;
+//
+// if (Platform.OS === "web") {
+//   auth = initializeAuth(app, { persistence: browserLocalPersistence });
+// } else {
+//   const AsyncStorage =
+//     require("@react-native-async-storage/async-storage").default;
+//   const { getReactNativePersistence } = require("firebase/auth");
+//   auth = initializeAuth(app, {
+//     persistence: getReactNativePersistence(AsyncStorage),
+//   });
+// }
+//
+// export { auth };
+// ── END OLD BRANCH CODE ─────────────────────────────────────────────────────
+
 const host = Constants.expoConfig?.hostUri?.split(":")[0] ?? "localhost";
 export const API_URL = Platform.OS === 'web' ? 'http://localhost:5000' : 'http://192.168.1.5:5000'; // استبدل ده بالـ IP بتاعك
 // Debug: Log API_URL on app start

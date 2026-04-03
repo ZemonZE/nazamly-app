@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "../App.css";
 import "../styles/Dashboard.css";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import logo from "../assets/logo.jpg";
 import {
   IconHome,
@@ -17,31 +17,89 @@ import {
 } from "../Icons/DashboardIcons";
 
 const navItems = [
-  { path: "/dashboard", label: "الرئيسية", icon: <IconHome /> },
+  { path: "/dashboard", label: "Dashboard", icon: <IconHome /> },
   {
     path: "/dashboard/gpa-calculator",
-    label: "حساب المعدل",
+    label: "GPA Calculator",
     icon: <IconChart />,
   },
   {
     path: "/dashboard/gpa-planner",
-    label: "مخطط المعدل",
+    label: "GPA Planner",
     icon: <IconCalendar />,
   },
-  { path: "/dashboard/materials", label: "مركز المواد", icon: <IconBook /> },
+  {
+    path: "/dashboard/materials",
+    label: "Materials Center",
+    icon: <IconBook />,
+  },
   {
     path: "/dashboard/questions",
-    label: "بنك الأسئلة",
+    label: "Question Bank",
     icon: <IconQuestion />,
   },
-  { path: "/dashboard/generator", label: "منظم الجداول", icon: <IconTable /> },
+  {
+    path: "/dashboard/generator",
+    label: "Schedule Generator",
+    icon: <IconTable />,
+  },
 ];
+
+const PAGE_META = {
+  "/dashboard": {
+    icon: <IconHome width={22} height={22} />,
+    getTitle: (name) => "Welcome, " + name + "!",
+    subtitle: "Your personal academic success dashboard. Track your progress.",
+  },
+  "/dashboard/generator": {
+    icon: <IconTable width={22} height={22} />,
+    title: "Schedule Generator",
+    subtitle:
+      "Create and customize your professionally formatted study schedules.",
+  },
+  "/dashboard/gpa-calculator": {
+    icon: <IconChart width={22} height={22} />,
+    title: "GPA Calculator",
+    subtitle:
+      "Calculate your semester GPA with high precision and grade details.",
+  },
+  "/dashboard/gpa-planner": {
+    icon: <IconCalendar width={22} height={22} />,
+    title: "GPA Planner",
+    subtitle: "Strategize your academic future and reach your target CGPA.",
+  },
+  "/dashboard/materials": {
+    icon: <IconBook width={22} height={22} />,
+    title: "Materials Center",
+    subtitle: "Access lectures, sections, and study files shared by the admin.",
+  },
+  "/dashboard/questions": {
+    icon: <IconQuestion width={22} height={22} />,
+    title: "Question Bank",
+    subtitle: "Practice with past exam questions and boost your preparation.",
+  },
+  "/dashboard/settings": {
+    icon: <IconSettings width={22} height={22} />,
+    title: "Account Settings",
+    subtitle: "Manage your personal info and app preferences.",
+  },
+};
 
 function DashboardLayout({ user, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const name = user?.user?.displayName || user?.user?.email || "طالب";
-  const email = user?.user?.email || "";
-  const avatar = name.charAt(0).toUpperCase();
+  const location = useLocation();
+  const name = user?.displayName || user?.fullName || "—";
+  const email = user?.email || "";
+  const avatar = (name || "").trim().substring(0, 1).toUpperCase();
+
+  const meta = PAGE_META[location.pathname];
+  const pageTitle = meta
+    ? typeof meta.getTitle === "function"
+      ? meta.getTitle(name)
+      : meta.title
+    : "Dashboard";
+  const pageSubtitle = meta?.subtitle ?? "";
+
   return (
     <div className="dash-wrapper">
       {/* ══ Sidebar ══ */}
@@ -50,10 +108,10 @@ function DashboardLayout({ user, onLogout }) {
         <div className="dash-logo">
           {sidebarOpen && (
             <div className="logo-text">
-              <img src={logo} alt="نظملي" className="logo-img" />
+              <img src={logo} alt="Nazamly" className="logo-img" />
               <div>
-                <h1>نظملي</h1>
-                <p>صفحة الطالب</p>
+                <h1>Nazamly</h1>
+                <p>Student Portal</p>
               </div>
             </div>
           )}
@@ -99,34 +157,38 @@ function DashboardLayout({ user, onLogout }) {
             className={({ isActive }) =>
               `dash-nav-item ${isActive ? "active" : ""}`
             }
-            title={!sidebarOpen ? "الإعدادات" : ""}
+            title={!sidebarOpen ? "Settings" : ""}
           >
             <span className="nav-icon">
               <IconSettings />
             </span>
-            {sidebarOpen && <span className="nav-label">الإعدادات</span>}
+            {sidebarOpen && <span className="nav-label">Settings</span>}
           </NavLink>
           <button
             className="dash-nav-item dash-logout"
             onClick={onLogout}
-            title={!sidebarOpen ? "تسجيل الخروج" : ""}
+            title={!sidebarOpen ? "Logout" : ""}
           >
             <span className="nav-icon">
               <IconLogout />
             </span>
-            {sidebarOpen && <span className="nav-label">تسجيل الخروج</span>}
+            {sidebarOpen && <span className="nav-label">Logout</span>}
           </button>
         </div>
       </aside>
       {/* ══ Main ══ */}
       <main className="dash-main">
         <header className="dash-header">
-          <h2>مرحباً، {name}!</h2>
-          <p>
-            لوحة معلومات النجاح الأكاديمي الشخصية الخاصة بك. تتبع تقدمك وحقق
-            أهدافك.
-          </p>
-          <p>GPA: 3.8</p>
+          <div className="dash-header-content">
+            <div className="header-title-row">
+              {meta?.icon && <span className="header-icon">{meta.icon}</span>}
+              <h2 className="header-title">{pageTitle}</h2>
+            </div>
+            <p className="header-subtitle">{pageSubtitle}</p>
+          </div>
+          {user?.cgpa != null && (
+            <div className="header-badge">CGPA: {user.cgpa}</div>
+          )}
         </header>
         <Outlet context={{ user, onLogout }} />
       </main>

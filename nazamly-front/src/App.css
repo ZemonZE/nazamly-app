@@ -50,7 +50,7 @@ html,
 body {
   min-height: 100vh;
   font-family: "Tajawal", sans-serif;
-  direction: rtl;
+  direction: ltr;
   background: var(--bg-deep);
   color: var(--text-primary);
   transition:

@@ -12,7 +12,7 @@ function Login({ onLogin, switchToSignup }) {
   const [loading, setLoading] = useState(false);
 
   const syncWithBackend = async (user) => {
-    const token = await user.getIdToken();
+    const token = await user.getIdToken(true);
     const res = await fetch(`${API_URL}/api/auth/sync`, {
       method: "POST",
       headers: {
@@ -29,7 +29,7 @@ function Login({ onLogin, switchToSignup }) {
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
       const data = await syncWithBackend(result.user);
-      onLogin(data);
+      onLogin(data.user);
     } catch (error) {
       alert(error.message);
     } finally {
@@ -42,7 +42,7 @@ function Login({ onLogin, switchToSignup }) {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const data = await syncWithBackend(result.user);
-      onLogin(data);
+      onLogin(data.user);
     } catch (error) {
       alert(error.message);
     } finally {
@@ -52,13 +52,13 @@ function Login({ onLogin, switchToSignup }) {
 
   return (
     <div className="auth-form-panel">
-      <h2>تسجيل الدخول</h2>
-      <p>أهلاً بك! الرجاء تسجيل الدخول إلى حسابك.</p>
+      <h2>Login</h2>
+      <p>Welcome back! Please login to your account.</p>
 
       <form onSubmit={handleEmailLogin}>
         <FormInput
           id="email"
-          label="البريد الإلكتروني"
+          label="Email Address"
           type="email"
           placeholder="example@example.com"
           value={email}
@@ -69,8 +69,8 @@ function Login({ onLogin, switchToSignup }) {
 
         <FormInput
           id="password"
-          label="كلمة المرور"
-          placeholder="أدخل كلمة المرور"
+          label="Password"
+          placeholder="Enter your password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           icon={<IconLock />}
@@ -80,24 +80,24 @@ function Login({ onLogin, switchToSignup }) {
           onToggle={() => setShowPwd((p) => !p)}
         />
 
-        <span className="forgot-link">هل نسيت كلمة المرور؟</span>
+        <span className="forgot-link">Forgot password?</span>
 
         <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? "جاري التحميل..." : "تسجيل الدخول"}
+          {loading ? "Loading..." : "Login"}
         </button>
         <div className="divider">
-          <span>أو</span>
+          <span>OR</span>
         </div>
         <button type="button" className="btn-google" onClick={handleGoogleLogin} disabled={loading}>
           <GoogleLogo />
-          <span>تسجيل الدخول باستخدام جوجل</span>
+          <span>Login with Google</span>
         </button>
       </form>
 
       <p className="form-footer">
-        ليس لديك حساب؟
+        Don't have an account?
         <span className="link-text" onClick={switchToSignup}>
-          إنشاء حساب
+          Sign Up
         </span>
       </p>
     </div>

@@ -21,7 +21,7 @@ function Signup({ onSignup, switchToLogin }) {
   const pwdMismatch = password && confirm && password !== confirm;
 
   const syncWithBackend = async (user) => {
-    const token = await user.getIdToken();
+    const token = await user.getIdToken(true);
     const res = await fetch(`${API_URL}/api/auth/sync`, {
       method: "POST",
       headers: {
@@ -44,7 +44,7 @@ function Signup({ onSignup, switchToLogin }) {
       );
       await updateProfile(result.user, { displayName: username });
       const data = await syncWithBackend(result.user);
-      onSignup(data);
+      onSignup(data.user);
     } catch (error) {
       alert(error.message);
     } finally {
@@ -57,7 +57,7 @@ function Signup({ onSignup, switchToLogin }) {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const data = await syncWithBackend(result.user);
-      onSignup(data);
+      onSignup(data.user);
     } catch (error) {
       alert(error.message);
     } finally {
@@ -67,15 +67,15 @@ function Signup({ onSignup, switchToLogin }) {
 
   return (
     <div className="auth-form-panel">
-      <h2>إنشاء حساب جديد</h2>
-      <p>مرحباً بك! الرجاء ملء النموذج التالي لإنشاء حسابك.</p>
+      <h2>Create a New Account</h2>
+      <p>Welcome! Please fill out the form below to create your account.</p>
 
       <form onSubmit={handleEmailSignup}>
         <FormInput
           id="username"
-          label="اسم المستخدم"
+          label="Username"
           type="text"
-          placeholder="الاسم الكامل"
+          placeholder="Full Name"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           icon={<IconUser />}
@@ -84,7 +84,7 @@ function Signup({ onSignup, switchToLogin }) {
 
         <FormInput
           id="email"
-          label="البريد الإلكتروني"
+          label="Email Address"
           type="email"
           placeholder="example@example.com"
           value={email}
@@ -95,8 +95,8 @@ function Signup({ onSignup, switchToLogin }) {
 
         <FormInput
           id="password"
-          label="كلمة المرور"
-          placeholder="أدخل كلمة المرور"
+          label="Password"
+          placeholder="Enter your password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           icon={<IconLock />}
@@ -108,8 +108,8 @@ function Signup({ onSignup, switchToLogin }) {
 
         <FormInput
           id="confirm"
-          label="تأكيد كلمة المرور"
-          placeholder="أعد إدخال كلمة المرور"
+          label="Confirm Password"
+          placeholder="Re-enter your password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
           icon={<IconLock />}
@@ -117,33 +117,33 @@ function Signup({ onSignup, switchToLogin }) {
           showToggle
           showVisible={showConfirm}
           onToggle={() => setShowConfirm((p) => !p)}
-          errorMsg={pwdMismatch ? "كلمة المرور غير متطابقة" : ""}
+          errorMsg={pwdMismatch ? "Passwords do not match" : ""}
         />
 
         <div className="terms-row">
           <input type="checkbox" id="terms" required />
           <label htmlFor="terms">
-            أوافق على <a href="#">الشروط والأحكام</a> و{" "}
-            <a href="#">سياسة الخصوصية</a>
+            I agree to the <a href="#">Terms and Conditions</a> and{" "}
+            <a href="#">Privacy Policy</a>
           </label>
         </div>
 
         <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? "جاري التحميل..." : "إنشاء حساب"}
+          {loading ? "Loading..." : "Sign Up"}
         </button>
         <div className="divider">
-          <span>أو</span>
+          <span>OR</span>
         </div>
         <button type="button" className="btn-google" onClick={handleGoogleSignup} disabled={loading}>
           <GoogleLogo />
-          <span>التسجيل باستخدام جوجل</span>
+          <span>Sign up with Google</span>
         </button>
       </form>
 
       <p className="form-footer">
-        هل لديك حساب؟
+        Already have an account?
         <span className="link-text" onClick={switchToLogin}>
-          تسجيل الدخول
+          Login
         </span>
       </p>
     </div>

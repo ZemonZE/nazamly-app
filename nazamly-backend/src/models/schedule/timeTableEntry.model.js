@@ -18,8 +18,18 @@ const timeTableEntrySchema = new Schema(
     courseId: {
       type: Schema.Types.ObjectId,
       ref: "Course",
-      required: [true, "Course is required"],
+      required: false,
       index: true,
+    },
+    courseCode: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    courseName: {
+      type: String,
+      required: false,
+      trim: true,
     },
     dayOfWeek: {
       type: Number,
