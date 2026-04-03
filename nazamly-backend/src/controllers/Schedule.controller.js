@@ -2,7 +2,9 @@ const scheduleRepo = require("../Repos/Schedule_Repo");
 const sessionsRepo = require("../Repos/Sessions_Repo");
 const userRepo = require("../Repos/User_Repo");
 const { TimeTable, TimeTableEntry } = require("../models/schedule");
-const { User } = require("../models");
+// ── OLD BRANCH (commented out — userRepo already handles user lookups) ──────
+// const { User } = require("../models");
+// ── END OLD BRANCH ──────────────────────────────────────────────────────────
 
 /**
  * Day name → number mapping for AI-generated schedules
@@ -38,7 +40,15 @@ function mapAIType(type) {
  */
 const addOrUpdateSchedule = async (req, res) => {
   try {
-    const userId = req.user.id;
+    // ── OLD BRANCH (commented out — req.user.id doesn't exist with Firebase auth) ──
+    // const userId = req.user.id;
+    // ── END OLD BRANCH ─────────────────────────────────────────────────────────────
+    const firebaseUid = req.user.uid;
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    const userId = user._id;
     const { entries, title, SemesterId } = req.body;
 
     // ✅ تحقق إن فيه sessions في الـ request
@@ -246,8 +256,10 @@ const saveAISchedule = async (req, res) => {
       });
     }
 
-    // Find the MongoDB user by Firebase UID
-    const user = await User.findOne({ firebaseUid });
+    // ── OLD BRANCH (commented out — using userRepo instead of direct User model) ──
+    // const user = await User.findOne({ firebaseUid });
+    // ── END OLD BRANCH ──────────────────────────────────────────────────────────────
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -347,7 +359,10 @@ const getMyTimetable = async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
 
-    const user = await User.findOne({ firebaseUid });
+    // ── OLD BRANCH (commented out — using userRepo instead of direct User model) ──
+    // const user = await User.findOne({ firebaseUid });
+    // ── END OLD BRANCH ──────────────────────────────────────────────────────────────
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -494,6 +509,7 @@ const getTimeTable = async (req, res) => {
 };
 
 module.exports = {
+  addOrUpdateSchedule,
   getMySchedule,
   deleteSession,
   addTimeTableEntry,

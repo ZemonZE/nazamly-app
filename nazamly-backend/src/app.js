@@ -7,7 +7,7 @@ const rateLimit = require("express-rate-limit");
 // 1. Route Imports
 const authRoutes = require("./routes/auth.routes");
 const gpaRoutes = require("./routes/gpa.routes");
-const scheduleRoutes = require('./routes/Schedule.routes');
+const scheduleRoutes = require('./routes/schedule.routes');
 const aiRoutes = require('./routes/ai.routes');
 const materialsRoutes = require('./routes/materials.routes');
 const courseRoutes = require('./routes/course.routes');

@@ -1,5 +1,5 @@
 const Base_Repo = require("./Base_Repo");
-const User = require("../models/User/user.model");
+const User = require("../models/user/user.model");
 const Schedule = require("../models/schedule/timeTable.model");
 
 /**

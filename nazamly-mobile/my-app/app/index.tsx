@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   ToastAndroid,
+  Platform,
 } from "react-native";
 import { useEffect, useState } from "react";
 import { API_URL } from "@/firebase";
@@ -17,7 +18,9 @@ export default function Index() {
   useEffect(() => {
     if (error) {
       console.error("Auth check failed:", error);
-      ToastAndroid.showWithGravity("Auth check failed", ToastAndroid.LONG, ToastAndroid.BOTTOM);
+      if (Platform.OS === 'android') {
+        ToastAndroid.showWithGravity("Auth check failed", ToastAndroid.LONG, ToastAndroid.BOTTOM);
+      }
     }
   }, [error]);
 
@@ -44,7 +47,9 @@ export default function Index() {
           console.log("User synced successfully:", data);
         } catch (err) {
           console.error("Sync error:", err);
-          ToastAndroid.showWithGravity("Failed to sync user data", ToastAndroid.SHORT, ToastAndroid.BOTTOM);
+          if (Platform.OS === 'android') {
+            ToastAndroid.showWithGravity("Failed to sync user data", ToastAndroid.SHORT, ToastAndroid.BOTTOM);
+          }
         } finally {
           setIsSyncing(false);
           setSyncCompleted(true);

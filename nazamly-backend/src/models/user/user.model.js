@@ -24,23 +24,39 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "student",
     },
-    cgpa: {
+    // ── OLD BRANCH FIELDS (commented out — replaced by HEAD branch fields below) ──
+    // cgpa: { type: Number, default: 0, min: 0, max: 5 },
+    // completedHours: { type: Number, default: 0, min: 0, max: 200 },
+    // termCourses: [
+    //   { name: { type: String, required: true },
+    //     courseCode: { type: String, required: true },
+    //     creditHours: { type: Number, required: true, min: 1, max: 10 } },
+    // ],
+    // ── END OLD BRANCH FIELDS ───────────────────────────────────────────────────
+    currentCGPA: {
       type: Number,
       default: 0,
       min: 0,
-      max: 5,
+      max: 5.0,
     },
-    completedHours: {
+    earnedCreditHours: {
       type: Number,
       default: 0,
       min: 0,
-      max: 200,
     },
-    termCourses: [
+    pastSemesters: [
       {
-        name: { type: String, required: true },
-        courseCode: { type: String, required: true },
-        creditHours: { type: Number, required: true, min: 1, max: 10 },
+        termName: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        termGPA: {
+          type: Number,
+          required: true,
+          min: 0,
+          max: 5.0,
+        },
       },
     ],
   },
