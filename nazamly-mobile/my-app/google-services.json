@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "229323424819",
+    "project_id": "nazamly-c242c",
+    "storage_bucket": "nazamly-c242c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:229323424819:android:bbc359298b6b1c2d784f46",
+        "android_client_info": {
+          "package_name": "host.exp.exponent"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "229323424819-bo0tpt18a47ohjo1dba5k8sgo2tbk2nb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAd5-nLi2h-wv2P-J6bXriLjP2FnhuHjw8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "229323424819-bo0tpt18a47ohjo1dba5k8sgo2tbk2nb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

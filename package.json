@@ -1,26 +1,29 @@
 {
-  "name": "nazamly-app",
-  "version": "1.0.0",
-  "description": "> **Nazamly** is a full-stack integrated learning management platform built for university students. It covers course management, quiz generation, GPA tracking, timetables, and more.",
-  "main": "index.js",
-  "scripts": {
-    "dev": "node start-dev.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/ZemonZE/nazamly-app.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/ZemonZE/nazamly-app/issues"
-  },
-  "homepage": "https://github.com/ZemonZE/nazamly-app#readme",
-  "devDependencies": {
-    "concurrently": "^9.2.1",
-    "portfinder": "^1.0.38"
+  "dependencies": {
+    "react-router-dom": "^7.13.1",
+    "name": "nazamly-app",
+    "version": "1.0.0",
+    "description": "> **Nazamly** is a full-stack integrated learning management platform built for university students. It covers course management, quiz generation, GPA tracking, timetables, and more.",
+    "main": "index.js",
+    "scripts": {
+      "dev": "node start-dev.js",
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/ZemonZE/nazamly-app.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "bugs": {
+      "url": "https://github.com/ZemonZE/nazamly-app/issues"
+    },
+    "homepage": "https://github.com/ZemonZE/nazamly-app#readme",
+    "devDependencies": {
+      "concurrently": "^9.2.1",
+      "portfinder": "^1.0.38"
+    }
   }
 }

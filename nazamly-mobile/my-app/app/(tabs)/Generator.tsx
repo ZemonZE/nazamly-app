@@ -1,0 +1,213 @@
+import React, { useState } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  SafeAreaView,
+} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAppTheme } from '@/constants/theme';
+
+type Intensity = 'Low' | 'Medium' | 'High';
+
+const SUBJECTS = ['Biology', 'Calculus', 'Physics', 'History', 'CS', 'Chemistry', 'English', 'Economics'];
+
+
+type BlockType = 'Deep Work' | 'Cognitive Reset' | 'Admin' | 'Free';
+
+interface TimelineBlock {
+  time: string;
+  label: string;
+  type: BlockType;
+  subject?: string;
+}
+
+const getBlockMeta = (type: BlockType, colors: any) => ({
+  'Deep Work': { bg: colors.indigoPale, border: colors.indigo, text: colors.indigo, icon: 'brain' },
+  'Cognitive Reset': { bg: colors.tealLight, border: colors.teal, text: colors.teal, icon: 'leaf' },
+  'Admin': { bg: colors.amberLight, border: colors.amber, text: colors.amber, icon: 'clipboard-text' },
+  'Free': { bg: colors.greenLight, border: colors.green, text: colors.green, icon: 'coffee' },
+}[type]);
+
+const generateSchedule = (intensity: Intensity, subjects: string[]): TimelineBlock[] => {
+  const intensityMap: Record<Intensity, number> = { Low: 2, Medium: 3, High: 5 };
+  const deepWorkCount = intensityMap[intensity];
+  const schedule: TimelineBlock[] = [{ time: '07:00 – 08:00', label: 'Morning Routine', type: 'Free' }];
+  const subjectQueue = [...subjects, ...subjects].slice(0, deepWorkCount);
+  const hours = [8, 9, 10, 11, 13, 14, 15, 16, 17, 20];
+  let subjectIdx = 0;
+  hours.forEach(h => {
+    const timeStr = `${h.toString().padStart(2, '0')}:00 – ${(h + 1).toString().padStart(2, '0')}:00`;
+    if (subjectIdx < subjectQueue.length) {
+      schedule.push({ time: timeStr, label: `Study ${subjectQueue[subjectIdx]}`, type: 'Deep Work', subject: subjectQueue[subjectIdx] });
+      subjectIdx++;
+    } else if (h >= 18) {
+      schedule.push({ time: timeStr, label: 'Review & Solve', type: 'Admin' });
+    }
+  });
+  schedule.push({ time: '22:00 – 23:00', label: 'Relax & Sleep', type: 'Free' });
+  return schedule;
+};
+
+export default function GeneratorScreen() {
+  const { colors } = useAppTheme();
+  const [intensity, setIntensity] = useState<Intensity>('Medium');
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(['Biology', 'Calculus']);
+  const [generated, setGenerated] = useState<TimelineBlock[] | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const toggleSubject = (s: string) => { setSelectedSubjects(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]); setGenerated(null); };
+
+  const handleGenerate = async () => {
+    setIsGenerating(true); setGenerated(null);
+    await new Promise(r => setTimeout(r, 1000));
+    setGenerated(generateSchedule(intensity, selectedSubjects));
+    setIsGenerating(false);
+  };
+
+  const intensityMeta: Record<Intensity, { color: string; bg: string; desc: string }> = {
+    Low: { color: colors.teal, bg: colors.tealLight, desc: 'Casual Study' },
+    Medium: { color: colors.indigo, bg: colors.indigoPale, desc: 'Balanced Focus' },
+    High: { color: colors.amber, bg: colors.amberLight, desc: 'Intense Grind' },
+  };
+
+  const LVL_LABELS = { Low: 'Low', Medium: 'Medium', High: 'High' };
+
+  return (
+    <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+
+        <View style={[s.header, { backgroundColor: colors.indigoPale, flexDirection: 'row' }]}>
+          <MaterialCommunityIcons name="lightning-bolt" size={28} color={colors.indigo} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={[s.headerTitle, { color: colors.textPrimary }]}>Smart Generator</Text>
+            <Text style={[s.headerSub, { color: colors.textSecondary }]}>AI powered daily plan</Text>
+          </View>
+        </View>
+
+        {/* Study Intensity */}
+        <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Study Intensity</Text>
+          <View style={[s.intensityRow, { flexDirection: 'row' }]}>
+            {(['Low', 'Medium', 'High'] as Intensity[]).map(lvl => {
+              const meta = intensityMeta[lvl];
+              const active = intensity === lvl;
+              return (
+                <TouchableOpacity key={lvl} style={[s.intensityBtn, { borderColor: active ? meta.color : colors.border }, active && { backgroundColor: meta.bg }]}
+                  onPress={() => { setIntensity(lvl); setGenerated(null); }} activeOpacity={0.75}>
+                  <Text style={[s.intensityLabel, { color: active ? meta.color : colors.textSecondary }]}>{LVL_LABELS[lvl]}</Text>
+                  {active && <Text style={[s.intensityDesc, { color: meta.color }]}>{meta.desc}</Text>}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Priority Subjects */}
+        <View style={[s.card, { backgroundColor: colors.card }]}>
+          <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Select Subjects</Text>
+          <Text style={[s.cardSub, { color: colors.textMuted }]}>Choose subjects to focus on today</Text>
+          <View style={[s.chipsWrap, { flexDirection: 'row' }]}>
+            {SUBJECTS.map(sub => {
+              const active = selectedSubjects.includes(sub);
+              return (
+                <TouchableOpacity key={sub} style={[s.subjectChip, { backgroundColor: active ? colors.indigoPale : colors.bg, borderColor: active ? colors.indigo : colors.border }]}
+                  onPress={() => toggleSubject(sub)} activeOpacity={0.75}>
+                  <Text style={[s.subjectChipText, { color: active ? colors.indigo : colors.textSecondary, fontWeight: active ? '700' : '500' }]}>{sub}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+
+
+        {/* CTA */}
+        <TouchableOpacity style={[s.generateBtn, { backgroundColor: colors.indigo, opacity: isGenerating ? 0.7 : 1, flexDirection: 'row' }]}
+          onPress={handleGenerate} activeOpacity={0.85} disabled={isGenerating || selectedSubjects.length === 0}>
+          <MaterialCommunityIcons name="lightning-bolt" size={22} color="#fff" />
+          <Text style={s.generateBtnText}>{isGenerating ? 'Generating...' : `✨ Generate Schedule`}</Text>
+        </TouchableOpacity>
+
+        {/* Legend */}
+        {generated && (
+          <View style={[s.legendRow, { flexDirection: 'row' }]}>
+            {(['Deep Work', 'Cognitive Reset', 'Admin', 'Free'] as BlockType[]).map(type => {
+              const meta = getBlockMeta(type, colors)!;
+              const typeLabel = type === 'Deep Work' ? 'Deep Work' : type === 'Cognitive Reset' ? 'Cognitive Reset' : type === 'Admin' ? 'Assignment' : 'Break';
+              return (
+                <View key={type} style={[s.legendItem, { flexDirection: 'row' }]}>
+                  <View style={[s.legendDot, { backgroundColor: meta.border }]} />
+                  <Text style={[s.legendText, { color: colors.textSecondary }]}>{typeLabel}</Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Timeline */}
+        {generated && (
+          <View style={s.timelineContainer}>
+            <Text style={[s.timelineTitle, { color: colors.textPrimary }]}>🗓 Generated AI Schedule</Text>
+            {generated.map((block, i) => {
+              const meta = getBlockMeta(block.type, colors)!;
+              return (
+                <View key={i} style={[s.timelineRow, { flexDirection: 'row' }]}>
+                  <View style={[s.timelineBlock, { backgroundColor: meta.bg, borderLeftWidth: 3, borderLeftColor: meta.border }]}>
+                    <View style={[s.timelineBlockHeader, { flexDirection: 'row' }]}>
+                      <MaterialCommunityIcons name={meta.icon as any} size={15} color={meta.text} />
+                      <Text style={[s.blockLabel, { color: meta.text }]}>{block.label}</Text>
+                    </View>
+                    <Text style={[s.blockType, { color: meta.text + 'AA', marginLeft: 22 }]}>
+                      {block.type === 'Deep Work' ? 'Deep Work' : block.type === 'Cognitive Reset' ? 'Cognitive Reset' : block.type === 'Admin' ? 'Assignment' : 'Break'}
+                    </Text>
+                  </View>
+                  <View style={s.timelineLeft}>
+                    <Text style={[s.blockTime, { color: colors.textMuted }]}>{block.time}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+        <View style={{ height: 20 }} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const s = StyleSheet.create({
+  container: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110 },
+  header: { alignItems: 'center', borderRadius: 16, padding: 18, marginBottom: 20 },
+  headerTitle: { fontSize: 20, fontWeight: '800' },
+  headerSub: { fontSize: 13, marginTop: 2 },
+  card: { borderRadius: 16, padding: 18, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  cardSub: { fontSize: 12, marginBottom: 14 },
+  intensityRow: { gap: 10, marginTop: 10 },
+  intensityBtn: { flex: 1, paddingVertical: 12, paddingHorizontal: 8, borderRadius: 10, borderWidth: 1.5, alignItems: 'center' },
+  intensityLabel: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  intensityDesc: { fontSize: 10, fontWeight: '500', marginTop: 3, textAlign: 'center' },
+  chipsWrap: { flexWrap: 'wrap', gap: 8 },
+  subjectChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5 },
+  subjectChipText: { fontSize: 13 },
+  slotRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderRadius: 10, marginBottom: 6, paddingHorizontal: 4, gap: 12 },
+  slotIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  slotLabel: { fontSize: 14, fontWeight: '600' },
+  slotTime: { fontSize: 12, marginTop: 1 },
+  slotCheck: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  generateBtn: { alignItems: 'center', justifyContent: 'center', paddingVertical: 17, borderRadius: 24, gap: 10, marginBottom: 20, shadowColor: '#3F51B5', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6 },
+  generateBtnText: { fontSize: 17, fontWeight: '800', color: '#fff' },
+  legendRow: { flexWrap: 'wrap', gap: 10, marginBottom: 16 },
+  legendItem: { alignItems: 'center', gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { fontSize: 12, fontWeight: '500' },
+  timelineContainer: { marginBottom: 10 },
+  timelineTitle: { fontSize: 16, fontWeight: '800', marginBottom: 16 },
+  timelineRow: { gap: 12, marginBottom: 6 },
+  timelineLeft: { width: 92, alignItems: 'center', paddingTop: 8 },
+  blockTime: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  timelineBlock: { flex: 1, borderRadius: 10, padding: 12, marginBottom: 4 },
+  timelineBlockHeader: { alignItems: 'center', gap: 7, marginBottom: 3 },
+  blockLabel: { fontSize: 14, fontWeight: '700', flex: 1 },
+  blockType: { fontSize: 11, fontWeight: '500' },
+});

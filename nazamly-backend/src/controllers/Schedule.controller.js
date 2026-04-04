@@ -1,6 +1,10 @@
 const scheduleRepo = require("../Repos/Schedule_Repo");
 const sessionsRepo = require("../Repos/Sessions_Repo");
-const { User } = require("../models");
+const userRepo = require("../Repos/User_Repo");
+const { TimeTable, TimeTableEntry } = require("../models/schedule");
+// ── OLD BRANCH (commented out — userRepo already handles user lookups) ──────
+// const { User } = require("../models");
+// ── END OLD BRANCH ──────────────────────────────────────────────────────────
 
 /**
  * Day name → number mapping for AI-generated schedules
@@ -30,20 +34,21 @@ function mapAIType(type) {
  */
 
 /**
- * @desc    Add/Update Schedule (Create/Update)
- * @route   POST /api/schedule/add
- * @access  Private (Authenticated User)
- * Business Logic:
- * 1. بيجيب الـ userId من الـ authenticated request (req.user.id)
- * 2. بيعمل create للـ sessions الجديدة في الداتابيز عن طريق Sessions_Repo
- * 3. بيدور على جدول موجود للـ user ده عن طريق Schedule_Repo
- * 4. Case 1 (طالب جديد): بيعمل Schedule جديد ويحط فيه الـ session IDs
- * 5. Case 2 (جدول موجود): بيضيف الـ session IDs الجديدة على الجدول الموجود
- * 6. بيرجع 201 Created مع الـ document المحدث
+ * -----------------------------------------
+ * LEGACY CONTROLLERS (Retained for Critical Usage)
+ * -----------------------------------------
  */
 const addOrUpdateSchedule = async (req, res) => {
   try {
-    const userId = req.user.id;
+    // ── OLD BRANCH (commented out — req.user.id doesn't exist with Firebase auth) ──
+    // const userId = req.user.id;
+    // ── END OLD BRANCH ─────────────────────────────────────────────────────────────
+    const firebaseUid = req.user.uid;
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    const userId = user._id;
     const { entries, title, SemesterId } = req.body;
 
     // ✅ تحقق إن فيه sessions في الـ request
@@ -133,12 +138,22 @@ const addOrUpdateSchedule = async (req, res) => {
  */
 const getMySchedule = async (req, res) => {
   try {
-    const userId = req.user.id;
+    // ✅ Get MongoDB User ID from Firebase UID
+    const firebaseUid = req.user.uid;
 
-    // ✅ جيب كل جداول الـ user (محمّلة بالـ sessions والـ timeTable)
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const userId = user._id;
+
     const schedules = await scheduleRepo.findByUserId(userId);
 
-    // ✅ Empty State: لو مفيش جدول، رجع array فاضي مش 404
     if (!schedules || schedules.length === 0) {
       return res.status(200).json({
         success: true,
@@ -174,7 +189,18 @@ const getMySchedule = async (req, res) => {
  */
 const deleteSession = async (req, res) => {
   try {
-    const userId = req.user.id;
+    // ✅ Get MongoDB User ID from Firebase UID
+    const firebaseUid = req.user.uid;
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const userId = user._id;
     const { sessionId } = req.params;
 
     // ✅ دور على جدول الـ user
@@ -230,8 +256,10 @@ const saveAISchedule = async (req, res) => {
       });
     }
 
-    // Find the MongoDB user by Firebase UID
-    const user = await User.findOne({ firebaseUid });
+    // ── OLD BRANCH (commented out — using userRepo instead of direct User model) ──
+    // const user = await User.findOne({ firebaseUid });
+    // ── END OLD BRANCH ──────────────────────────────────────────────────────────────
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -331,7 +359,10 @@ const getMyTimetable = async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
 
-    const user = await User.findOne({ firebaseUid });
+    // ── OLD BRANCH (commented out — using userRepo instead of direct User model) ──
+    // const user = await User.findOne({ firebaseUid });
+    // ── END OLD BRANCH ──────────────────────────────────────────────────────────────
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -383,10 +414,106 @@ const getMyTimetable = async (req, res) => {
   }
 };
 
+/**
+ * -----------------------------------------
+ * USER'S CUSTOM REQUESTED CONTROLLERS
+ * -----------------------------------------
+ */
+
+// المرحلة الأولى: الباك إند (إنشاء وحفظ المحاضرة)
+const addTimeTableEntry = async (req, res) => {
+  try {
+    let {
+      timeTableId,
+      courseId,
+      dayOfWeek,
+      startTime,
+      endTime,
+      sessionType,
+      location,
+      groupNumber,
+    } = req.body;
+
+    // Convert firebaseUid to our mongo ObjectId
+    const user = await userRepo.findByFirebaseUid(req.user.uid);
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    const userId = user._id;
+
+    // IF TIMETABLE ID IS MISSING, FIND OR CREATE IT
+    if (!timeTableId) {
+      const existing = await scheduleRepo.findByUserId(userId);
+      if (existing && existing.length > 0) {
+        timeTableId = existing[0]._id;
+      } else {
+        const newSched = await TimeTable.create({
+          userId,
+          entries: [],
+          title: "My Schedule",
+        });
+        timeTableId = newSched._id;
+      }
+    }
+
+    // 1. إنشاء العنصر الجديد في قاعدة البيانات
+    const newEntry = await TimeTableEntry.create({
+      userId,
+      timeTableId,
+      courseId,
+      dayOfWeek,
+      startTime,
+      endTime,
+      sessionType,
+      location,
+      groupNumber,
+    });
+
+    // 2. إضافة الـ ID الخاص بهذا العنصر إلى مصفوفة entries في الجدول الأساسي
+    await TimeTable.findByIdAndUpdate(
+      timeTableId,
+      { $push: { entries: newEntry._id } },
+      { new: true },
+    );
+
+    return res.status(201).json({ success: true, data: newEntry });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// المرحلة الثانية: الباك إند (جلب الجدول للعرض - Populating)
+const getTimeTable = async (req, res) => {
+  try {
+    const { timeTableId } = req.params;
+
+    const timeTable = await TimeTable.findById(timeTableId).populate({
+      path: "entries", // جلب تفاصيل المحاضرات
+      populate: {
+        path: "courseId", // بداخل كل محاضرة، اجلب تفاصيل المادة
+        select: "courseName courseCode color", // updated to match actual DB fields courseName & courseCode
+      },
+    });
+
+    if (!timeTable) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Timetable not found" });
+    }
+
+    return res.status(200).json({ success: true, data: timeTable });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   addOrUpdateSchedule,
   getMySchedule,
   deleteSession,
+  addTimeTableEntry,
+  getTimeTable,
   saveAISchedule,
   getMyTimetable,
 };

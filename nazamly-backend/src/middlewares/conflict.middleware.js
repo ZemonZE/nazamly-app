@@ -1,47 +1,71 @@
-const { detectConflict } = require('../utils/timeHelpers');
+const { TimeTableEntry } = require('../models/schedule');
+const User = require('../models/user/user.model');
 
-// TODO: [INTEGRATION - ABDO] Uncomment the line below once the timeTable model is merged.
-// const StudentSchedule = require('../models/timeTable.model'); 
+/**
+ * Fix #3: Rewrote conflict.middleware.js to:
+ * 1. Use the correct new req.body schema (single entry: dayOfWeek, startTime, endTime)
+ * 2. Query the real database for existing entries via Firebase UID → MongoDB userId
+ * 3. Detect actual overlapping time slots on the same day
+ */
+
+const toMinutes = (timeStr) => {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+};
 
 const checkScheduleConflicts = async (req, res, next) => {
-    try {
-        const newSessions = req.body.sessions;
+  try {
+    const { dayOfWeek, startTime, endTime, timeTableId } = req.body;
+    const firebaseUid = req.user?.uid;
 
-        if (!newSessions || !Array.isArray(newSessions) || newSessions.length === 0) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Invalid request. Please provide an array of sessions.' 
-            });
-        }
-
-        // TODO: [INTEGRATION - ABDO] Replace the empty array below with the actual DB query.
-        // NOTE: We are querying directly using the Firebase UID stored in the token.
-        /* const firebaseUid = req.user.uid;
-        const userSchedule = await StudentSchedule.findOne({ firebaseUid: firebaseUid });
-        const existingSessions = userSchedule && userSchedule.sessions ? userSchedule.sessions : [];
-        */
-        
-        // TEMPORARY PLACEHOLDER: Remove this line once the above block is active.
-        const existingSessions = []; 
-
-        const conflictResult = detectConflict(newSessions, existingSessions);
-
-        if (conflictResult.hasConflict) {
-            return res.status(409).json({
-                success: false,
-                message: conflictResult.message
-            });
-        }
-
-        next();
-
-    } catch (error) {
-        console.error("Error in conflict detection middleware:", error);
-        return res.status(500).json({ 
-            success: false, 
-            message: 'Internal Server Error during conflict verification.' 
-        });
+    if (!firebaseUid) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
+
+    // Look up MongoDB user
+    const user = await User.findOne({ firebaseUid });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Get all existing entries for this user on the same day
+    const existingEntries = await TimeTableEntry.find({
+      userId: user._id,
+      dayOfWeek: Number(dayOfWeek),
+      isDeleted: { $ne: true },
+    });
+
+    const newStart = toMinutes(startTime);
+    const newEnd = toMinutes(endTime);
+
+    // Check for overlap: conflict if new entry overlaps any existing entry
+    const conflict = existingEntries.find(entry => {
+      const existStart = toMinutes(entry.startTime);
+      const existEnd = toMinutes(entry.endTime);
+      // Overlap condition: new start < exist end AND new end > exist start
+      return newStart < existEnd && newEnd > existStart;
+    });
+
+    if (conflict) {
+      return res.status(409).json({
+        success: false,
+        message: `Time conflict: A class already exists from ${conflict.startTime} to ${conflict.endTime} on that day.`,
+        conflictWith: {
+          startTime: conflict.startTime,
+          endTime: conflict.endTime,
+          sessionType: conflict.sessionType,
+        },
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('[ConflictMiddleware] Error during conflict detection:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal Server Error during conflict verification.',
+    });
+  }
 };
 
 module.exports = { checkScheduleConflicts };
