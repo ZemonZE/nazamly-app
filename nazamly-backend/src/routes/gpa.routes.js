@@ -5,6 +5,7 @@ const router = express.Router();
 // 1. Import Middlewares
 // IMPORTANT: Adjust the path to your actual authentication middleware
 const authMiddleware = require('../middlewares/auth.middleware');
+const upload = require('../middlewares/upload.middleware');
 const { 
     validateTermCalculation, 
     validateTargetStrategy 
@@ -16,7 +17,11 @@ const {
     generateTargetPlan,
     getTermCourses,
     addTermCourse,
-    removeTermCourse
+    removeTermCourse,
+    uploadTranscript,
+    getAllTranscripts,
+    getTranscriptById,
+    deleteTranscript
 } = require('../controllers/gpa.controller');
 
 // 3. Apply authentication to all routes in this file
@@ -65,5 +70,35 @@ router.post('/my-courses', addTermCourse);
  * @access  Private
  */
 router.delete('/my-courses/:courseId', removeTermCourse);
+
+// ── Transcript Endpoints ──
+
+/**
+ * @route   POST /api/gpa/upload-transcript
+ * @desc    Upload an image/PDF transcript to parse courses
+ * @access  Private
+ */
+router.post('/upload-transcript', upload.single('transcript'), uploadTranscript);
+
+/**
+ * @route   GET /api/gpa/transcripts
+ * @desc    Get all transcript histories for the signed-in student
+ * @access  Private
+ */
+router.get('/transcripts', getAllTranscripts);
+
+/**
+ * @route   GET /api/gpa/transcripts/:id
+ * @desc    Get a specific transcript by ID
+ * @access  Private
+ */
+router.get('/transcripts/:id', getTranscriptById);
+
+/**
+ * @route   DELETE /api/gpa/transcripts/:id
+ * @desc    Delete a specific transcript record
+ * @access  Private
+ */
+router.delete('/transcripts/:id', deleteTranscript);
 
 module.exports = router;

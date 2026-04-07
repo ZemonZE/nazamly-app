@@ -16,6 +16,7 @@ const ALLOWED_UPDATE_FIELDS = [
   "currentCGPA",
   "earnedCreditHours",
   "pastSemesters",
+  "termCourses"
 ];
 
 /**

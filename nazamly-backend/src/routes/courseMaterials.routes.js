@@ -4,10 +4,18 @@ const router = express.Router();
 const requireAuth = require('../middlewares/auth.middleware');
 const ctrl = require('../controllers/courseMaterials.controller');
 
-// Get courses with initialized Drive folders (read-only for students)
+/**
+ * @route   GET /api/course-materials/my-courses
+ * @desc    Get courses with initialized Drive folders
+ * @access  Private (Read-only for students)
+ */
 router.get('/my-courses', requireAuth, ctrl.getMyCoursesMaterials);
 
-// List files in a specific sub-folder of a course
+/**
+ * @route   GET /api/course-materials/:courseCode/files/:subFolderType
+ * @desc    List files in a specific sub-folder of a course
+ * @access  Private
+ */
 router.get('/:courseCode/files/:subFolderType', requireAuth, ctrl.getSubFolderFiles);
 
 module.exports = router;
