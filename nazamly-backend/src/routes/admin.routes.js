@@ -57,4 +57,7 @@ router.get('/users', adminCtrl.getUsers);
 router.put('/users/:id', adminCtrl.updateUser);
 router.patch('/users/:id/status', adminCtrl.updateUserStatus);
 
+// ── Past Exams Ingestion ──
+router.post('/upload-past-exam', upload.single('pdf'), adminCtrl.uploadPastExam);
+
 module.exports = router;

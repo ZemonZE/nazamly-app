@@ -43,7 +43,7 @@ exports.updateCourse = async (req, res) => {
     const course = await Course.findByIdAndUpdate(
       req.params.id,
       { courseCode, courseName, level, creditHours, difficulty, department },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
     if (!course) return res.status(404).json({ error: 'Course not found' });
     res.json(course);
@@ -159,7 +159,7 @@ exports.updateCourseInstance = async (req, res) => {
     const instance = await CourseInstance.findByIdAndUpdate(
       req.params.id,
       { courseId, doctorId, academicYear, semester },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     )
       .populate('courseId', 'courseName courseCode creditHours')
       .populate('doctorId', 'name');
@@ -269,7 +269,7 @@ exports.updateUser = async (req, res) => {
       user = await User.findByIdAndUpdate(
         user._id,
         { email, displayName, role, accessStatus },
-        { new: true, runValidators: true }
+        { returnDocument: 'after', runValidators: true }
       );
     } else {
       const conflict = await User.findOne({ email });
@@ -306,14 +306,14 @@ exports.updateUserStatus = async (req, res) => {
     let user = await User.findByIdAndUpdate(
       req.params.id,
       { accessStatus },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).catch(() => null);
 
     if (!user) {
       user = await User.findOneAndUpdate(
         { firebaseUid: req.params.id },
         { accessStatus },
-        { new: true, runValidators: true }
+        { returnDocument: 'after', runValidators: true }
       );
     }
 
@@ -328,5 +328,101 @@ exports.updateUserStatus = async (req, res) => {
   } catch (error) {
     console.error('Error updating user status:', error.message);
     res.status(500).json({ error: 'Failed to update user status', details: error.message });
+  }
+};
+
+// ═══════════════════════════════════════════
+//  PAST EXAMS INGESTION
+// ═══════════════════════════════════════════
+
+/** POST /api/admin/upload-past-exam */
+exports.uploadPastExam = async (req, res) => {
+  try {
+    const { courseId, examType, year } = req.body;
+    let { lectureIds } = req.body;
+    const file = req.file;
+
+    if (!file) return res.status(400).json({ error: 'PDF file is required' });
+    if (!courseId || !examType || !year) {
+      return res.status(400).json({ error: 'courseId, examType, and year are required' });
+    }
+
+    if (!lectureIds) lectureIds = [];
+    if (typeof lectureIds === 'string') {
+      lectureIds = lectureIds.split(',').map(id => id.trim()).filter(Boolean);
+    } else if (!Array.isArray(lectureIds)) {
+      lectureIds = [lectureIds];
+    }
+
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ error: 'Invalid courseId format' });
+    }
+
+    let materialFileIds = [];
+    if (lectureIds.length > 0) {
+      const MaterialFile = require('../models/materials/materialFile.model');
+      const resolvedMaterials = await MaterialFile.find({ driveFileId: { $in: lectureIds } }).lean();
+      materialFileIds = resolvedMaterials.map(m => m._id);
+    }
+    
+    if (lectureIds.length > 0 && materialFileIds.length === 0) {
+       return res.status(404).json({ error: 'Could not resolve any selected Drive IDs to database entries. Sync Drive first.' });
+    }
+
+    // ── SMART INGESTION LOGIC ──
+    // Fetch all LectureConcepts for these mapped lectures to pass to Semantic Engine
+    const LectureConcept = require('../models/lectureConcept.model');
+    const concepts = await LectureConcept.find({ materialFileId: { $in: materialFileIds } }).lean();
+
+    const { parseExamAndLinkToLectures } = require('../services/ai.service');
+    const examDetails = `This is a ${examType} exam from year ${year}.`;
+    
+    // Pass buffer and concepts to Gemini to act as a semantic router
+    const aiQuestions = await parseExamAndLinkToLectures(file.buffer, examDetails, concepts);
+
+    if (!Array.isArray(aiQuestions) || aiQuestions.length === 0) {
+      return res.status(422).json({ error: 'AI processed the PDF but found zero questions.' });
+    }
+
+    const ArchivedQuestion = require('../models/archivedQuestion.model');
+    const documentsToInsert = [];
+
+    // Validations before inserting
+    for (const q of aiQuestions) {
+        if (!q.questionText) continue;
+
+        // Semantic Engine assigns linkedLectureId. If it returns null/unknown, 
+        // we use a fallback (e.g. the first material file) to satisfy Mongoose `required: true`.
+        // If materialFileIds is empty, we still have a problem, but UI blocks empty lecture selection.
+        const bestLectureId = q.linkedLectureId || (materialFileIds.length > 0 ? materialFileIds[0] : null);
+
+        if (bestLectureId) {
+             documentsToInsert.push({
+                 courseId,
+                 linkedLectureId: bestLectureId,
+                 questionText: q.questionText,
+                 options: Array.isArray(q.options) ? q.options : [],
+                 correctAnswer: q.correctAnswer || "",
+                 examType,
+                 year: parseInt(year, 10)
+             });
+        }
+    }
+
+    if (documentsToInsert.length === 0) {
+        return res.status(422).json({ error: 'Failed to format any valid questions from AI semantic routing output.' });
+    }
+
+    await ArchivedQuestion.insertMany(documentsToInsert);
+
+    res.status(201).json({ 
+       message: `Smart Ingestion Complete! Automatically mapped ${documentsToInsert.length} questions to ${concepts.length} semantic concepts.`,
+       insertedCount: documentsToInsert.length
+    });
+
+  } catch (error) {
+    console.error('Error in uploadPastExam:', error.message);
+    res.status(500).json({ error: 'Ingestion failed', details: error.message });
   }
 };
