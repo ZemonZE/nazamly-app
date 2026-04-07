@@ -34,7 +34,7 @@ const extractScheduleFromImages = async (files) => {
         console.log(`📤 Dispatching request to Gemini Flash...`);
         
         // Recommended to use explicit model version
-        const geminiModel = genAI.getGenerativeModel({ model: "gemini-flash-latest" }); 
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         
         const geminiImageParts = files.map(file => ({
             inlineData: { data: file.buffer.toString("base64"), mimeType: file.mimetype }
@@ -71,4 +71,191 @@ const extractScheduleFromImages = async (files) => {
     }
 };
 
-module.exports = { extractScheduleFromImages };
+/**
+ * Extracts key academic concepts from a PDF lecture using Gemini's multimodal capabilities.
+ * The PDF buffer is sent directly as base64 inline data — no OCR library required.
+ *
+ * @param {Buffer} pdfBuffer - The raw PDF file content as a Node.js Buffer.
+ * @returns {{ extractedTextSummary: string, keywords: string[], keyConcepts: string[] }}
+ */
+const extractLectureConcepts = async (pdfBuffer) => {
+    const prompt = `Analyze this academic lecture PDF. Extract the core academic concepts. Return ONLY a valid JSON object strictly matching this structure: { "extractedTextSummary": "A brief 3-sentence summary of the lecture", "keywords": ["keyword1", "keyword2"], "keyConcepts": ["concept1", "concept2"] }. Do not include markdown formatting like \`\`\`json.`;
+
+    try {
+        console.log('[AI Service] Sending PDF to Gemini for concept extraction...');
+
+        const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+        // Encode the PDF buffer as base64 and pass it as inline multimodal data
+        const pdfPart = {
+            inlineData: {
+                data: pdfBuffer.toString('base64'),
+                mimeType: 'application/pdf',
+            },
+        };
+
+        const result = await geminiModel.generateContent([prompt, pdfPart]);
+        const responseText = result.response.text();
+
+        // Extract the JSON object from the response, stripping any surrounding text
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+
+        if (!jsonMatch) {
+            throw new Error('Gemini did not return a valid JSON object for concept extraction.');
+        }
+
+        const parsed = JSON.parse(jsonMatch[0].trim());
+
+        console.log('[AI Service] Concept extraction completed successfully.');
+
+        return parsed;
+    } catch (error) {
+        console.error(`[AI Service] Concept extraction failed: ${error.message}`);
+
+        if (error.message.includes('429')) {
+            throw new Error('AI Service is currently overloaded (Rate Limit). Please try again in a few seconds.');
+        }
+
+        throw new Error(`AI Concept Extraction Failed: ${error.message}`);
+    }
+};
+
+/**
+ * Extracts individual questions from an academic exam PDF using Gemini's multimodal capabilities.
+ * The PDF buffer is sent directly as base64 inline data.
+ *
+ * @param {Buffer} pdfBuffer - The raw exam PDF file content as a Node.js Buffer.
+ * @returns {Array<{ questionText: string, options: string[], correctAnswer: string, difficulty: number }>}
+ */
+const extractQuestionsFromExam = async (pdfBuffer) => {
+    const prompt = `Analyze this academic exam PDF. Extract all questions. Return ONLY a valid JSON array of objects. Each object MUST strictly match this structure: { "questionText": "The exact text of the question", "options": ["Option A", "Option B", "Option C", "Option D"] (leave empty array if not multiple choice), "correctAnswer": "The correct answer if identifiable from the document, otherwise an empty string", "difficulty": 3 (estimate between 1 and 5) }. Do not include markdown formatting like \`\`\`json.`;
+
+    try {
+        console.log('[AI Service] Sending exam PDF to Gemini for question extraction...');
+
+        const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+        // Encode the PDF buffer as base64 and pass it as inline multimodal data
+        const pdfPart = {
+            inlineData: {
+                data: pdfBuffer.toString('base64'),
+                mimeType: 'application/pdf',
+            },
+        };
+
+        const result = await geminiModel.generateContent([prompt, pdfPart]);
+        const responseText = result.response.text();
+
+        // Extract the JSON array from the response, stripping any surrounding text
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+
+        if (!jsonMatch) {
+            throw new Error('Gemini did not return a valid JSON array for question extraction.');
+        }
+
+        const parsed = JSON.parse(jsonMatch[0].trim());
+
+        console.log(`[AI Service] Question extraction completed successfully. Found ${parsed.length} questions.`);
+
+        return parsed;
+    } catch (error) {
+        console.error(`[AI Service] Question extraction failed: ${error.message}`);
+
+        if (error.message.includes('429')) {
+            throw new Error('AI Service is currently overloaded (Rate Limit). Please try again in a few seconds.');
+        }
+
+        throw new Error(`AI Question Extraction Failed: ${error.message}`);
+    }
+};
+
+/**
+ * Analyzes an array of exam questions to determine a professor's testing style.
+ * Uses Gemini to identify patterns in question types, difficulty, and trick phrases.
+ *
+ * @param {Array} questionsArray - Array of question objects to analyze.
+ * @returns {{ preferredQuestionTypes: string[], difficultyDistribution: object, trickPhrases: string[], averageQuestionLength: string }}
+ */
+const analyzeProfessorStyle = async (questionsArray) => {
+    const prompt = `Analyze this array of exam questions to determine the professor's testing style. Return ONLY a valid JSON object matching this structure: { "preferredQuestionTypes": ["MCQ", "True/False", etc.], "difficultyDistribution": { "easy": 20, "medium": 50, "hard": 30 }, "trickPhrases": ["not true except", "all of the above", etc.], "averageQuestionLength": "short/medium/long" }. Do not include markdown formatting like \`\`\`json.`;
+
+    try {
+        console.log(`[AI Service] Analyzing professor style from ${questionsArray.length} questions...`);
+
+        const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+        // Pass the questions array as a stringified text payload alongside the prompt
+        const questionsPayload = JSON.stringify(questionsArray);
+
+        const result = await geminiModel.generateContent([prompt, questionsPayload]);
+        const responseText = result.response.text();
+
+        // Extract the JSON object from the response, stripping any surrounding text
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+
+        if (!jsonMatch) {
+            throw new Error('Gemini did not return a valid JSON object for style analysis.');
+        }
+
+        const parsed = JSON.parse(jsonMatch[0].trim());
+
+        console.log('[AI Service] Professor style analysis completed successfully.');
+
+        return parsed;
+    } catch (error) {
+        console.error(`[AI Service] Professor style analysis failed: ${error.message}`);
+
+        if (error.message.includes('429')) {
+            throw new Error('AI Service is currently overloaded (Rate Limit). Please try again in a few seconds.');
+        }
+
+        throw new Error(`AI Style Analysis Failed: ${error.message}`);
+    }
+};
+
+/**
+ * Generates a custom exam using RAG (Retrieval-Augmented Generation).
+ * Combines aggregated lecture concepts with a professor's style profile
+ * to produce questions that match the professor's testing patterns.
+ *
+ * @param {Array} aggregatedConcepts - Summarized concepts from selected LectureConcept documents.
+ * @param {Object} professorProfile - The professor's style profile (question types, difficulty, trick phrases).
+ * @param {String} examType - Type of exam to generate (e.g., 'Quiz', 'Midterm', 'Final').
+ * @param {Number} questionCount - Exact number of questions to generate.
+ * @returns {Array<{ questionText: string, options: string[], correctAnswer: string, difficulty: number, aiConfidenceScore: number, derivedFromConcept: string }>}
+ */
+const generateCustomExamWithRAG = async (aggregatedConcepts, professorProfile, examType, questionCount) => {
+    const prompt = `You are an expert exam creator. Generate a "${examType}" exam with exactly ${questionCount} questions. Distribute the questions comprehensively across these aggregated course concepts: ${JSON.stringify(aggregatedConcepts)}. CRITICAL: You must strictly emulate this professor's testing style and exam structure: ${JSON.stringify(professorProfile)}. Ensure the ratio of question types (MCQ, True/False, etc.) and difficulties matches the profile. Return ONLY a valid JSON array of objects. Each object MUST strictly match: { "questionText": "...", "options": ["..."], "correctAnswer": "...", "difficulty": (1-5), "aiConfidenceScore": (0-100), "derivedFromConcept": "brief concept reference" }. Do not include markdown formatting.`;
+
+    try {
+        console.log(`[AI Service] Generating ${examType} exam with ${questionCount} questions using RAG...`);
+
+        const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+        const result = await geminiModel.generateContent(prompt);
+        const responseText = result.response.text();
+
+        // Extract the JSON array from the response, stripping any surrounding text
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+
+        if (!jsonMatch) {
+            throw new Error('Gemini did not return a valid JSON array for exam generation.');
+        }
+
+        const parsed = JSON.parse(jsonMatch[0].trim());
+
+        console.log(`[AI Service] Custom exam generation completed. Generated ${parsed.length} questions.`);
+
+        return parsed;
+    } catch (error) {
+        console.error(`[AI Service] Custom exam generation failed: ${error.message}`);
+
+        if (error.message.includes('429')) {
+            throw new Error('AI Service is currently overloaded (Rate Limit). Please try again in a few seconds.');
+        }
+
+        throw new Error(`AI Exam Generation Failed: ${error.message}`);
+    }
+};
+
+module.exports = { extractScheduleFromImages, extractLectureConcepts, extractQuestionsFromExam, analyzeProfessorStyle, generateCustomExamWithRAG };

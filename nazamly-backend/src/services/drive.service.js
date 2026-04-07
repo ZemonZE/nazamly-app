@@ -104,4 +104,22 @@ async function listFolders(folderId) {
   return response.data.files;
 }
 
-module.exports = { createFolder, uploadFile, deleteFile, listFiles, listFolders };
+/**
+ * Download a file's content from Google Drive as a Node.js Buffer.
+ * Used by the lecture processor to feed PDFs directly to the Gemini multimodal API.
+ * @param {string} driveFileId - The Google Drive file ID to download
+ * @returns {Buffer} The file content as a Node.js Buffer
+ */
+async function downloadFileBuffer(driveFileId) {
+  if (!drive) throw new Error('Google Drive is not configured');
+
+  const res = await drive.files.get(
+    { fileId: driveFileId, alt: 'media' },
+    { responseType: 'arraybuffer' }
+  );
+
+  // Convert the arraybuffer response to a Node.js Buffer
+  return Buffer.from(res.data);
+}
+
+module.exports = { createFolder, uploadFile, deleteFile, listFiles, listFolders, downloadFileBuffer };

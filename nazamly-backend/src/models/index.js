@@ -7,6 +7,11 @@ const { MaterialsFolder, MaterialFile, Chapter } = require("./materials");
 const { QuizTemplate, QuizAttempt } = require("./quiz");
 const { ExamSource, ExtractedQuestion, GeneratedQuestion, DoctorInsight, WeaknessAnalysis } = require("./ai");
 
+// Question & Exams Generator models
+const ProfessorProfile = require("./professorProfile.model");
+const LectureConcept = require("./lectureConcept.model");
+const QuestionBank = require("./questionBank.model");
+
 module.exports = {
   // User
   User,
@@ -43,4 +48,9 @@ module.exports = {
   GeneratedQuestion,
   DoctorInsight,
   WeaknessAnalysis,
+
+  // Question & Exams Generator
+  ProfessorProfile,
+  LectureConcept,
+  QuestionBank,
 };

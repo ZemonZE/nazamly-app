@@ -2,33 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import { IconStudent, IconAdmin, IconClose } from '../Icons/Icons';
-import { auth, API_URL } from '../firebase';
+import { fetchWithAuth } from '../../services/api';
 import './Users.css';
-
-async function fetchWithAuth(url, options = {}) {
-  const user = auth.currentUser;
-  if (!user) {
-    throw new Error('Not authenticated');
-  }
-
-  const token = await user.getIdToken();
-
-  const response = await fetch(`${API_URL}${url}`, {
-    ...options,
-    headers: {
-      ...options.headers,
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw { status: response.status, message: errorBody.error };
-  }
-
-  return response.json();
-}
 
 function Users() {
   const [searchTerm, setSearchTerm] = useState('');
