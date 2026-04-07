@@ -34,7 +34,7 @@ const extractScheduleFromImages = async (files) => {
         console.log(`📤 Dispatching request to Gemini Flash...`);
         
         // Recommended to use explicit model version
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
         
         const geminiImageParts = files.map(file => ({
             inlineData: { data: file.buffer.toString("base64"), mimeType: file.mimetype }
@@ -83,10 +83,7 @@ const extractLectureConcepts = async (pdfBuffer) => {
 
     try {
         console.log('[AI Service] Sending PDF to Gemini for concept extraction...');
-
         const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-        // Encode the PDF buffer as base64 and pass it as inline multimodal data
         const pdfPart = {
             inlineData: {
                 data: pdfBuffer.toString('base64'),
@@ -94,10 +91,21 @@ const extractLectureConcepts = async (pdfBuffer) => {
             },
         };
 
-        const result = await geminiModel.generateContent([prompt, pdfPart]);
-        const responseText = result.response.text();
+        const MAX_RETRIES = 5;
+        let result = null;
 
-        // Extract the JSON object from the response, stripping any surrounding text
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                result = await geminiModel.generateContent([prompt, pdfPart]);
+                break; // Exit retry loop on success
+            } catch (err) {
+                if (attempt === MAX_RETRIES) throw err;
+                console.warn(`[AI Service] Attempt ${attempt} failed: ${err.message}, retrying in 5s...`);
+                await new Promise(res => setTimeout(res, 5000));
+            }
+        }
+
+        const responseText = result.response.text();
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
 
         if (!jsonMatch) {
@@ -105,33 +113,49 @@ const extractLectureConcepts = async (pdfBuffer) => {
         }
 
         const parsed = JSON.parse(jsonMatch[0].trim());
-
         console.log('[AI Service] Concept extraction completed successfully.');
-
         return parsed;
+
     } catch (error) {
         console.error(`[AI Service] Concept extraction failed: ${error.message}`);
-
-        if (error.message.includes('429')) {
-            throw new Error('AI Service is currently overloaded (Rate Limit). Please try again in a few seconds.');
+        if (error.message.includes('429') || error.message.includes('503')) {
+            throw new Error('AI Service is currently overloaded (Rate Limit / Unavailable). Please try again later.');
         }
-
         throw new Error(`AI Concept Extraction Failed: ${error.message}`);
     }
 };
 
 /**
- * Extracts individual questions from an academic exam PDF using Gemini's multimodal capabilities.
- * The PDF buffer is sent directly as base64 inline data.
+ * Extracts individual questions from an academic exam PDF and performs Zero-Shot
+ * Semantic Classification to link each question to the most relevant LectureConcept.
  *
  * @param {Buffer} pdfBuffer - The raw exam PDF file content as a Node.js Buffer.
- * @returns {Array<{ questionText: string, options: string[], correctAnswer: string, difficulty: number }>}
+ * @param {string} examDetails - Metadata about the exam (year, type).
+ * @param {Array} lectureConcepts - Array of object { materialFileId: ObjectId, extractedTextSummary: String }
+ * @returns {Array<{ questionText: string, options: string[], correctAnswer: string, linkedLectureId: string|null }>}
  */
-const extractQuestionsFromExam = async (pdfBuffer) => {
-    const prompt = `Analyze this academic exam PDF. Extract all questions. Return ONLY a valid JSON array of objects. Each object MUST strictly match this structure: { "questionText": "The exact text of the question", "options": ["Option A", "Option B", "Option C", "Option D"] (leave empty array if not multiple choice), "correctAnswer": "The correct answer if identifiable from the document, otherwise an empty string", "difficulty": 3 (estimate between 1 and 5) }. Do not include markdown formatting like \`\`\`json.`;
+const parseExamAndLinkToLectures = async (pdfBuffer, examDetails = '', lectureConcepts = []) => {
+    // Inject the available concepts into the prompt so Gemini can map them
+    const conceptsPayload = JSON.stringify(lectureConcepts.map(c => ({
+        materialFileId: c.materialFileId,
+        summary: c.extractedTextSummary
+    })));
+
+    const prompt = `Analyze this academic exam PDF. ${examDetails} Extract all questions. 
+    You are also provided with a list of available lecture concepts for this course: ${conceptsPayload}
+    
+    For each extracted question, determine which lecture concept it most likely belongs to based on semantic similarity.
+    Return ONLY a valid JSON array of objects. Do NOT include markdown formatting.
+    Each object MUST strictly match this structure: 
+    { 
+      "questionText": "The exact text of the question", 
+      "options": ["Option A", "Option B", "Option C", "Option D"] (leave empty array if not multiple choice), 
+      "correctAnswer": "The correct answer if identifiable from the document, otherwise an empty string",
+      "linkedLectureId": "The exact materialFileId from the provided list that best matches the question, or null if no match is found."
+    }`;
 
     try {
-        console.log('[AI Service] Sending exam PDF to Gemini for question extraction...');
+        console.log('[AI Service] Sending exam PDF to Gemini for smart extraction and linking...');
 
         const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
@@ -143,29 +167,41 @@ const extractQuestionsFromExam = async (pdfBuffer) => {
             },
         };
 
-        const result = await geminiModel.generateContent([prompt, pdfPart]);
-        const responseText = result.response.text();
+        const generationConfig = {
+            responseMimeType: "application/json"
+        };
 
-        // Extract the JSON array from the response, stripping any surrounding text
-        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        const MAX_RETRIES = 3;
+        let result = null;
 
-        if (!jsonMatch) {
-            throw new Error('Gemini did not return a valid JSON array for question extraction.');
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                result = await geminiModel.generateContent({
+                    contents: [{ role: "user", parts: [{ text: prompt }, pdfPart] }],
+                    generationConfig
+                });
+                break; // Exit retry loop on success
+            } catch (err) {
+                if (attempt === MAX_RETRIES) throw err;
+                console.warn(`[AI Service] Attempt ${attempt} failed: ${err.message}, retrying in 5s...`);
+                await new Promise(res => setTimeout(res, 5000));
+            }
         }
 
-        const parsed = JSON.parse(jsonMatch[0].trim());
+        const responseText = result.response.text();
+        const parsed = JSON.parse(responseText);
 
-        console.log(`[AI Service] Question extraction completed successfully. Found ${parsed.length} questions.`);
+        console.log(`[AI Service] Smart Question extraction completed successfully. Found ${parsed.length} questions.`);
 
         return parsed;
     } catch (error) {
-        console.error(`[AI Service] Question extraction failed: ${error.message}`);
-
-        if (error.message.includes('429')) {
-            throw new Error('AI Service is currently overloaded (Rate Limit). Please try again in a few seconds.');
+        console.error(`[AI Service] Smart Question extraction failed: ${error.message}`);
+        
+        if (error.message.includes('429') || error.message.includes('503')) {
+            throw new Error('AI Service is currently overloaded (Rate Limit / Unavailable). Please try again later.');
         }
 
-        throw new Error(`AI Question Extraction Failed: ${error.message}`);
+        throw new Error(`AI Smart Extraction Failed: ${error.message}`);
     }
 };
 
@@ -258,4 +294,4 @@ const generateCustomExamWithRAG = async (aggregatedConcepts, professorProfile, e
     }
 };
 
-module.exports = { extractScheduleFromImages, extractLectureConcepts, extractQuestionsFromExam, analyzeProfessorStyle, generateCustomExamWithRAG };
+module.exports = { extractScheduleFromImages, extractLectureConcepts, parseExamAndLinkToLectures, analyzeProfessorStyle, generateCustomExamWithRAG };

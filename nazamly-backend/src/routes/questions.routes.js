@@ -24,4 +24,8 @@ router.post('/analyze-style', questionsController.analyzeStyle);
 // Example: /api/questions/generate-stream?courseId=abc&materialFileIds=id1,id2&examType=Midterm&questionCount=15
 router.get('/generate-stream', questionsController.generateExamSSE);
 
+// ─── Past Exams Archive ───
+// GET /api/questions/archive
+router.get('/archive', questionsController.getArchivedQuestions);
+
 module.exports = router;

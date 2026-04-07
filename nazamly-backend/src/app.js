@@ -12,9 +12,9 @@ const aiRoutes = require('./routes/ai.routes');
 const materialsRoutes = require('./routes/materials.routes');
 const courseRoutes = require('./routes/course.routes');
 const questionsRoutes = require('./routes/questions.routes');
-// ── OLD BRANCH ROUTES (commented out — these routes don't exist yet on main) ──
-// const courseMaterialsRoutes = require('./routes/courseMaterials.routes');
-// const adminRoutes = require('./routes/admin.routes');
+// ── OLD BRANCH ROUTES (restored) ──
+const courseMaterialsRoutes = require('./routes/courseMaterials.routes');
+const adminRoutes = require('./routes/admin.routes');
 // ── END OLD BRANCH ROUTES ─────────────────────────────────────────────────────
 
 const app = express();
@@ -75,9 +75,9 @@ app.use('/api/ai', aiLimiter, aiRoutes);
 app.use('/api/materials', materialsRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/questions', aiLimiter, questionsRoutes);
-// ── OLD BRANCH ROUTE MOUNTS (commented out — route files don't exist yet) ──
-// app.use('/api/course-materials', courseMaterialsRoutes);
-// app.use('/api/admin', adminRoutes);
+// ── OLD BRANCH ROUTE MOUNTS (restored) ──
+app.use('/api/course-materials', courseMaterialsRoutes);
+app.use('/api/admin', adminRoutes);
 // ── END OLD BRANCH ROUTE MOUNTS ─────────────────────────────────────────────
 
 // 6. Global Error Handler

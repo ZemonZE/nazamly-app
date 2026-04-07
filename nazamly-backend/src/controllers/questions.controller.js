@@ -65,15 +65,40 @@ exports.generateExamSSE = async (req, res) => {
       : [];
 
     if (!courseId || materialFileIds.length === 0) {
-      res.write(`data: ${JSON.stringify({ status: 'error', message: 'courseId and materialFileIds (comma-separated) are required' })}\n\n`);
+      res.write(`data: ${JSON.stringify({ success: false, message: 'courseId and materialFileIds (comma-separated) are required' })}\n\n`);
+      return res.end();
+    }
+
+    const MaterialFile = require('../models/materials/materialFile.model');
+    const mongoose = require('mongoose');
+
+    // Map Google Drive IDs from UI to standard MongoDB Object IDs via MaterialFile
+    const resolvedMaterials = await MaterialFile.find({ driveFileId: { $in: materialFileIds } }).lean();
+    const resolvedIds = resolvedMaterials.map(m => m._id.toString());
+
+    if (!mongoose.Types.ObjectId.isValid(courseId) || resolvedIds.length === 0) {
+      res.write(`data: ${JSON.stringify({ success: false, message: 'No processed lecture concepts found for this selection' })}\n\n`);
       return res.end();
     }
 
     // Send initial progress event to the client
     res.write(`data: ${JSON.stringify({ status: 'generating', message: 'Analyzing professor style and building your custom exam...' })}\n\n`);
 
-    // Generate the exam asynchronously
-    const questions = await generateAndSaveCustomExam(courseId, materialFileIds, examType, questionCount);
+    const ProfessorProfile = require('../models/professorProfile.model');
+    const { generateAndSaveProfile } = require('../services/professorProfile.service');
+
+    let profile = await ProfessorProfile.findOne({ courseId }).lean();
+    if (profile && profile.styleProfileDirty === true) {
+      res.write(`data: ${JSON.stringify({ status: 'generating', message: 'Prioritizing analysis of recent professor exams...' })}\n\n`);
+      try {
+        await generateAndSaveProfile(courseId);
+      } catch (e) {
+        console.warn('Failed to update dirty profile', e.message);
+      }
+    }
+
+    // Generate the exam asynchronously using the resolved Object IDs
+    const questions = await generateAndSaveCustomExam(courseId, resolvedIds, examType, questionCount);
 
     // Send the completed exam to the client
     res.write(`data: ${JSON.stringify({ status: 'ready', questions })}\n\n`);
@@ -81,9 +106,61 @@ exports.generateExamSSE = async (req, res) => {
   } catch (error) {
     console.error('Error in SSE exam generation:', error.message);
 
-    // Send error event to the client and close the connection
-    res.write(`data: ${JSON.stringify({ status: 'error', message: error.message })}\n\n`);
+    // Send error event to the client safely formatted
+    res.write(`data: ${JSON.stringify({ success: false, message: error.message })}\n\n`);
     res.end();
+  }
+};
+
+/**
+ * GET /api/questions/archive
+ * Retrieves past exam questions stored in the archive linked to specific lectures.
+ * Expected query parameters: courseId, lectureId (comma-separated string of Google Drive IDs)
+ */
+exports.getArchivedQuestions = async (req, res) => {
+  try {
+    const { courseId, lectureId } = req.query;
+
+    const lectureIdsArray = lectureId ? lectureId.split(',').map(id => id.trim()).filter(Boolean) : [];
+    
+    if (!courseId) {
+      return res.status(400).json({ error: 'courseId is required.' });
+    }
+
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ error: 'Invalid courseId format.' });
+    }
+
+    let materialFileIds = [];
+    if (lectureIdsArray.length > 0) {
+      const MaterialFile = require('../models/materials/materialFile.model');
+      const resolvedMaterials = await MaterialFile.find({ driveFileId: { $in: lectureIdsArray } }).lean();
+      materialFileIds = resolvedMaterials.map(m => m._id);
+    }
+
+    const ArchivedQuestion = require('../models/archivedQuestion.model');
+    const query = { courseId };
+
+    if (materialFileIds.length > 0) {
+      // Use $in operator to fetch questions linked to ANY of the selected mapped MongoDB ObjectIds
+      query.linkedLectureId = { $in: materialFileIds };
+    } else if (lectureIdsArray.length > 0) {
+      // If Drive IDs were provided but NONE resolved to MongoDB MaterialFiles, there are no matches.
+      return res.json({ midterms: [], finals: [] });
+    }
+
+    const archivedQuestions = await ArchivedQuestion.find(query).lean();
+
+    // Organize natively into clean categories matching Vanilla CSS UI expectations
+    const midterms = archivedQuestions.filter(q => q.examType === 'midterm');
+    const finals = archivedQuestions.filter(q => q.examType === 'final');
+
+    res.json({ midterms, finals });
+
+  } catch (error) {
+    console.error('Error fetching archived questions:', error.message);
+    res.status(500).json({ error: 'Failed to retrieve archive' });
   }
 };
 

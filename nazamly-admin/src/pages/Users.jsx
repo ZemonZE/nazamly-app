@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import { IconStudent, IconAdmin, IconClose } from '../Icons/Icons';
-import { fetchWithAuth } from '../../services/api';
+import { fetchWithAuth } from '../services/api';
 import './Users.css';
 
 function Users() {

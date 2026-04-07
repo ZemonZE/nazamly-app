@@ -29,7 +29,11 @@ const authMiddleware = async (req, res, next) => {
         
         next();
     } catch (err) {
-        console.error('Firebase Auth Error:', err);
+        if (err.code === 'auth/id-token-expired') {
+            console.warn('Firebase Auth: Token expired. Returning 401.');
+            return res.status(401).json({ message: "Unauthorized - Token Expired" });
+        }
+        console.error('Firebase Auth Error:', err.message || err);
         return res.status(401).json({ message: "Unauthorized" });
     }
 };

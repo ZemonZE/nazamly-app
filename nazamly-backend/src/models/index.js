@@ -1,6 +1,6 @@
 // Root barrel export — re-exports all models from subfolders
 const { User } = require("./user");
-const { Department, Course, CourseInstance, Doctor, Semester, Enrollment } = require("./academic");
+const { Department, Course, CourseInstance, Doctor, Semester } = require("./academic");
 const { GPAPlan, GPARecord, CourseGrade } = require("./gpa");
 const { TimeTable, TimeTableEntry } = require("./schedule");
 const { MaterialsFolder, MaterialFile, Chapter } = require("./materials");
@@ -11,6 +11,7 @@ const { ExamSource, ExtractedQuestion, GeneratedQuestion, DoctorInsight, Weaknes
 const ProfessorProfile = require("./professorProfile.model");
 const LectureConcept = require("./lectureConcept.model");
 const QuestionBank = require("./questionBank.model");
+const ArchivedQuestion = require("./archivedQuestion.model");
 
 module.exports = {
   // User
@@ -22,7 +23,6 @@ module.exports = {
   CourseInstance,
   Doctor,
   Semester,
-  Enrollment,
 
   // GPA
   GPAPlan,
@@ -53,4 +53,5 @@ module.exports = {
   ProfessorProfile,
   LectureConcept,
   QuestionBank,
+  ArchivedQuestion,
 };

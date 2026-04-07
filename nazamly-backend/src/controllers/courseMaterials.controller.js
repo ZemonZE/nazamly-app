@@ -89,6 +89,7 @@ exports.getMyCoursesMaterials = async (req, res) => {
 
       result.push({
         _id: cm._id,
+        courseId: course._id,
         courseCode: cm.courseCode,
         courseName: cm.courseName,
         creditHours: course.creditHours,
@@ -218,6 +219,7 @@ exports.getSubFolderFiles = async (req, res) => {
 exports.uploadToSubFolder = async (req, res) => {
   try {
     const { courseCode, subFolderType } = req.params;
+    console.log("[DEBUG] subFolderType received:", subFolderType);
     const file = req.file;
     const title = req.body.title || file?.originalname;
 
@@ -236,10 +238,113 @@ exports.uploadToSubFolder = async (req, res) => {
       subFolder.driveFolderId,
     );
 
+    let parsedFileType = 'other';
+    if (file.mimetype.includes('pdf')) parsedFileType = 'pdf';
+    else if (file.mimetype.includes('powerpoint') || file.mimetype.includes('presentation')) parsedFileType = 'slides';
+    else if (file.mimetype.includes('word') || file.mimetype.includes('doc')) parsedFileType = 'doc';
+
+    const MaterialFile = require('../models/materials/materialFile.model');
+    const savedMaterial = await MaterialFile.create({
+      title,
+      fileType: parsedFileType,
+      driveFileId: driveFile.id,
+      driveWebViewLink: driveFile.webViewLink
+    });
+
+    if (['lectures', 'Lectures', 'المحاضرات'].includes(subFolderType)) {
+      const lectureProcessor = require('../services/lectureProcessor.service');
+      // Fire-and-forget: AI triggered and concepts will be saved linked to the real materialId!
+      lectureProcessor.processLectureBackground(savedMaterial._id, driveFile.id);
+    } else if (['mids', 'midterms', 'finals', 'final', 'امتحانات'].includes(subFolderType)) {
+      console.log('[ExamProcessor] Triggered for:', subFolderType);
+      
+      // Fire-and-forget background ingestor
+      (async () => {
+        try {
+          const Course = require('../models/academic/course.model');
+          const courseDoc = await Course.findOne({ courseCode: courseCode.toUpperCase().trim() });
+          if (!courseDoc) return;
+
+          let materialFileIds = [];
+          let { lectureIds } = req.body;
+          
+          if (!lectureIds || lectureIds.length === 0) {
+             // Fallback: No explicit UI selection, find all mapped lectures for this course dynamically
+             const lecturesFolder = cm.subFolders.find(sf => ['lectures', 'Lectures', 'المحاضرات'].includes(sf.type));
+             if (lecturesFolder) {
+                 const driveServiceBg = require('../services/drive.service');
+                 const allDriveLectures = await driveServiceBg.listFiles(lecturesFolder.driveFolderId);
+                 const availableDriveIds = allDriveLectures.map(f => f.id);
+                 
+                 const MaterialFileAgg = require('../models/materials/materialFile.model');
+                 const resolvedMaterials = await MaterialFileAgg.find({ driveFileId: { $in: availableDriveIds } }).lean();
+                 materialFileIds = resolvedMaterials.map(m => m._id);
+             }
+          } else {
+             if (typeof lectureIds === 'string') {
+               lectureIds = lectureIds.split(',').map(id => id.trim()).filter(Boolean);
+             } else if (!Array.isArray(lectureIds)) {
+               lectureIds = [lectureIds];
+             }
+             const MaterialFileAgg = require('../models/materials/materialFile.model');
+             const resolvedMaterials = await MaterialFileAgg.find({ driveFileId: { $in: lectureIds } }).lean();
+             materialFileIds = resolvedMaterials.map(m => m._id);
+          }
+
+          if (materialFileIds.length === 0) {
+              console.warn(`[ExamProcessor] Aborted: No lectures found to link questions contextually for ${courseCode}.`);
+              return;
+          }
+
+          const LectureConcept = require('../models/lectureConcept.model');
+          const concepts = await LectureConcept.find({ materialFileId: { $in: materialFileIds } }).lean();
+
+          const driveServiceBg = require('../services/drive.service');
+          const pdfBuffer = await driveServiceBg.downloadFileBuffer(driveFile.id);
+
+          const { parseExamAndLinkToLectures } = require('../services/ai.service');
+          const examType = subFolderType.includes('final') ? 'final' : 'midterm';
+          const examDetails = `This is a ${examType} exam.`;
+          
+          const aiQuestions = await parseExamAndLinkToLectures(pdfBuffer, examDetails, concepts);
+
+          if (!Array.isArray(aiQuestions) || aiQuestions.length === 0) return;
+
+          const ArchivedQuestion = require('../models/archivedQuestion.model');
+          const documentsToInsert = [];
+
+          for (const q of aiQuestions) {
+              if (!q.questionText) continue;
+              const bestLectureId = q.linkedLectureId || materialFileIds[0];
+
+              if (bestLectureId) {
+                   documentsToInsert.push({
+                       courseId: courseDoc._id,
+                       linkedLectureId: bestLectureId,
+                       questionText: q.questionText,
+                       options: Array.isArray(q.options) ? q.options : [],
+                       correctAnswer: q.correctAnswer || "",
+                       examType,
+                       year: new Date().getFullYear() // Default year
+                   });
+              }
+          }
+
+          if (documentsToInsert.length > 0) {
+              await ArchivedQuestion.insertMany(documentsToInsert);
+              console.log(`[ExamProcessor] Background Success: Inserted ${documentsToInsert.length} questions for ${courseCode}.`);
+          }
+        } catch (bgErr) {
+          console.error('[ExamProcessor] Background execution failed:', bgErr.message);
+        }
+      })();
+    }
+
     res.status(201).json({
-      message: 'File uploaded successfully',
+      message: 'File uploaded successfully and AI processing triggered safely.',
       file: {
         id: driveFile.id,
+        materialId: savedMaterial._id,
         name: title,
         webViewLink: driveFile.webViewLink,
       },

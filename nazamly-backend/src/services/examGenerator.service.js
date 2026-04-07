@@ -40,7 +40,7 @@ async function generateAndSaveCustomExam(courseId, materialFileIdsArray, examTyp
     }).lean();
 
     if (!concepts || concepts.length === 0) {
-      throw new Error('Lecture concepts not processed yet for selected materials');
+      throw new Error('No processed lecture concepts found for this selection');
     }
 
     console.log(`[ExamGenerator] Fetched ${concepts.length} LectureConcept documents.`);

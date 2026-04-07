@@ -1,4 +1,5 @@
 const userRepo = require("../Repos/User_Repo");
+const { User, Course } = require("../models");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -29,25 +30,35 @@ const imageUpload = multer({
 const syncUser = async (req, res) => {
   try {
     const { uid, email, name, picture } = req.user;
-    let user = await userRepo.findByFirebaseUid(uid);
     const isCollege = email?.endsWith("@std.sci.cu.edu.eg");
 
-    if (!user) {
-      user = await userRepo.create({
+    // Fetch up to 6 courses to automatically embed for new users
+    const defaultCourses = await Course.find({}).limit(6);
+    const mappedCourses = defaultCourses.map(c => ({
+      name: c.courseName,
+      courseCode: c.courseCode,
+      creditHours: c.creditHours
+    }));
+
+    // Prepare update parameters
+    const query = { email: email || "" };
+    const updateQuery = {
+      $set: {
         firebaseUid: uid,
-        email: email || "",
         displayName: name || "",
-        photoURL: picture || "",
+        photoURL: picture || ""
+      },
+      $setOnInsert: {
         accessStatus: isCollege ? "active" : "pending",
-      });
-    } else {
-      const updateData = {};
-      if (name && name !== user.displayName) updateData.displayName = name;
-      if (picture && picture !== user.photoURL) updateData.photoURL = picture;
-      if (Object.keys(updateData).length > 0) {
-        user = await userRepo.update(user._id, updateData);
+        role: "student",
+        cgpa: 0,
+        completedHours: 0,
+        termCourses: mappedCourses
       }
-    }
+    };
+
+    // Upsert by Email avoiding Firebase duplicate index issues
+    const user = await User.findOneAndUpdate(query, updateQuery, { upsert: true, returnDocument: 'after' });
 
     return res.status(200).json({ success: true, message: "User synced successfully", user });
   } catch (error) {
