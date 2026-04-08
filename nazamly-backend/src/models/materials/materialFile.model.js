@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
  * Represents the actual file node. Linked to a specific folder.
  */
 const materialFileSchema = new mongoose.Schema({
-  folderId: { type: mongoose.Schema.Types.ObjectId, ref: 'MaterialsFolder', required: true, index: true },
+  folderId: { type: mongoose.Schema.Types.ObjectId, ref: 'MaterialsFolder', required: false, index: true },
   title: { type: String, required: true, trim: true },
   
   fileType: { 

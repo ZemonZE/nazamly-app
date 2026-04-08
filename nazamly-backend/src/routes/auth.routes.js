@@ -10,6 +10,7 @@ const {
   updatePhoto,
   updateStudentCard,
   uploadPhotoFile,
+  verifyAdmin,
   uploadStudentCardFile,
 } = require("../controllers/user.controller");
 
@@ -68,5 +69,6 @@ router.post("/upload-photo", requireAuth, ...uploadPhotoFile);
  * @access  Private
  */
 router.post("/upload-student-card", requireAuth, ...uploadStudentCardFile);
+router.get("/verify-admin", requireAuth, verifyAdmin);
 
 module.exports = router;

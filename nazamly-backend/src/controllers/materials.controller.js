@@ -3,6 +3,8 @@ const MaterialsFolder = require('../models/materials/materialsFolder.model');
 const MaterialFile = require('../models/materials/materialFile.model');
 const Chapter = require('../models/materials/chapter.model');
 const driveService = require('../services/drive.service');
+const lectureProcessor = require('../services/lectureProcessor.service');
+const examProcessor = require('../services/examProcessor.service');
 
 // ═══════════════════════════════════════════
 //  FOLDERS
@@ -109,14 +111,14 @@ exports.deleteFolder = async (req, res) => {
  */
 exports.uploadFile = async (req, res) => {
   try {
-    const { folderId, title, fileType } = req.body;
+    const { folderId, title, fileType, courseId } = req.body;
     const file = req.file;
 
     if (!folderId || !title || !fileType || !file) {
       return res.status(400).json({ error: 'folderId, title, fileType, and file are required' });
     }
 
-    // Find the folder to get its Drive folder ID
+    // Find the folder to get its Drive folder ID and title (used for routing)
     const folder = await MaterialsFolder.findById(folderId);
     if (!folder) return res.status(404).json({ error: 'Folder not found' });
 
@@ -136,6 +138,31 @@ exports.uploadFile = async (req, res) => {
       driveFileId: driveFile.id,
       driveWebViewLink: driveFile.webViewLink,
     });
+
+    // ─── Background AI Processing Router (Fire-and-Forget) ───
+    // Determine the type of content based on the parent folder's title.
+    // Normalize to lowercase for case-insensitive matching.
+    const folderTitle = (folder.title || '').toLowerCase();
+
+    // Sub-folder types that indicate exam content
+    const examTypes = ['mids', 'finals', 'assignments'];
+    // Sub-folder types that indicate lecture content
+    const lectureTypes = ['lectures', 'videos'];
+
+    if (examTypes.some(type => folderTitle.includes(type))) {
+      // Route to exam processor — extracts individual questions into QuestionBank
+      // courseId must be provided in the request body for proper linking
+      if (courseId) {
+        examProcessor.processExamBackground(materialFile._id, materialFile.driveFileId, courseId);
+      } else {
+        console.warn('[UploadRouter] Exam file detected but no courseId provided — skipping exam processing.');
+      }
+    } else if (lectureTypes.some(type => folderTitle.includes(type))) {
+      // Route to lecture processor — extracts concepts and keywords into LectureConcept
+      lectureProcessor.processLectureBackground(materialFile._id, materialFile.driveFileId);
+    } else {
+      console.log(`[UploadRouter] Folder "${folder.title}" does not match any known processing type — no background job triggered.`);
+    }
 
     res.status(201).json({
       message: 'File uploaded successfully',

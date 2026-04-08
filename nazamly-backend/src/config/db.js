@@ -7,7 +7,7 @@ const connectDB = async () => {
   }
 
   try {
-    const mongoUri = process.env.MONGO_URI || "mongodb://localhost:27017/nazamly";
+    const mongoUri = process.env.MONGO_URL || "mongodb://localhost:27017/nazamly";
     await mongoose.connect(mongoUri);
     console.log("Mongo Connected");
   } catch (error) {

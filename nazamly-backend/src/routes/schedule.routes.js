@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
 
-const requireAuth = require("../middlewares/auth.middleware");
+// FIXED: Renamed the variable to match the routes below
+const requireAuth = require("../middlewares/auth.middleware"); 
+
 const {
   addOrUpdateSchedule,
   getMySchedule,
