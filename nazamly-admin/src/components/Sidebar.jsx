@@ -14,7 +14,8 @@ import {
   IconAiPanel,
   IconSignOut,
   IconStudent,
-  IconAdmin
+  IconAdmin,
+  IconCode
 } from '../Icons/Icons';
 import './Sidebar.css';
 
@@ -91,6 +92,10 @@ function Sidebar({ onLogout, userData, onFoldChange }) {
           <NavLink to="/materials" className="nav-link" title="Materials">
             <IconMaterials />
             {!isFolded && <span>Materials</span>}
+          </NavLink>
+          <NavLink to="/coding-problems" className="nav-link" title="Coding Problems">
+            <IconCode />
+            {!isFolded && <span>Coding Problems</span>}
           </NavLink>
         </div>
 

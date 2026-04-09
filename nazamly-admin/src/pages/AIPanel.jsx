@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import { API_URL, authHeaders, getAdminToken } from '../firebase';
-import './AIPanel.css';
+import '../CSS/AIPanel.css';
 
 function AIPanel() {
   const [courses, setCourses] = useState([]);

@@ -1,5 +1,5 @@
 import PageHeader from '../components/PageHeader';
-import './Users.css';
+import '../CSS/Users.css';
 
 function Doctors() {
   return (
