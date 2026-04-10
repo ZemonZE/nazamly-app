@@ -12,6 +12,8 @@ const aiRoutes = require('./routes/ai.routes');
 const materialsRoutes = require('./routes/materials.routes');
 const courseRoutes = require('./routes/course.routes');
 const questionsRoutes = require('./routes/questions.routes');
+const codingRoutes = require('./routes/coding.routes');
+const adminCodingRoutes = require('./routes/admin-coding.routes');
 // ── OLD BRANCH ROUTES (restored) ──
 const courseMaterialsRoutes = require('./routes/courseMaterials.routes');
 const adminRoutes = require('./routes/admin.routes');
@@ -34,7 +36,8 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // 3. Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
@@ -75,6 +78,8 @@ app.use('/api/ai', aiLimiter, aiRoutes);
 app.use('/api/materials', materialsRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/questions', aiLimiter, questionsRoutes);
+app.use('/api/coding', codingRoutes);
+app.use('/api/admin/coding', adminCodingRoutes);
 // ── OLD BRANCH ROUTE MOUNTS (restored) ──
 app.use('/api/course-materials', courseMaterialsRoutes);
 app.use('/api/admin', adminRoutes);

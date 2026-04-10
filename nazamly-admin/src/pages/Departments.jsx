@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import PageHeader from '../components/PageHeader';
 import { IconEdit, IconDelete, IconClose } from '../Icons/Icons';
-import './Users.css';
+import '../CSS/Users.css';
 
 function Departments() {
   const [departments, setDepartments] = useState([

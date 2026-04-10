@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import "./App.css";
+import "./CSS/App.css";
 import Sidebar from './components/Sidebar';
 import Users from './pages/Users';
 import Departments from './pages/Departments';
@@ -11,6 +11,8 @@ import Chapters from './pages/Chapters';
 import Materials from './pages/Materials';
 import AIPanel from './pages/AIPanel';
 import AdminLogin from './pages/AdminLogin';
+import ProblemSubmissions from './pages/ProblemSubmissions';
+import CodingProblems from './pages/CodingProblems';
 import { auth, API_URL } from './firebase';
 
 function App() {
@@ -142,6 +144,8 @@ function App() {
             <Route path="/chapters" element={<Chapters />} />
             <Route path="/materials" element={<Materials />} />
             <Route path="/ai-panel" element={<AIPanel />} />
+            <Route path="/coding-problems" element={<CodingProblems />} />
+            <Route path="/coding-problems/:id/submissions" element={<ProblemSubmissions />} />
           </Routes>
         </main>
       </div>

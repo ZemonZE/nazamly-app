@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import PageHeader from '../components/PageHeader';
 import { IconClose } from '../Icons/Icons';
 import { API_URL, authHeaders, getAdminToken } from '../firebase';
-import './Users.css';
+import '../CSS/Users.css';
 
 const SUB_FOLDER_LABELS = {
   lectures: 'المحاضرات',

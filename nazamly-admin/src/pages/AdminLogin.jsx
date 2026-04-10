@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, API_URL } from '../firebase';
 import { IconEmail, IconLock, IconBrain, IconEyeOpen, IconEyeClose } from '../Icons/Icons';
-import './AdminLogin.css';
+import '../CSS/AdminLogin.css';
 
 function AdminLogin({ onLoginSuccess }) {
   const [email, setEmail] = useState('');

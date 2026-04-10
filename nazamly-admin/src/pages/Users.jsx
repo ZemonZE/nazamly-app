@@ -3,7 +3,7 @@ import PageHeader from '../components/PageHeader';
 import StatusBadge from '../components/StatusBadge';
 import { IconStudent, IconAdmin, IconClose } from '../Icons/Icons';
 import { fetchWithAuth } from '../services/api';
-import './Users.css';
+import '../CSS/Users.css';
 
 function Users() {
   const [searchTerm, setSearchTerm] = useState('');
