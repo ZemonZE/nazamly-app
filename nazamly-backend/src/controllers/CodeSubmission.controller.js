@@ -63,9 +63,10 @@ async function submitCode(req, res) {
         code: 'LANGUAGE_UNAVAILABLE',
       });
     }
+    console.error('[submitCode] Execution error:', err.message, err.pistonData || '');
     return res.status(503).json({
       success: false,
-      message: 'Code execution service is temporarily unavailable. Please try again.',
+      message: err.message || 'Code execution service is temporarily unavailable. Please try again.',
       code: 'JUDGE_UNAVAILABLE',
     });
   }
