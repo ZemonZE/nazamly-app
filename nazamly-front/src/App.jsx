@@ -14,6 +14,8 @@ import Materials from "./pages/Materials";
 import Questions from "./pages/Questions";
 import Generator from "./pages/Generator";
 import Settings from "./pages/Settings";
+import CodingProblems from "./pages/CodingProblems";
+import ProblemSolver from "./pages/ProblemSolver";
 
 import { auth, API_URL } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -111,6 +113,11 @@ function App() {
           path="/login"
           element={!user ? <AuthLayout /> : <Navigate to="/dashboard" />}
         />
+        {/* ── Standalone full-page routes (no sidebar/header) ── */}
+        <Route
+          path="/dashboard/coding/problems/:id"
+          element={user ? <ProblemSolver /> : <Navigate to="/login" />}
+        />
         <Route
           path="/dashboard"
           element={
@@ -131,6 +138,7 @@ function App() {
           <Route path="questions" element={<Questions />} />
           <Route path="generator" element={<Generator />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="coding" element={<CodingProblems />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>

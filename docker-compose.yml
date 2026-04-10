@@ -1,0 +1,8 @@
+services:
+  piston:
+    image: ghcr.io/engineer-man/piston
+    ports:
+      - "2000:2000"
+    restart: unless-stopped
+    tmpfs:
+      - /piston/jobs

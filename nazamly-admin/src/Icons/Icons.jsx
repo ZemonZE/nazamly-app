@@ -285,3 +285,10 @@ export const IconAdmin = () => (
     <path d="M9 12l2 2 4-4" />
   </svg>
 );
+
+export const IconCode = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="16 18 22 12 16 6" />
+    <polyline points="8 6 2 12 8 18" />
+  </svg>
+);

@@ -43,6 +43,11 @@ const navItems = [
     label: "Schedule Generator",
     icon: <IconTable />,
   },
+  {
+    path: "/dashboard/coding",
+    label: "Coding Practice",
+    icon: <IconQuestion />,
+  },
 ];
 
 const PAGE_META = {
@@ -82,6 +87,11 @@ const PAGE_META = {
     icon: <IconSettings width={22} height={22} />,
     title: "Account Settings",
     subtitle: "Manage your personal info and app preferences.",
+  },
+  "/dashboard/coding": {
+    icon: <IconQuestion width={22} height={22} />,
+    title: "Coding Practice",
+    subtitle: "Browse and solve coding problems for your courses.",
   },
 };
 
