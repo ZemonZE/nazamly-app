@@ -34,14 +34,19 @@ const syncUser = async (req, res) => {
 
     // Fetch up to 6 courses to automatically embed for new users
     const defaultCourses = await Course.find({}).limit(6);
-    const mappedCourses = defaultCourses.map(c => ({
-      name: c.courseName,
-      courseCode: c.courseCode,
-      creditHours: c.creditHours
-    }));
+    // Filter out any courses with missing required fields to prevent subdocument validation errors
+    const mappedCourses = defaultCourses
+      .filter(c => c.courseName && c.courseCode && c.creditHours)
+      .map(c => ({
+        name: c.courseName,
+        courseCode: c.courseCode,
+        creditHours: c.creditHours
+      }));
 
     // Prepare update parameters
-    const query = { email: email || "" };
+    const query = { email: email };
+    
+    // We don't set email in setOnInsert because it's part of the query and MongoDB will automatically insert it.
     const updateQuery = {
       $set: {
         firebaseUid: uid,
@@ -58,7 +63,12 @@ const syncUser = async (req, res) => {
     };
 
     // Upsert by Email avoiding Firebase duplicate index issues
-    const user = await User.findOneAndUpdate(query, updateQuery, { upsert: true, returnDocument: 'after' });
+    const user = await User.findOneAndUpdate(query, updateQuery, { 
+      upsert: true, 
+      new: true, 
+      setDefaultsOnInsert: true,
+      runValidators: true
+    });
 
     return res.status(200).json({ success: true, message: "User synced successfully", user });
   } catch (error) {
@@ -66,7 +76,6 @@ const syncUser = async (req, res) => {
     return res.status(500).json({ success: false, message: "Error syncing user", error: error.message });
   }
 };
-
 const setupProfile = async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
