@@ -64,24 +64,24 @@ done
 
 info "Installing Piston runtimes (this may take a few minutes)..."
 
-# C++
-info "Installing C++ runtime..."
+# gcc (C++)
+info "Installing gcc (C++) runtime..."
 if curl -f --max-time 300 -X POST http://localhost:2000/api/v2/packages \
   -H "Content-Type: application/json" \
-  -d '{"language":"c++","version":"10.2.0"}' 2>&1; then
-  info "Installed C++ runtime."
+  -d '{"language":"gcc","version":"10.2.0"}' 2>&1; then
+  info "Installed gcc runtime."
 else
-  warn "C++ runtime install failed or already installed."
+  warn "gcc runtime install failed or already installed."
 fi
 
-# JavaScript
-info "Installing JavaScript runtime..."
+# node (JavaScript)
+info "Installing node (JavaScript) runtime..."
 if curl -f --max-time 300 -X POST http://localhost:2000/api/v2/packages \
   -H "Content-Type: application/json" \
-  -d '{"language":"javascript","version":"18.15.0"}' 2>&1; then
-  info "Installed JavaScript runtime."
+  -d '{"language":"node","version":"18.15.0"}' 2>&1; then
+  info "Installed node runtime."
 else
-  warn "JavaScript runtime install failed or already installed."
+  warn "node runtime install failed or already installed."
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────

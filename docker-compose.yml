@@ -9,6 +9,7 @@ services:
       - /piston/jobs
     volumes:
       - piston_data:/piston
+      - ./piston-index.js:/piston_api/src/index.js
 
 volumes:
   piston_data:

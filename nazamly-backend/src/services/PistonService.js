@@ -16,10 +16,10 @@ class PistonService {
   _resolveRuntime(language) {
     // Piston v3 language names (from /api/v2/runtimes)
     const runtimes = {
-      cpp:     { language: 'c++',        version: '10.2.0' },
-      js:      { language: 'javascript', version: '18.15.0' },
-      emu8086: { language: 'nasm',       version: '2.15.5' },
-      plsql:   { language: 'sqlite3',    version: '3.36.0' },
+      cpp:     { language: 'c++',     version: '10.2.0' },
+      js:      { language: 'node',    version: '18.15.0' },
+      emu8086: { language: 'nasm',    version: '2.15.5' },
+      plsql:   { language: 'sqlite3', version: '3.36.0' },
     };
     const runtime = runtimes[language];
     if (!runtime) throw new PistonLanguageUnavailableError(language);
@@ -38,7 +38,7 @@ class PistonService {
           version:  runtime.version,
           files:    [{ content: code }],
           stdin:    stdin || '',
-          run_timeout: 10000,  // 10s — matches PISTON_RUN_TIMEOUT env on container
+          run_timeout: 3000,  // 3s — matches PISTON_RUN_TIMEOUT limit on container
         },
         { timeout: 15000 }
       );
