@@ -159,7 +159,8 @@ exports.uploadFile = async (req, res) => {
       }
     } else if (lectureTypes.some(type => folderTitle.includes(type))) {
       // Route to lecture processor — extracts concepts and keywords into LectureConcept
-      lectureProcessor.processLectureBackground(materialFile._id, materialFile.driveFileId);
+      // Pass courseId so the processor can resolve the doctor and build a style profile
+      lectureProcessor.processLectureBackground(materialFile._id, materialFile.driveFileId, courseId || null);
     } else {
       console.log(`[UploadRouter] Folder "${folder.title}" does not match any known processing type — no background job triggered.`);
     }

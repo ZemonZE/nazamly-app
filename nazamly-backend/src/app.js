@@ -18,6 +18,7 @@ const adminCodingRoutes = require('./routes/admin-coding.routes');
 const courseMaterialsRoutes = require('./routes/courseMaterials.routes');
 const adminRoutes = require('./routes/admin.routes');
 // ── END OLD BRANCH ROUTES ─────────────────────────────────────────────────────
+const studentRoutes = require('./routes/student.routes');
 
 const app = express();
 
@@ -84,6 +85,8 @@ app.use('/api/admin/coding', adminCodingRoutes);
 app.use('/api/course-materials', courseMaterialsRoutes);
 app.use('/api/admin', adminRoutes);
 // ── END OLD BRANCH ROUTE MOUNTS ─────────────────────────────────────────────
+
+app.use('/api/student', studentRoutes);
 
 // 6. Global Error Handler
 app.use((err, req, res, next) => {

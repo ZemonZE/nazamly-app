@@ -10,9 +10,9 @@
 }
 
 .difficulty-easy {
-  background: rgba(16, 185, 129, 0.15);
-  color: #6ee7b7;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: rgba(37, 99, 235, 0.15);
+  color: var(--blue-700);
+  border: 1px solid rgba(37, 99, 235, 0.3);
 }
 
 .difficulty-medium {
@@ -22,9 +22,9 @@
 }
 
 .difficulty-hard {
-  background: rgba(239, 68, 68, 0.15);
-  color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(220, 38, 38, 0.15);
+  color: var(--error);
+  border: 1px solid rgba(220, 38, 38, 0.3);
 }
 
 /* Language checkboxes */
@@ -40,14 +40,14 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #a3c9b4;
+  color: var(--text-secondary);
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
 
 .lang-checkbox-label input[type='checkbox'] {
-  accent-color: #10b981;
+  accent-color: var(--blue-500);
   width: 15px;
   height: 15px;
   cursor: pointer;

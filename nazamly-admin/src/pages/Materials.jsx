@@ -82,8 +82,11 @@ function Materials() {
       if (uploadTitle.trim()) formData.append('title', uploadTitle.trim());
 
       const token = await getAdminToken();
+      
+      const uploadUrl = new URL(`/api/admin/course-materials/${selectedCourse.courseCode}/upload/${activeSubFolder}`, import.meta.env.VITE_API_URL).toString();
+      
       const res = await fetch(
-        `${API_URL}/api/admin/course-materials/${selectedCourse.courseCode}/upload/${activeSubFolder}`,
+        uploadUrl,
         {
           method: 'POST',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -113,6 +116,28 @@ function Materials() {
       fetchFiles(selectedCourse.courseCode, activeSubFolder);
     } catch (err) {
       setError('Failed to delete file');
+    }
+  };
+
+  const handleReprocessFile = async (mongoId) => {
+    if (!mongoId) return setError('File has no database record to reprocess yet.');
+    try {
+      // Optimistically update the UI to PROCESSING
+      setFiles(prev => prev.map(f => f.mongoId === mongoId ? { ...f, aiStatus: 'PROCESSING', aiError: null } : f));
+      
+      const res = await fetch(
+        `${API_URL}/api/admin/materials/reprocess/${selectedCourse.courseCode}/${activeSubFolder}/${mongoId}`,
+        { method: 'POST', headers: await authHeaders() }
+      );
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to trigger reprocessing');
+      }
+    } catch (err) {
+      setError(err.message);
+      // Re-fetch to reset the optimistic state
+      fetchFiles(selectedCourse.courseCode, activeSubFolder);
     }
   };
 
@@ -200,23 +225,23 @@ function Materials() {
 
         {error && (
           <div style={{
-            padding: '12px 16px', background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '10px',
-            color: '#fca5a5', marginBottom: '16px', display: 'flex',
+            padding: '12px 16px', background: 'rgba(220, 38, 38, 0.15)',
+            border: '1px solid rgba(220, 38, 38, 0.3)', borderRadius: '10px',
+            color: 'var(--error)', marginBottom: '16px', display: 'flex',
             justifyContent: 'space-between', alignItems: 'center',
           }}>
             {error}
-            <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: '18px' }}>×</button>
+            <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: '18px' }}>×</button>
           </div>
         )}
 
         {!selectedCourse.initialized ? (
           <div style={{
             textAlign: 'center', padding: '48px 24px',
-            background: 'rgba(6, 78, 59, 0.2)', borderRadius: '12px',
-            border: '1px dashed rgba(52, 211, 153, 0.2)',
+            background: 'rgba(255, 255, 255, 0.2)', borderRadius: '12px',
+            border: '1px dashed rgba(59, 109, 224, 0.2)',
           }}>
-            <p style={{ color: '#5a8a6e', marginBottom: '16px' }}>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>
               Drive folders have not been created for this course yet.
             </p>
             <button className="action-btn" onClick={() => handleInitCourse(selectedCourse)}>
@@ -232,7 +257,7 @@ function Materials() {
                   href={selectedCourse.driveWebViewLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: '#6ee7b7', fontSize: '13px', textDecoration: 'underline' }}
+                  style={{ color: 'var(--blue-700)', fontSize: '13px', textDecoration: 'underline' }}
                 >
                   📂 Open root folder on Google Drive
                 </a>
@@ -251,12 +276,12 @@ function Materials() {
                     padding: '8px 18px',
                     borderRadius: '8px',
                     border: activeSubFolder === type
-                      ? '1px solid rgba(16, 185, 129, 0.5)'
-                      : '1px solid rgba(52, 211, 153, 0.15)',
+                      ? '1px solid rgba(37, 99, 235, 0.5)'
+                      : '1px solid rgba(59, 109, 224, 0.15)',
                     background: activeSubFolder === type
-                      ? 'rgba(16, 185, 129, 0.2)'
-                      : 'rgba(6, 78, 59, 0.4)',
-                    color: activeSubFolder === type ? '#6ee7b7' : '#9ec5ae',
+                      ? 'rgba(37, 99, 235, 0.2)'
+                      : 'var(--surface-bg)',
+                    color: activeSubFolder === type ? 'var(--blue-700)' : '#9ec5ae',
                     cursor: 'pointer',
                     fontWeight: activeSubFolder === type ? 600 : 400,
                     fontSize: '14px',
@@ -270,7 +295,7 @@ function Materials() {
 
             {/* Upload button */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h3 style={{ color: '#6ee7b7', margin: 0, fontSize: '16px' }}>
+              <h3 style={{ color: 'var(--blue-700)', margin: 0, fontSize: '16px' }}>
                 Files — {SUB_FOLDER_LABELS[activeSubFolder]}
               </h3>
               <button className="action-btn" onClick={() => setShowUpload(true)}>+ Upload File</button>
@@ -282,6 +307,7 @@ function Materials() {
                 <thead>
                   <tr>
                     <th>File Name</th>
+                    <th>Status</th>
                     <th>Size</th>
                     <th>Drive Link</th>
                     <th>Created</th>
@@ -291,11 +317,11 @@ function Materials() {
                 <tbody>
                   {filesLoading ? (
                     <tr>
-                      <td colSpan="5" className="empty-state">Loading files...</td>
+                      <td colSpan="6" className="empty-state">Loading files...</td>
                     </tr>
                   ) : files.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="empty-state">No files in this folder yet</td>
+                      <td colSpan="6" className="empty-state">No files in this folder yet</td>
                     </tr>
                   ) : (
                     files.map((file) => (
@@ -304,6 +330,23 @@ function Materials() {
                           <span style={{ marginRight: '8px' }}>{getFileIcon(file.mimeType)}</span>
                           {file.name}
                         </td>
+                        <td>
+                          <span 
+                            title={file.aiError || ''}
+                            style={{ 
+                              padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold',
+                              background: file.aiStatus === 'SUCCESS' ? 'rgba(37, 99, 235, 0.2)' :
+                                          file.aiStatus === 'FAILED' ? 'rgba(220, 38, 38, 0.2)' :
+                                          file.aiStatus === 'PROCESSING' ? 'rgba(59, 130, 246, 0.2)' :
+                                          'rgba(156, 163, 175, 0.2)',
+                              color: file.aiStatus === 'SUCCESS' ? 'var(--blue-500)' :
+                                     file.aiStatus === 'FAILED' ? '#ef4444' :
+                                     file.aiStatus === 'PROCESSING' ? '#3b82f6' :
+                                     '#9ca3af'
+                            }}>
+                            {file.aiStatus === 'PROCESSING' ? '⏳ PROCESSING' : file.aiStatus || 'UNKNOWN'}
+                          </span>
+                        </td>
                         <td>{formatFileSize(file.size)}</td>
                         <td>
                           {file.webViewLink ? (
@@ -311,14 +354,24 @@ function Materials() {
                               href={file.webViewLink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ color: '#6ee7b7', textDecoration: 'underline' }}
+                              style={{ color: 'var(--blue-700)', textDecoration: 'underline' }}
                             >
                               Open in Drive
                             </a>
                           ) : '—'}
                         </td>
                         <td>{file.createdTime ? new Date(file.createdTime).toLocaleDateString() : '—'}</td>
-                        <td>
+                        <td style={{ display: 'flex', gap: '8px' }}>
+                          {file.aiStatus === 'FAILED' && file.mongoId && (
+                            <button
+                              className="action-btn"
+                              style={{ padding: '4px 8px', fontSize: '12px', height: 'auto', background: 'rgba(59, 130, 246, 0.2)', border: '1px solid rgba(59, 130, 246, 0.4)' }}
+                              onClick={() => handleReprocessFile(file.mongoId)}
+                              title="Reprocess AI Tasks"
+                            >
+                              🔄 Reprocess
+                            </button>
+                          )}
                           <button
                             className="icon-btn delete-btn"
                             onClick={() => handleDeleteFile(file.id)}
@@ -365,20 +418,20 @@ function Materials() {
                     onChange={(e) => setUploadFile(e.target.files[0])}
                     style={{
                       padding: '10px',
-                      background: 'rgba(6, 78, 59, 0.6)',
-                      border: '1px solid rgba(52, 211, 153, 0.2)',
+                      background: 'var(--surface-bg)',
+                      border: '1px solid rgba(59, 109, 224, 0.2)',
                       borderRadius: '8px',
-                      color: '#e8f9f0',
+                      color: 'var(--text-primary)',
                       width: '100%',
                     }}
                   />
                 </div>
                 {uploadFile && (
-                  <p style={{ color: '#6ee7b7', fontSize: '13px', margin: '4px 0 0' }}>
+                  <p style={{ color: 'var(--blue-700)', fontSize: '13px', margin: '4px 0 0' }}>
                     Selected: {uploadFile.name} ({(uploadFile.size / 1024 / 1024).toFixed(2)} MB)
                   </p>
                 )}
-                <p style={{ color: '#5a8a6e', fontSize: '13px', margin: '8px 0 0' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '8px 0 0' }}>
                   File will be uploaded to Drive folder: {selectedCourse.courseName} → {SUB_FOLDER_LABELS[activeSubFolder]}
                 </p>
               </div>
@@ -413,7 +466,7 @@ function Materials() {
           className="action-btn" 
           onClick={handleSyncDrive}
           disabled={loading}
-          style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid rgba(16, 185, 129, 0.4)' }}
+          style={{ background: 'rgba(37, 99, 235, 0.2)', border: '1px solid rgba(37, 99, 235, 0.4)' }}
         >
           {loading ? 'Syncing...' : '🔄 Sync from Drive'}
         </button>
@@ -421,13 +474,13 @@ function Materials() {
 
       {error && (
         <div style={{
-          padding: '12px 16px', background: 'rgba(239, 68, 68, 0.15)',
-          border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '10px',
-          color: '#fca5a5', marginBottom: '16px', display: 'flex',
+          padding: '12px 16px', background: 'rgba(220, 38, 38, 0.15)',
+          border: '1px solid rgba(220, 38, 38, 0.3)', borderRadius: '10px',
+          color: 'var(--error)', marginBottom: '16px', display: 'flex',
           justifyContent: 'space-between', alignItems: 'center',
         }}>
           {error}
-          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: '18px' }}>×</button>
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: '18px' }}>×</button>
         </div>
       )}
 
@@ -441,10 +494,10 @@ function Materials() {
           style={{
             flex: 1,
             padding: '10px 14px',
-            background: 'rgba(6, 78, 59, 0.6)',
-            border: '1px solid rgba(52, 211, 153, 0.2)',
+            background: 'var(--surface-bg)',
+            border: '1px solid rgba(59, 109, 224, 0.2)',
             borderRadius: '10px',
-            color: '#e8f9f0',
+            color: 'var(--text-primary)',
             fontSize: '14px',
             outline: 'none',
           }}
@@ -463,14 +516,14 @@ function Materials() {
       </div>
 
       {loading ? (
-        <p style={{ color: '#5a8a6e', textAlign: 'center', padding: '48px' }}>Loading courses...</p>
+        <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '48px' }}>Loading courses...</p>
       ) : filteredCourses.length === 0 ? (
         <div style={{
           textAlign: 'center', padding: '48px 24px',
-          background: 'rgba(6, 78, 59, 0.2)', borderRadius: '12px',
-          border: '1px dashed rgba(52, 211, 153, 0.2)',
+          background: 'rgba(255, 255, 255, 0.2)', borderRadius: '12px',
+          border: '1px dashed rgba(59, 109, 224, 0.2)',
         }}>
-          <p style={{ color: '#5a8a6e', fontSize: '15px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '15px' }}>
             {courses.length === 0
               ? 'No courses found. Add courses first from the Courses page.'
               : 'No courses match your search.'}
@@ -489,40 +542,40 @@ function Materials() {
               onClick={() => setSelectedCourse(course)}
               style={{
                 padding: '20px',
-                background: 'rgba(6, 78, 59, 0.4)',
-                border: '1px solid rgba(52, 211, 153, 0.15)',
+                background: 'var(--surface-bg)',
+                border: '1px solid rgba(59, 109, 224, 0.15)',
                 borderRadius: '12px',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)';
+                e.currentTarget.style.borderColor = 'rgba(37, 99, 235, 0.4)';
+                e.currentTarget.style.background = 'rgba(37, 99, 235, 0.15)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(52, 211, 153, 0.15)';
-                e.currentTarget.style.background = 'rgba(6, 78, 59, 0.4)';
+                e.currentTarget.style.borderColor = 'rgba(59, 109, 224, 0.15)';
+                e.currentTarget.style.background = 'var(--surface-bg)';
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                 <span style={{
-                  background: 'rgba(16, 185, 129, 0.2)', color: '#6ee7b7',
+                  background: 'rgba(37, 99, 235, 0.2)', color: 'var(--blue-700)',
                   padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600,
                 }}>
                   {course.courseCode}
                 </span>
                 <span style={{
                   fontSize: '11px', padding: '3px 8px', borderRadius: '6px',
-                  background: course.initialized ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                  color: course.initialized ? '#6ee7b7' : '#fbbf24',
+                  background: course.initialized ? 'rgba(37, 99, 235, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                  color: course.initialized ? 'var(--blue-700)' : '#3b6de0',
                 }}>
                   {course.initialized ? '✓ Drive Ready' : '⚠ Not Initialized'}
                 </span>
               </div>
-              <h3 style={{ color: '#e8f9f0', fontSize: '15px', fontWeight: 600, margin: '0 0 8px' }}>
+              <h3 style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600, margin: '0 0 8px' }}>
                 {course.courseName}
               </h3>
-              <div style={{ display: 'flex', gap: '16px', color: '#5a8a6e', fontSize: '12px' }}>
+              <div style={{ display: 'flex', gap: '16px', color: 'var(--text-muted)', fontSize: '12px' }}>
                 {course.level && <span>Level {course.level}</span>}
                 {course.creditHours && <span>{course.creditHours} Credit Hours</span>}
               </div>

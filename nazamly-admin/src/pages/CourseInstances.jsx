@@ -21,6 +21,12 @@ function CourseInstances() {
   });
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Toast notification state
+  const [toast, setToast] = useState(null); // { type: 'success'|'error', message: string }
+
+  // Per-row profiling loading state: { [courseId]: true|false }
+  const [profilingLoading, setProfilingLoading] = useState({});
+
   // Doctor creation inline
   const [showAddDoctor, setShowAddDoctor] = useState(false);
   const [newDoctorName, setNewDoctorName] = useState('');
@@ -29,6 +35,15 @@ function CourseInstances() {
   useEffect(() => {
     fetchAll();
   }, []);
+
+  // Auto-dismiss toast after 4 seconds
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const showToast = (type, message) => setToast({ type, message });
 
   const fetchAll = async () => {
     setLoading(true);
@@ -126,6 +141,28 @@ function CourseInstances() {
     }
   };
 
+  /**
+   * Calls POST /api/admin/trigger-profiling/:courseId
+   * Uses the courseId from the CourseInstance row. Shows a toast on result.
+   */
+  const handleTriggerProfiling = async (courseId, courseName) => {
+    if (!courseId) return;
+    setProfilingLoading(prev => ({ ...prev, [courseId]: true }));
+    try {
+      const res = await fetch(`${API_URL}/api/admin/trigger-profiling/${courseId}`, {
+        method: 'POST',
+        headers: await authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Profiling failed');
+      showToast('success', data.message || `Profile generated for ${courseName}`);
+    } catch (err) {
+      showToast('error', err.message);
+    } finally {
+      setProfilingLoading(prev => ({ ...prev, [courseId]: false }));
+    }
+  };
+
   const filteredInstances = instances.filter(inst => {
     const courseName = inst.courseId?.courseName || '';
     const courseCode = inst.courseId?.courseCode || '';
@@ -142,10 +179,36 @@ function CourseInstances() {
     <div className="page-content">
       <PageHeader title="Course Instances" description="Manage course offerings by semester" />
 
+      {/* ── Toast Notification ──────────────────────────────────────────────── */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: '24px', right: '24px', zIndex: 9999,
+          padding: '14px 20px',
+          background: toast.type === 'success' ? 'rgba(22, 163, 74, 0.15)' : 'rgba(220, 38, 38, 0.15)',
+          border: `1px solid ${toast.type === 'success' ? 'rgba(22, 163, 74, 0.4)' : 'rgba(220, 38, 38, 0.4)'}`,
+          borderLeft: `4px solid ${toast.type === 'success' ? '#16a34a' : 'var(--error)'}`,
+          borderRadius: '10px',
+          color: toast.type === 'success' ? '#16a34a' : 'var(--error)',
+          fontSize: '14px', fontWeight: 500,
+          maxWidth: '420px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          display: 'flex', alignItems: 'flex-start', gap: '10px',
+          backdropFilter: 'blur(10px)',
+          animation: 'slideInToast 0.3s ease-out',
+        }}>
+          <span style={{ fontSize: '18px', flexShrink: 0 }}>{toast.type === 'success' ? '✅' : '❌'}</span>
+          <span>{toast.message}</span>
+          <button
+            onClick={() => setToast(null)}
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '16px', flexShrink: 0, paddingLeft: '8px' }}
+          >×</button>
+        </div>
+      )}
+
       {error && (
-        <div style={{ padding: '12px 16px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '10px', color: '#fca5a5', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '12px 16px', background: 'rgba(220, 38, 38, 0.15)', border: '1px solid rgba(220, 38, 38, 0.3)', borderRadius: '10px', color: 'var(--error)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {error}
-          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: '18px' }}>×</button>
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: '18px' }}>×</button>
         </div>
       )}
 
@@ -180,15 +243,32 @@ function CourseInstances() {
                 <tr key={inst._id}>
                   <td>
                     <div>
-                      <span style={{ color: '#e8f9f0', fontWeight: 500 }}>{inst.courseId?.courseName || 'Unknown'}</span>
-                      <div style={{ fontSize: '12px', color: '#5a8a6e', marginTop: '2px' }}>{inst.courseId?.courseCode || ''}</div>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{inst.courseId?.courseName || 'Unknown'}</span>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{inst.courseId?.courseCode || ''}</div>
                     </div>
                   </td>
                   <td>Dr. {inst.doctorId?.name || 'Unknown'}</td>
                   <td>{inst.academicYear}</td>
                   <td><span className="role-badge">{inst.semester}</span></td>
                   <td>
-                    <button className="action-btn" style={{ marginRight: '8px' }} onClick={() => handleOpenEdit(inst)}>Edit</button>
+                    <button className="action-btn" style={{ marginRight: '6px' }} onClick={() => handleOpenEdit(inst)}>Edit</button>
+                    <button
+                      className="action-btn"
+                      style={{
+                        marginRight: '6px',
+                        background: profilingLoading[inst.courseId?._id] ? 'var(--glass-strong)' : 'var(--blue-glow)',
+                        border: '1px solid var(--glass-border)',
+                        color: 'var(--blue-700)',
+                        opacity: profilingLoading[inst.courseId?._id] ? 0.7 : 1,
+                        cursor: profilingLoading[inst.courseId?._id] ? 'not-allowed' : 'pointer',
+                        minWidth: '120px',
+                      }}
+                      onClick={() => handleTriggerProfiling(inst.courseId?._id, inst.courseId?.courseName)}
+                      disabled={profilingLoading[inst.courseId?._id] || !inst.courseId?._id}
+                      title="Generate AI professor style profile from archived exam questions"
+                    >
+                      {profilingLoading[inst.courseId?._id] ? '⏳ Analyzing...' : '🧠 Analyze Style'}
+                    </button>
                     <button className="icon-btn delete-btn" onClick={() => handleDelete(inst._id)}>🗑️</button>
                   </td>
                 </tr>
@@ -223,7 +303,7 @@ function CourseInstances() {
                   <button
                     type="button"
                     onClick={() => setShowAddDoctor(!showAddDoctor)}
-                    style={{ background: 'none', border: 'none', color: '#6ee7b7', cursor: 'pointer', fontSize: '12px', textDecoration: 'underline' }}
+                    style={{ background: 'none', border: 'none', color: 'var(--blue-700)', cursor: 'pointer', fontSize: '12px', textDecoration: 'underline' }}
                   >
                     {showAddDoctor ? 'Cancel' : '+ New Doctor'}
                   </button>

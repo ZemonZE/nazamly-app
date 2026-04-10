@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getMyCoursesMaterials, getSubFolderFiles } from "../services/materialsService";
-import { API_URL } from "../firebase";
+import { API_URL, auth } from "../firebase";
 
 import {
   GenerateIcon, ArchiveIcon, BrainIcon, QuizIcon, MidtermIcon, FinalIcon,
@@ -128,6 +128,13 @@ function Questions() {
   const [archiveError, setArchiveError] = useState(null);
   const [hasSearchedArchive, setHasSearchedArchive] = useState(false);
 
+<<<<<<< feat/local-db-seeder
+  // ── Quiz History State ──
+  const [quizHistory, setQuizHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(null);
+  const [selectedHistoryQuiz, setSelectedHistoryQuiz] = useState(null);
+=======
   // ── Archive Interaction State (dual-mode) ──
   const [archiveAnswers, setArchiveAnswers] = useState({});    // { "mid-0": "option", "fin-3": "option" }
   const [archiveRevealed, setArchiveRevealed] = useState({});  // { "mid-0": true, "fin-3": true }
@@ -138,6 +145,7 @@ function Questions() {
   const totalQuestions = aiQuestions.length;
   const allAnswered = totalQuestions > 0 && answeredCount === totalQuestions;
   const progressPercent = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
+>>>>>>> main
 
   // ── Initial Data Fetch ──
   useEffect(() => {
@@ -155,6 +163,30 @@ function Questions() {
         setCoursesLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    if (activeMainTab === "history") {
+      loadHistory();
+    }
+  }, [activeMainTab]);
+
+  const loadHistory = async () => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`${API_URL}/api/student/quizzes/history`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setQuizHistory(data.history || []);
+    } catch (err) {
+      setHistoryError(err.message);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   // ── Handle Course Selection ──
   const handleCourseChange = async (courseIdValue) => {
@@ -275,6 +307,58 @@ function Questions() {
     setAiUserAnswers((prev) => ({ ...prev, [questionIdx]: option }));
   };
 
+<<<<<<< feat/local-db-seeder
+  const handleAiSubmitExam = async () => {
+    if (Object.keys(aiUserAnswers).length === 0) return;
+    setAiLoading(true);
+    setAiStatusMessage("Grading your exam via AI...");
+
+    const questionsSnapshot = aiQuestions.map((q, idx) => {
+      const studentAnswer = aiUserAnswers[idx] || "";
+      const isCorrect = studentAnswer === q.correctAnswer;
+      return {
+        questionText: q.questionText,
+        options: q.options || [],
+        correctAnswer: q.correctAnswer,
+        studentAnswer,
+        isCorrect,
+        explanation: "",
+        difficulty: q.difficulty || null,
+        derivedFromConcept: q.derivedFromConcept || null
+      };
+    });
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const payload = {
+        courseId: selectedCourseObj.courseId,
+        totalQuestions: aiQuestions.length,
+        questionsSnapshot
+      };
+
+      const response = await fetch(`${API_URL}/api/student/quizzes/submit`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      const responseData = await response.json();
+      
+      // Override local unstructured aiQuestions with the definitively graded snapshot
+      if (responseData.attempt && responseData.attempt.questionsSnapshot) {
+          setAiQuestions(responseData.attempt.questionsSnapshot);
+      }
+      
+      setAiSubmitted(true);
+    } catch (err) {
+      console.error("Failed to submit exam:", err);
+    } finally {
+      setAiLoading(false);
+      setAiStatusMessage("");
+    }
+=======
   const handleAiSubmitExam = () => {
     setAiSubmitted(true);
     // Scroll to top of the dashboard content area to show results
@@ -284,6 +368,7 @@ function Questions() {
         scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }, 50);
+>>>>>>> main
   };
 
   const handleReportQuestion = (questionIdx) => {
@@ -337,6 +422,10 @@ function Questions() {
 
   const aiScore = aiSubmitted
     ? aiQuestions.reduce((acc, q, idx) => {
+        // If the backend graded snapshot contains an explicit isCorrect tag (essays), prefer it
+        if (q.hasOwnProperty("isCorrect")) {
+           return q.isCorrect ? acc + 1 : acc;
+        }
         return aiUserAnswers[idx] === q.correctAnswer ? acc + 1 : acc;
       }, 0)
     : 0;
@@ -398,6 +487,14 @@ function Questions() {
         >
           <span className="nse-tab-icon">{<GenerateIcon size={16} />}</span>
           Generate AI Exam
+        </button>
+        <button
+          type="button"
+          className={`nse-tab-btn ${activeMainTab === "history" ? "active" : ""}`}
+          onClick={() => setActiveMainTab("history")}
+        >
+          <span className="nse-tab-icon">🏆</span>
+          My Quizzes
         </button>
         <button
           type="button"
@@ -698,6 +795,66 @@ function Questions() {
                 </div>
               )}
 
+<<<<<<< feat/local-db-seeder
+                    <h3 className="qb-question-title">{q.questionText}</h3>
+
+                    {q.options && q.options.length > 0 ? (
+                      <div className="qb-options-grid">
+                        {q.options.map((option, optIdx) => (
+                          <button
+                            key={optIdx}
+                            type="button"
+                            className={`qb-option-btn ${getAiOptionClass(q, option, idx)}`.trim()}
+                            onClick={() => handleAiSelectAnswer(idx, option)}
+                          >
+                            <span className="nse-option-letter">
+                              {String.fromCharCode(65 + optIdx)}
+                            </span>
+                            <span className="qb-option-text">{option}</span>
+                            <span className="qb-option-check" aria-hidden="true">✓</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: '15px' }}>
+                        <textarea
+                          className="qb-pill-input"
+                          style={{ width: '100%', minHeight: '120px', padding: '15px', color: 'var(--text-primary)', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', resize: 'vertical', fontFamily: 'inherit' }}
+                          placeholder="Type your answer here..."
+                          value={aiUserAnswers[idx] || ""}
+                          onChange={(e) => handleAiSelectAnswer(idx, e.target.value)}
+                          disabled={aiSubmitted}
+                        />
+                      </div>
+                    )}
+
+                    {aiSubmitted && (
+                      <div className="qb-detail" style={{marginTop: '15px'}}>
+                        <div className="qb-answer-box">
+                          {q.options && q.options.length > 0 && (
+                            <>
+                              <strong>Correct Answer:</strong>
+                              <p>{q.correctAnswer}</p>
+                            </>
+                          )}
+                          {(!q.options || q.options.length === 0) && (
+                            <div style={{ marginTop: '10px', padding: '15px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', borderLeft: `4px solid ${q.isCorrect ? 'var(--success)' : 'var(--error)'}` }}>
+                                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '18px', marginRight: '8px' }}>{q.isCorrect ? '✅' : '❌'}</span>
+                                    <strong style={{ color: q.isCorrect ? 'var(--success)' : 'var(--error)' }}>AI Feedback</strong>
+                                </div>
+                                <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                                  {q.explanation || (q.isCorrect ? "Correct answer." : "Incorrect. Core concepts were missing.")}
+                                </p>
+                                {q.correctAnswer && (
+                                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--border-color)' }}>
+                                    <strong style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Required Concepts:</strong>
+                                    <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>{q.correctAnswer}</p>
+                                  </div>
+                                )}
+                            </div>
+                          )}
+=======
               <div className="qb-questions-list nse-questions-spaced">
                 {aiQuestions.map((q, idx) => {
                   const isTF = q.type === "tf";
@@ -745,6 +902,7 @@ function Questions() {
                               <span className="qb-option-check" aria-hidden="true">{<CheckIcon size={14} />}</span>
                             </button>
                           ))}
+>>>>>>> main
                         </div>
                       )}
 
@@ -1112,6 +1270,169 @@ function Questions() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════
+          TAB 3: MY QUIZZES (HISTORY)
+      ══════════════════════════════════════════ */}
+      {activeMainTab === "history" && !selectedHistoryQuiz && (
+        <div className="nse-history-tab">
+          <div className="nse-config-section">
+            <div className="nse-config-header">
+              <div className="nse-config-icon">🏆</div>
+              <div>
+                <h2 className="nse-config-title">My Quizzes</h2>
+                <p className="nse-config-subtitle">Review your past AI-generated quizzes and track your progress.</p>
+              </div>
+            </div>
+
+            {historyLoading ? (
+              <p style={{ marginTop: '20px', color: 'var(--text-secondary)' }}>Loading history...</p>
+            ) : historyError ? (
+              <div className="tool-card nse-error-card" style={{ marginTop: '20px', textAlign: 'center' }}>
+                <p style={{ color: 'var(--error)' }}>{historyError}</p>
+              </div>
+            ) : quizHistory.length === 0 ? (
+              <div className="tool-card" style={{ padding: '40px', textAlign: 'center', marginTop: '20px' }}>
+                <div style={{ fontSize: '40px', marginBottom: '15px' }}>🌟</div>
+                <h3>No Quizzes Taken Yet</h3>
+                <p style={{ color: 'var(--text-secondary)', marginTop: '10px' }}>
+                  Generate and complete an AI quiz to see it here!
+                </p>
+              </div>
+            ) : (
+              <div className="qb-questions-list" style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                {quizHistory.map(attempt => (
+                  <div key={attempt._id} className="tool-card qb-question-card" style={{ cursor: 'pointer', transition: 'transform 0.2s' }} onClick={() => setSelectedHistoryQuiz(attempt)} onMouseOver={e => e.currentTarget.style.transform = 'translateY(-5px)'} onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                      <span className="qb-chip nse-confidence-chip" style={{ background: 'var(--blue-glow)', color: 'var(--blue-700)' }}>
+                        {new Date(attempt.createdAt).toLocaleDateString()}
+                      </span>
+                      <span style={{ fontWeight: 'bold' }}>
+                        Score: {attempt.score}/{attempt.totalQuestions}
+                      </span>
+                    </div>
+                    <h3 style={{ fontSize: '18px', margin: '0 0 10px 0' }}>
+                      {attempt.courseId?.courseName || 'Unknown Course'}
+                    </h3>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: 0 }}>
+                      {attempt.courseId?.courseCode || ''}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* QUIZ REVIEW MODAL/VIEW */}
+      {selectedHistoryQuiz && activeMainTab === "history" && (
+        <div className="nse-history-review">
+          <button 
+            className="gen-tab-btn" 
+            onClick={() => setSelectedHistoryQuiz(null)}
+            style={{ marginBottom: '20px' }}
+          >
+            ← Back to Quizzes
+          </button>
+          
+          <div className="tool-card qb-score-card nse-result-card" style={{ marginBottom: '30px' }}>
+            <div className="nse-result-header">
+              <div className="nse-result-emoji">
+                {Math.round((selectedHistoryQuiz.score / selectedHistoryQuiz.totalQuestions) * 100) >= 85 ? "🏆" : "💪"}
+              </div>
+              <div>
+                <h3>{selectedHistoryQuiz.courseId?.courseName || 'Review Quiz'}</h3>
+                <p className="nse-result-sub" style={{ opacity: 0.8 }}>
+                  {new Date(selectedHistoryQuiz.createdAt).toLocaleString()} • {selectedHistoryQuiz.totalQuestions} Questions
+                </p>
+              </div>
+            </div>
+            <div className="nse-score-row" style={{ display: 'flex', alignItems: 'center', marginTop: '20px', gap: '20px' }}>
+              <div className="nse-score-circle">
+                <span className="nse-score-value" style={{ fontSize: '24px', fontWeight: 'bold' }}>
+                  {Math.round((selectedHistoryQuiz.score / selectedHistoryQuiz.totalQuestions) * 100)}%
+                </span>
+              </div>
+              <div className="nse-score-details">
+                <p>Correct: <strong>{selectedHistoryQuiz.score}</strong> / {selectedHistoryQuiz.totalQuestions}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="qb-questions-list">
+             {selectedHistoryQuiz.questionsSnapshot.map((q, idx) => (
+               <article key={q._id || idx} className="tool-card qb-question-card">
+                 <span className="qb-topic">Q{idx + 1} {q.derivedFromConcept ? `• ${q.derivedFromConcept}` : ''}</span>
+                 <h3 className="qb-question-title">{q.questionText}</h3>
+                 
+                 {q.options && q.options.length > 0 ? (
+                   <div className="qb-options-grid">
+                     {q.options.map((option, optIdx) => {
+                       let optClass = "";
+                       if (option === q.correctAnswer) {
+                          optClass = "qb-option-correct";
+                       } else if (option === q.studentAnswer && option !== q.correctAnswer) {
+                          optClass = "qb-option-wrong";
+                       }
+                       
+                       return (
+                         <div
+                           key={optIdx}
+                           className={`qb-option-btn ${optClass}`}
+                           style={{ cursor: 'default' }}
+                         >
+                           <span className="nse-option-letter">{String.fromCharCode(65 + optIdx)}</span>
+                           <span className="qb-option-text">{option}</span>
+                           {(option === q.correctAnswer || option === q.studentAnswer) && (
+                             <span className="qb-option-check" style={{ opacity: 1 }}>
+                               {option === q.correctAnswer ? "✓" : "✗"}
+                             </span>
+                           )}
+                         </div>
+                       );
+                     })}
+                   </div>
+                 ) : (
+                    <div style={{ marginTop: '15px' }}>
+                      <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>Your Answer:</p>
+                      <div className="qb-pill-input" style={{ width: '100%', padding: '15px', color: 'var(--text-primary)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', cursor: 'default' }}>
+                         {q.studentAnswer || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>No answer provided</span>}
+                      </div>
+                    </div>
+                 )}
+                 <div className="qb-detail" style={{ marginTop: '15px' }}>
+                   <div className="qb-answer-box">
+                      {q.options && q.options.length > 0 && (
+                        <>
+                          <strong>Correct Answer:</strong>
+                          <p>{q.correctAnswer}</p>
+                        </>
+                      )}
+                      {(!q.options || q.options.length === 0) && (
+                         <div style={{ marginTop: '10px', padding: '15px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', borderLeft: `4px solid ${q.isCorrect ? 'var(--success)' : 'var(--error)'}` }}>
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '18px', marginRight: '8px' }}>{q.isCorrect ? '✅' : '❌'}</span>
+                                <strong style={{ color: q.isCorrect ? 'var(--success)' : 'var(--error)' }}>AI Feedback</strong>
+                            </div>
+                            <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                              {q.explanation || "No explanation provided by AI."}
+                            </p>
+                            {q.correctAnswer && (
+                              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--border-color)' }}>
+                                <strong style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Required Concepts:</strong>
+                                <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>{q.correctAnswer}</p>
+                              </div>
+                            )}
+                         </div>
+                      )}
+                   </div>
+                 </div>
+               </article>
+             ))}
+          </div>
         </div>
       )}
     </div>

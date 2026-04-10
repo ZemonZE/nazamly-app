@@ -1,28 +1,128 @@
 @import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap");
 
-/* ── Variables ── */
+/* ── Light Mode Variables (default) ── */
 :root {
-  --bg-deep: #061a10;
-  --green-900: #064e3b;
-  --green-800: #065f46;
-  --green-700: #047857;
-  --green-600: #059669;
-  --green-500: #10b981;
-  --green-400: #34d399;
-  --green-300: #6ee7b7;
-  --green-glow: rgba(16, 185, 129, 0.25);
-  --glass-bg: rgba(6, 78, 59, 0.4);
-  --glass-border: rgba(52, 211, 153, 0.2);
-  --glass-strong: rgba(16, 185, 129, 0.15);
-  --text-primary: #e8f9f0;
-  --text-secondary: #a3c9b4;
-  --text-muted: #5a8a6e;
-  --error: #f87171;
+  --bg-deep: #eef2f7;
+  --blue-700: #1e40af;
+  --blue-500: #3b6de0;
+  --blue-400: #4a7cec;
+  --blue-300: #2563b8;
+  --blue-glow: rgba(37, 99, 235, 0.2);
+  --glass-bg: var(--glass-bg);
+  --glass-border: rgba(37, 99, 235, 0.18);
+  --glass-strong: rgba(37, 99, 235, 0.06);
+  --text-primary: #0f172a;
+  --text-secondary: #1e3a5f;
+  --text-muted: #64748b;
+  --error: #dc2626;
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 22px;
   --transition: cubic-bezier(0.4, 0, 0.2, 1);
+  --input-bg: var(--input-bg);
+  --input-bg-focus: var(--modal-bg);
+  --sidebar-bg: var(--surface-bg);
+  --sidebar-footer-bg: var(--modal-bg);
+  --modal-bg: var(--modal-bg);
+  --surface-bg: var(--surface-bg);
 }
+
+/* ── Dark Mode Variables ── */
+[data-theme="dark"] {
+  --bg-deep: #0f172a;
+  --blue-700: #3b82f6;
+  --blue-500: #60a5fa;
+  --blue-400: #93bbfd;
+  --blue-300: #3b82f6;
+  --blue-glow: rgba(96, 165, 250, 0.18);
+  --glass-bg: rgba(30, 41, 59, 0.8);
+  --glass-border: rgba(96, 165, 250, 0.14);
+  --glass-strong: rgba(96, 165, 250, 0.06);
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --error: #f87171;
+  --input-bg: rgba(30, 41, 59, 0.7);
+  --input-bg-focus: rgba(30, 41, 59, 0.9);
+  --sidebar-bg: rgba(15, 23, 42, 0.9);
+  --sidebar-footer-bg: rgba(15, 23, 42, 0.98);
+  --modal-bg: rgba(15, 23, 42, 0.98);
+  --surface-bg: rgba(30, 41, 59, 0.6);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100vh;
+  font-family: "Tajawal", sans-serif;
+  /* Smooth theme transition */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body {
+  background: var(--bg-deep);
+  background-image:
+    radial-gradient(
+      ellipse 80% 60% at 20% 10%,
+      rgba(37, 99, 235, 0.12) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 80% at 80% 90%,
+      rgba(30, 64, 175, 0.1) 0%,
+      transparent 60%
+    );
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+[data-theme="dark"] body {
+  background-image:
+    radial-gradient(
+      ellipse 80% 60% at 20% 10%,
+      rgba(96, 165, 250, 0.06) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 60% 80% at 80% 90%,
+      rgba(59, 130, 246, 0.05) 0%,
+      transparent 60%
+    );
+}
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 260px;
+  background: transparent;
+  min-height: 100vh;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.main-content.sidebar-folded {
+  margin-left: 80px;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 
 * {
   margin: 0;
@@ -41,15 +141,14 @@ body {
   background-image:
     radial-gradient(
       ellipse 80% 60% at 20% 10%,
-      rgba(6, 78, 59, 0.3) 0%,
+      rgba(37, 99, 235, 0.12) 0%,
       transparent 60%
     ),
     radial-gradient(
       ellipse 60% 80% at 80% 90%,
-      rgba(4, 120, 87, 0.2) 0%,
+      rgba(30, 64, 175, 0.1) 0%,
       transparent 60%
-    ),
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23047857' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    );
   color: var(--text-primary);
   overflow-x: hidden;
 }
@@ -80,4 +179,24 @@ body {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* ── Toast slide-in animation ── */
+@keyframes slideInToast {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ── Select option theming (dark mode) ── */
+/* Native <option> elements cannot be styled via CSS vars in all browsers,
+   but these rules help where supported */
+select option {
+  background: var(--input-bg-focus);
+  color: var(--text-primary);
 }
