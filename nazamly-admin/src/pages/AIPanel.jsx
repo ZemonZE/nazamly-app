@@ -18,9 +18,65 @@ function AIPanel() {
   const [ingestStatus, setIngestStatus] = useState(''); // '', 'loading', 'success', 'error'
   const [statusMessage, setStatusMessage] = useState('');
 
+  // --- AI Config State ---
+  const [activeModel, setActiveModel] = useState('');
+  const [supportedModels, setSupportedModels] = useState([]);
+  const [modelLoading, setModelLoading] = useState(true);
+  const [modelStatus, setModelStatus] = useState(''); 
+  const [modelMessage, setModelMessage] = useState('');
+
   useEffect(() => {
     fetchCourses();
+    fetchAiSettings();
   }, []);
+
+  const fetchAiSettings = async () => {
+    try {
+      const token = await getAdminToken();
+      const res = await fetch(`${API_URL}/api/admin/ai/settings`, { 
+        headers: token ? { Authorization: `Bearer ${token}` } : {} 
+      });
+      if (!res.ok) throw new Error('Failed to fetch AI settings');
+      const data = await res.json();
+      setActiveModel(data.activeModel || '');
+      setSupportedModels(data.supportedModels || []);
+    } catch (err) {
+      console.error(err);
+      setModelStatus('error');
+      setModelMessage('Failed to load active AI model config.');
+    } finally {
+      setModelLoading(false);
+    }
+  };
+
+  const handleSaveModel = async (e) => {
+    e.preventDefault();
+    if (!activeModel) return;
+    setModelStatus('loading');
+    setModelMessage('Saving configuration...');
+
+    try {
+      const token = await getAdminToken();
+      const res = await fetch(`${API_URL}/api/admin/ai/settings`, { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ activeModel })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update model.');
+      
+      setModelStatus('success');
+      setModelMessage(`AI Model dynamically updated to ${data.activeModel}`);
+    } catch (err) {
+      console.error(err);
+      setModelStatus('error');
+      setModelMessage(err.message);
+    }
+  };
 
   const fetchCourses = async () => {
     try {
@@ -123,19 +179,101 @@ function AIPanel() {
       />
 
       <div style={{
-          background: 'rgba(6, 78, 59, 0.4)',
-          border: '1px solid rgba(52, 211, 153, 0.2)',
+          background: 'var(--surface-bg)',
+          border: '1px solid rgba(59, 109, 224, 0.2)',
           borderRadius: '16px',
           padding: '30px',
           marginTop: '20px'
       }}>
-        <h2 style={{ color: '#6ee7b7', margin: '0 0 20px', fontSize: '18px' }}>🤖 Google Gemini Pipeline</h2>
+        <h2 style={{ color: 'var(--blue-700)', margin: '0 0 20px', fontSize: '18px' }}>⚙️ Google AI Model Configuration</h2>
+        
+        <form onSubmit={handleSaveModel}>
+           <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>
+                 Active Gemini Engine {modelLoading && '(Loading...)'}
+              </label>
+              <select 
+                value={activeModel} 
+                onChange={(e) => setActiveModel(e.target.value)}
+                disabled={modelLoading || modelStatus === 'loading'}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  background: 'var(--surface-bg)',
+                  border: '1px solid rgba(59, 109, 224, 0.2)',
+                  borderRadius: '8px',
+                  color: 'var(--text-primary)',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              >
+                {!modelLoading && supportedModels.length === 0 && <option value="">Fallback: gemini-2.0-flash</option>}
+                {supportedModels.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+           </div>
+           
+           {modelMessage && (
+            <div style={{
+              padding: '16px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              background: modelStatus === 'error' ? 'rgba(220, 38, 38, 0.15)' 
+                          : modelStatus === 'success' ? 'rgba(37, 99, 235, 0.15)'
+                          : 'rgba(59, 130, 246, 0.15)',
+              border: modelStatus === 'error' ? '1px solid rgba(220, 38, 38, 0.3)'
+                      : modelStatus === 'success' ? '1px solid rgba(37, 99, 235, 0.3)'
+                      : '1px solid rgba(59, 130, 246, 0.3)',
+              color: modelStatus === 'error' ? 'var(--error)'
+                     : modelStatus === 'success' ? 'var(--blue-700)'
+                     : '#93c5fd',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              fontWeight: 500
+            }}>
+              {modelStatus === 'loading' && <div className="spinner" style={{ width: '20px', height: '20px', border: '2px solid transparent', borderTopColor: '#93c5fd', borderRadius: '50%' }}></div>}
+              {modelStatus === 'success' && <span>✅</span>}
+              {modelStatus === 'error' && <span>⚠️</span>}
+              <span>{modelMessage}</span>
+            </div>
+          )}
+
+           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+             <button
+                type="submit"
+                disabled={!activeModel || modelStatus === 'loading'}
+                className="ai-action-btn primary"
+                style={{
+                  fontSize: '14px',
+                  padding: '10px 20px',
+                  opacity: (!activeModel || modelStatus === 'loading') ? 0.5 : 1,
+                  cursor: (!activeModel || modelStatus === 'loading') ? 'not-allowed' : 'pointer',
+                  border: 'none',
+                  outline: 'none'
+                }}
+             >
+                {modelStatus === 'loading' ? 'Saving...' : 'Save AI Config'}
+             </button>
+           </div>
+        </form>
+      </div>
+
+      <div style={{
+          background: 'var(--surface-bg)',
+          border: '1px solid rgba(59, 109, 224, 0.2)',
+          borderRadius: '16px',
+          padding: '30px',
+          marginTop: '20px'
+      }}>
+        <h2 style={{ color: 'var(--blue-700)', margin: '0 0 20px', fontSize: '18px' }}>🤖 Google Gemini Pipeline</h2>
 
         <form onSubmit={handleUploadExam}>
           
           {/* Step 1: Course Selection */}
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', color: '#a3c9b4', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>1. Select Target Course</label>
+            <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>1. Select Target Course</label>
             <select 
               value={selectedCourseObj ? selectedCourseObj._id : ""} 
               onChange={handleCourseChange}
@@ -143,10 +281,10 @@ function AIPanel() {
               style={{
                 width: '100%',
                 padding: '12px 14px',
-                background: 'rgba(6, 78, 59, 0.6)',
-                border: '1px solid rgba(52, 211, 153, 0.2)',
+                background: 'var(--surface-bg)',
+                border: '1px solid rgba(59, 109, 224, 0.2)',
                 borderRadius: '8px',
-                color: '#e8f9f0',
+                color: 'var(--text-primary)',
                 fontSize: '14px',
                 outline: 'none'
               }}
@@ -163,7 +301,7 @@ function AIPanel() {
           {/* Step 2: Lecture Selection */}
           {selectedCourseObj && (
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', color: '#a3c9b4', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>
                 2. Select Linked Material (Multiple Selection Allowed) 
                 {loadingLectures && ' (Loading...)'}
               </label>
@@ -173,7 +311,7 @@ function AIPanel() {
                 gap: '10px'
               }}>
                 {!loadingLectures && lectures.length === 0 && (
-                  <p style={{ color: '#a3c9b4' }}>No lectures synced yet.</p>
+                  <p style={{ color: 'var(--text-secondary)' }}>No lectures synced yet.</p>
                 )}
                 {!loadingLectures && lectures.map((lec) => (
                   <label
@@ -183,11 +321,11 @@ function AIPanel() {
                       alignItems: 'center',
                       gap: '8px',
                       padding: '10px',
-                      background: selectedLectures.includes(lec.id) ? 'rgba(16, 185, 129, 0.2)' : 'rgba(6, 78, 59, 0.6)',
-                      border: selectedLectures.includes(lec.id) ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(52, 211, 153, 0.2)',
+                      background: selectedLectures.includes(lec.id) ? 'rgba(37, 99, 235, 0.2)' : 'var(--surface-bg)',
+                      border: selectedLectures.includes(lec.id) ? '1px solid rgba(37, 99, 235, 0.5)' : '1px solid rgba(59, 109, 224, 0.2)',
                       borderRadius: '8px',
                       cursor: 'pointer',
-                      color: selectedLectures.includes(lec.id) ? '#6ee7b7' : '#e8f9f0',
+                      color: selectedLectures.includes(lec.id) ? 'var(--blue-700)' : 'var(--text-primary)',
                       transition: 'all 0.2s'
                     }}
                   >
@@ -211,7 +349,7 @@ function AIPanel() {
           {selectedLectures.length > 0 && (
             <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: '150px' }}>
-                <label style={{ display: 'block', color: '#a3c9b4', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>3. Exam Type</label>
+                <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>3. Exam Type</label>
                 <select 
                   value={examType}
                   onChange={(e) => setExamType(e.target.value)}
@@ -219,10 +357,10 @@ function AIPanel() {
                   style={{
                     width: '100%',
                     padding: '12px 14px',
-                    background: 'rgba(6, 78, 59, 0.6)',
-                    border: '1px solid rgba(52, 211, 153, 0.2)',
+                    background: 'var(--surface-bg)',
+                    border: '1px solid rgba(59, 109, 224, 0.2)',
                     borderRadius: '8px',
-                    color: '#e8f9f0',
+                    color: 'var(--text-primary)',
                     fontSize: '14px',
                     outline: 'none'
                   }}
@@ -233,7 +371,7 @@ function AIPanel() {
               </div>
 
               <div style={{ flex: 1, minWidth: '150px' }}>
-                <label style={{ display: 'block', color: '#a3c9b4', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>4. Exam Year</label>
+                <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>4. Exam Year</label>
                 <input 
                   type="number"
                   value={year}
@@ -242,10 +380,10 @@ function AIPanel() {
                   style={{
                     width: '100%',
                     padding: '12px 14px',
-                    background: 'rgba(6, 78, 59, 0.6)',
-                    border: '1px solid rgba(52, 211, 153, 0.2)',
+                    background: 'var(--surface-bg)',
+                    border: '1px solid rgba(59, 109, 224, 0.2)',
                     borderRadius: '8px',
-                    color: '#e8f9f0',
+                    color: 'var(--text-primary)',
                     fontSize: '14px',
                     outline: 'none'
                   }}
@@ -257,7 +395,7 @@ function AIPanel() {
           {/* Step 4: PDF Upload */}
           {selectedLectures.length > 0 && (
              <div style={{ marginBottom: '30px' }}>
-               <label style={{ display: 'block', color: '#a3c9b4', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>5. Upload Exam PDF</label>
+               <label style={{ display: 'block', color: 'var(--text-secondary)', marginBottom: '8px', fontSize: '14px', fontWeight: 'bold' }}>5. Upload Exam PDF</label>
                <input 
                  id="file-upload"
                  type="file"
@@ -267,10 +405,10 @@ function AIPanel() {
                  style={{
                    width: '100%',
                    padding: '12px 14px',
-                   background: 'rgba(6, 78, 59, 0.6)',
-                   border: '1px dashed rgba(52, 211, 153, 0.5)',
+                   background: 'var(--surface-bg)',
+                   border: '1px dashed rgba(59, 109, 224, 0.5)',
                    borderRadius: '8px',
-                   color: '#e8f9f0',
+                   color: 'var(--text-primary)',
                    cursor: 'pointer'
                  }}
                />
@@ -283,14 +421,14 @@ function AIPanel() {
               padding: '16px',
               borderRadius: '8px',
               marginBottom: '20px',
-              background: ingestStatus === 'error' ? 'rgba(239, 68, 68, 0.15)' 
-                          : ingestStatus === 'success' ? 'rgba(16, 185, 129, 0.15)'
+              background: ingestStatus === 'error' ? 'rgba(220, 38, 38, 0.15)' 
+                          : ingestStatus === 'success' ? 'rgba(37, 99, 235, 0.15)'
                           : 'rgba(59, 130, 246, 0.15)',
-              border: ingestStatus === 'error' ? '1px solid rgba(239, 68, 68, 0.3)'
-                      : ingestStatus === 'success' ? '1px solid rgba(16, 185, 129, 0.3)'
+              border: ingestStatus === 'error' ? '1px solid rgba(220, 38, 38, 0.3)'
+                      : ingestStatus === 'success' ? '1px solid rgba(37, 99, 235, 0.3)'
                       : '1px solid rgba(59, 130, 246, 0.3)',
-              color: ingestStatus === 'error' ? '#fca5a5'
-                     : ingestStatus === 'success' ? '#6ee7b7'
+              color: ingestStatus === 'error' ? 'var(--error)'
+                     : ingestStatus === 'success' ? 'var(--blue-700)'
                      : '#93c5fd',
               display: 'flex',
               alignItems: 'center',

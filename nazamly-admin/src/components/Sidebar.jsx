@@ -15,11 +15,13 @@ import {
   IconSignOut,
   IconStudent,
   IconAdmin,
-  IconCode
+  IconCode,
+  IconSun,
+  IconMoon
 } from '../Icons/Icons';
 import './Sidebar.css';
 
-function Sidebar({ onLogout, userData, onFoldChange }) {
+function Sidebar({ onLogout, userData, onFoldChange, isDark, onToggleTheme }) {
   const [isFolded, setIsFolded] = useState(false);
   const userEmail = userData?.user?.email || 'admin@nazamly.com';
   const userName = userData?.user?.name || 'Admin User';
@@ -123,14 +125,34 @@ function Sidebar({ onLogout, userData, onFoldChange }) {
               </div>
               <div className="admin-email">{userEmail}</div>
             </div>
-            <button className="sign-out-btn-inline" onClick={onLogout} title="Sign Out">
+            <div className="sidebar-footer-actions">
+              {/* Theme toggle: Sun in dark mode, Moon in light mode */}
+              <button
+                className="theme-toggle-btn"
+                onClick={onToggleTheme}
+                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDark ? <IconSun /> : <IconMoon />}
+              </button>
+              <button className="sign-out-btn-inline" onClick={onLogout} title="Sign Out">
+                <IconSignOut />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+            {/* Theme toggle in folded state */}
+            <button
+              className="theme-toggle-btn"
+              onClick={onToggleTheme}
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            >
+              {isDark ? <IconSun /> : <IconMoon />}
+            </button>
+            <button className="sign-out-btn-folded" onClick={onLogout} title="Sign Out">
               <IconSignOut />
             </button>
           </div>
-        ) : (
-          <button className="sign-out-btn-folded" onClick={onLogout} title="Sign Out">
-            <IconSignOut />
-          </button>
         )}
       </div>
     </div>

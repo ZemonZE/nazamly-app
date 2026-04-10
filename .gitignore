@@ -26,3 +26,5 @@ uploads/
 # Root package-lock (not a real project root)
 /package-lock.json
 firebase-adminsdk.json
+# Local Database Backup (Sensitive Data)
+data-backup/

@@ -28,7 +28,8 @@ const archivedQuestionSchema = new mongoose.Schema({
   }],
   correctAnswer: {
     type: String,
-    required: true,
+    required: false,
+    default: 'Not provided in exam file',
     trim: true
   },
   examType: {

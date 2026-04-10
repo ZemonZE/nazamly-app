@@ -3,7 +3,9 @@ const CourseInstance = require('../models/academic/courseInstance.model');
 const Course = require('../models/academic/course.model');
 const Doctor = require('../models/academic/doctor.model');
 const User = require('../models/user/user.model');
+const SystemSetting = require('../models/settings/SystemSetting.model');
 const admin = require('../config/firebase');
+const aiService = require('../services/ai.service');
 
 // ═══════════════════════════════════════════
 //  COURSES
@@ -403,7 +405,7 @@ exports.uploadPastExam = async (req, res) => {
                  linkedLectureId: bestLectureId,
                  questionText: q.questionText,
                  options: Array.isArray(q.options) ? q.options : [],
-                 correctAnswer: q.correctAnswer || "",
+                 correctAnswer: q.correctAnswer || 'Not provided in exam file',
                  examType,
                  year: parseInt(year, 10)
              });
@@ -424,5 +426,187 @@ exports.uploadPastExam = async (req, res) => {
   } catch (error) {
     console.error('Error in uploadPastExam:', error.message);
     res.status(500).json({ error: 'Ingestion failed', details: error.message });
+  }
+};
+
+// ═══════════════════════════════════════════
+//  DOCTOR → COURSE LINKAGE (Testing / Setup)
+// ═══════════════════════════════════════════
+
+/**
+ * POST /api/admin/link-doctor-to-course
+ * Creates or updates a CourseInstance linking a doctor to a course.
+ * Body: { courseId, doctorId, academicYear?, semester? }
+ *
+ * This is the "missing link" fix endpoint:
+ * The ExamGenerator and LectureProcessor resolve the doctor profile by
+ * querying CourseInstance first. Without a CourseInstance record, the
+ * professor-style analysis pipeline never fires.
+ */
+exports.linkDoctorToCourse = async (req, res) => {
+  try {
+    const { courseId, doctorId, academicYear, semester } = req.body;
+
+    if (!courseId || !doctorId) {
+      return res.status(400).json({ error: 'courseId and doctorId are required' });
+    }
+
+    const academicYearVal = academicYear || `${new Date().getFullYear()}/${new Date().getFullYear() + 1}`;
+    const semesterVal = semester || 'Fall';
+
+    // Upsert: if a CourseInstance with this doctor/course/year/semester already exists,
+    // return it; otherwise create a new one.
+    const instance = await CourseInstance.findOneAndUpdate(
+      { courseId, doctorId, academicYear: academicYearVal, semester: semesterVal },
+      { courseId, doctorId, academicYear: academicYearVal, semester: semesterVal },
+      { upsert: true, returnDocument: 'after', runValidators: true }
+    )
+      .populate('courseId', 'courseName courseCode')
+      .populate('doctorId', 'name');
+
+    res.status(201).json({
+      message: `Doctor successfully linked to course. The profiling pipeline will activate on the next lecture upload.`,
+      courseInstance: instance,
+    });
+  } catch (error) {
+    console.error('Error linking doctor to course:', error.message);
+    if (error.code === 11000) {
+      return res.status(409).json({ error: 'This doctor/course/semester combination already exists.' });
+    }
+    res.status(500).json({ error: 'Failed to link doctor to course', details: error.message });
+  }
+};
+
+/**
+ * POST /api/admin/trigger-profiling/:courseId
+ * Manually triggers professor-style analysis for a course using its existing archived questions.
+ * This is useful for back-filling DoctorInsight records without re-uploading any files.
+ * Resolves: CourseInstance → doctorId → ArchivedQuestion → analyzeProfessorStyle → DoctorInsight
+ */
+exports.triggerProfiling = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const mongoose = require('mongoose');
+
+    if (!mongoose.Types.ObjectId.isValid(courseId)) {
+      return res.status(400).json({ error: 'Invalid courseId format' });
+    }
+
+    // Step 1: Find the most-recent CourseInstance to get the doctorId
+    const courseInstance = await CourseInstance.findOne({ courseId })
+      .sort({ createdAt: -1 })
+      .populate('doctorId', 'name')
+      .populate('courseId', 'courseName courseCode')
+      .lean();
+
+    if (!courseInstance) {
+      return res.status(404).json({
+        error: 'No CourseInstance found for this course. Use POST /api/admin/link-doctor-to-course first.',
+      });
+    }
+
+    const doctorId = courseInstance.doctorId._id;
+
+    // Step 2: Fetch all ArchivedQuestions for this course
+    const ArchivedQuestion = require('../models/archivedQuestion.model');
+    const archivedQuestions = await ArchivedQuestion.find({ courseId }).lean();
+
+    if (archivedQuestions.length < 3) {
+      return res.status(422).json({
+        error: `Only ${archivedQuestions.length} archived questions found. Minimum 3 required for profiling. Upload past exams first.`,
+        count: archivedQuestions.length,
+      });
+    }
+
+    // Step 3: Run AI style analysis
+    const { analyzeProfessorStyle } = require('../services/ai.service');
+    const styleProfile = await analyzeProfessorStyle(archivedQuestions);
+
+    // Step 4: Upsert the DoctorInsight document
+    const DoctorInsight = require('../models/ai/doctorInsight.model');
+    const insight = await DoctorInsight.findOneAndUpdate(
+      { doctorId, courseId },
+      {
+        $set: {
+          courseInstanceId: courseInstance._id,
+          doctorId,
+          courseId,
+          preferredQuestionTypes: styleProfile.preferredQuestionTypes || [],
+          difficultyDistribution:  styleProfile.difficultyDistribution  || {},
+          trickPhrases:            styleProfile.trickPhrases            || [],
+          averageQuestionLength:   styleProfile.averageQuestionLength   || 'medium',
+          summaryText: `Profile generated from ${archivedQuestions.length} archived questions on ${new Date().toLocaleDateString()}.`,
+          generatedAt: new Date(),
+        },
+      },
+      { upsert: true, returnDocument: 'after' }
+    );
+
+    res.status(200).json({
+      message: `Profiling complete! DoctorInsight created for Dr. ${courseInstance.doctorId.name} — ${courseInstance.courseId.courseName}.`,
+      questionsAnalyzed: archivedQuestions.length,
+      insight,
+    });
+  } catch (error) {
+    console.error('Error triggering profiling:', error.message);
+    res.status(500).json({ error: 'Profiling failed', details: error.message });
+  }
+};
+
+// ═══════════════════════════════════════════
+//  AI SETTINGS
+// ═══════════════════════════════════════════
+
+/** GET /api/admin/ai/settings */
+exports.getAiSettings = async (req, res) => {
+  try {
+    let setting = await SystemSetting.findOne({ key: 'ACTIVE_GEMINI_MODEL' });
+    
+    // Dynamically discover supported models from Google API
+    const supportedModels = await aiService.fetchAvailableGeminiModels();
+
+    if (!setting || !supportedModels.includes(setting.value)) {
+      if (setting) {
+        // Existed but deprecated or not in live discovery list
+        setting.value = 'gemini-2.0-flash';
+        setting = await setting.save();
+      } else {
+        // Init
+        setting = await SystemSetting.create({ key: 'ACTIVE_GEMINI_MODEL', value: 'gemini-2.0-flash' });
+      }
+    }
+    
+    // Ensure memory map correctly hooks whatever is actually in the DB silently on first read
+    aiService.updateActiveGeminiModel(setting.value);
+
+    res.json({
+      activeModel: setting.value,
+      supportedModels
+    });
+  } catch (error) {
+    console.error('Error fetching AI settings:', error.message);
+    res.status(500).json({ error: 'Failed to fetch AI Settings.' });
+  }
+};
+
+/** POST /api/admin/ai/settings */
+exports.updateAiSettings = async (req, res) => {
+  try {
+    const { activeModel } = req.body;
+    if (!activeModel) return res.status(400).json({ error: 'activeModel is required' });
+
+    const setting = await SystemSetting.findOneAndUpdate(
+      { key: 'ACTIVE_GEMINI_MODEL' },
+      { value: activeModel },
+      { upsert: true, returnDocument: 'after' }
+    );
+
+    // Hard cache update dynamically locking into the Node.js memory loop
+    aiService.updateActiveGeminiModel(activeModel);
+
+    res.json({ success: true, activeModel: setting.value });
+  } catch (error) {
+    console.error('Error updating AI settings:', error.message);
+    res.status(500).json({ error: 'Failed to update AI Settings.' });
   }
 };

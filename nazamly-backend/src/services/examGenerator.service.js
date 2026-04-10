@@ -1,6 +1,7 @@
 // src/services/examGenerator.service.js
 const LectureConcept = require('../models/lectureConcept.model');
-const ProfessorProfile = require('../models/professorProfile.model');
+const DoctorInsight = require('../models/ai/doctorInsight.model');
+const CourseInstance = require('../models/academic/courseInstance.model');
 const QuestionBank = require('../models/questionBank.model');
 const { generateCustomExamWithRAG } = require('./ai.service');
 
@@ -52,21 +53,35 @@ async function generateAndSaveCustomExam(courseId, materialFileIdsArray, examTyp
       keywords: c.keywords || [],
     }));
 
-    // ─── Step 3: Fetch the ProfessorProfile for this course ───
-    let professorProfile = await ProfessorProfile.findOne({ courseId }).lean();
+    // ─── Step 3: Resolve DoctorInsight via CourseInstance → Doctor ───────────
+    // Find the most-recent CourseInstance for this course to get the doctorId,
+    // then query DoctorInsight for the (doctorId, courseId) pair.
+    let professorProfile = DEFAULT_PROFESSOR_PROFILE;
 
-    if (!professorProfile) {
-      console.log('[ExamGenerator] No ProfessorProfile found — using default balanced profile.');
-      professorProfile = DEFAULT_PROFESSOR_PROFILE;
+    const courseInstance = await CourseInstance.findOne({ courseId })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    if (courseInstance && courseInstance.doctorId) {
+      const insight = await DoctorInsight.findOne({
+        doctorId: courseInstance.doctorId,
+        courseId,
+      }).lean();
+
+      if (insight) {
+        console.log(`[ExamGenerator] DoctorInsight found for doctorId=${courseInstance.doctorId}. Using real style profile.`);
+        // Map DoctorInsight fields to the profile shape expected by the AI service
+        professorProfile = {
+          preferredQuestionTypes: insight.preferredQuestionTypes || DEFAULT_PROFESSOR_PROFILE.preferredQuestionTypes,
+          difficultyDistribution:  insight.difficultyDistribution  || DEFAULT_PROFESSOR_PROFILE.difficultyDistribution,
+          trickPhrases:            insight.trickPhrases            || [],
+          averageQuestionLength:   insight.averageQuestionLength   || 'medium',
+        };
+      } else {
+        console.log(`[ExamGenerator] No DoctorInsight found for doctorId=${courseInstance.doctorId} — using default profile.`);
+      }
     } else {
-      console.log('[ExamGenerator] ProfessorProfile loaded successfully.');
-      // Extract only the style-relevant fields to reduce token payload
-      professorProfile = {
-        preferredQuestionTypes: professorProfile.preferredQuestionTypes,
-        difficultyDistribution: professorProfile.difficultyDistribution,
-        trickPhrases: professorProfile.trickPhrases,
-        averageQuestionLength: professorProfile.averageQuestionLength,
-      };
+      console.log('[ExamGenerator] No CourseInstance / doctor linked to this course — using default profile.');
     }
 
     // ─── Step 4: Call Gemini AI to generate the custom exam via RAG ───
