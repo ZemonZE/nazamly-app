@@ -48,7 +48,7 @@ npm install --prefix nazamly-front
 # ── Piston (Docker) ───────────────────────────────────────────────────────────
 
 info "Starting Piston code execution service..."
-docker compose up -d piston
+docker compose up -d --force-recreate piston
 
 info "Waiting for Piston to be ready..."
 for i in $(seq 1 20); do
@@ -62,17 +62,23 @@ for i in $(seq 1 20); do
   sleep 3
 done
 
-info "Installing Piston runtimes..."
+info "Installing Piston runtimes (this may take a few minutes)..."
 
 # C++
-if docker exec "$(docker compose ps -q piston)" piston install c++ 10.2.0 2>/dev/null; then
+info "Installing C++ runtime..."
+if curl -f --max-time 300 -X POST http://localhost:2000/api/v2/packages \
+  -H "Content-Type: application/json" \
+  -d '{"language":"c++","version":"10.2.0"}' 2>&1; then
   info "Installed C++ runtime."
 else
   warn "C++ runtime install failed or already installed."
 fi
 
 # JavaScript
-if docker exec "$(docker compose ps -q piston)" piston install javascript 18.15.0 2>/dev/null; then
+info "Installing JavaScript runtime..."
+if curl -f --max-time 300 -X POST http://localhost:2000/api/v2/packages \
+  -H "Content-Type: application/json" \
+  -d '{"language":"javascript","version":"18.15.0"}' 2>&1; then
   info "Installed JavaScript runtime."
 else
   warn "JavaScript runtime install failed or already installed."
