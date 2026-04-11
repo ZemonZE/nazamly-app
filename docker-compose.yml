@@ -4,5 +4,12 @@ services:
     ports:
       - "2000:2000"
     restart: unless-stopped
+    privileged: true
     tmpfs:
       - /piston/jobs
+    volumes:
+      - piston_data:/piston
+      - ./piston-index.js:/piston_api/src/index.js
+
+volumes:
+  piston_data:

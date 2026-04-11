@@ -18,6 +18,14 @@ const materialFileSchema = new mongoose.Schema({
   driveFileId: { type: String, required: true, unique: true }, // Maps to Google Drive file
   driveWebViewLink: { type: String }, // Optional direct viewing link
   
+  // AI Concept Extraction Tracking
+  aiStatus: { 
+    type: String, 
+    enum: ['PENDING', 'PROCESSING', 'SUCCESS', 'FAILED'], 
+    default: 'PENDING' 
+  },
+  aiError: { type: String },
+
   // // Identifies the contributor. Nullable in case of automated system uploads.
   // uploadedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });

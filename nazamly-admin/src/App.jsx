@@ -21,6 +21,17 @@ function App() {
   const [userData, setUserData] = useState(null);
   const [isSidebarFolded, setIsSidebarFolded] = useState(false);
 
+  // --- Theme State ---
+  const [isDark, setIsDark] = useState(() => localStorage.getItem('adminTheme') === 'dark');
+
+  // Apply theme to document root and persist preference
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    localStorage.setItem('adminTheme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
+  const toggleTheme = () => setIsDark(prev => !prev);
+
   useEffect(() => {
     // Check if user is already logged in
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -96,15 +107,15 @@ function App() {
         alignItems: 'center', 
         justifyContent: 'center', 
         minHeight: '100vh',
-        color: '#6ee7b7',
-        background: '#061a10'
+        color: 'var(--blue-700)',
+        background: 'var(--bg-deep)'
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ 
             width: '40px', 
             height: '40px', 
-            border: '3px solid rgba(110, 231, 183, 0.3)',
-            borderTop: '3px solid #6ee7b7',
+            border: '3px solid var(--blue-glow)',
+            borderTop: '3px solid var(--blue-700)',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
@@ -132,6 +143,8 @@ function App() {
           onLogout={handleLogout} 
           userData={userData}
           onFoldChange={setIsSidebarFolded}
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
         />
         <main className={`main-content ${isSidebarFolded ? 'sidebar-folded' : ''}`}>
           <Routes>

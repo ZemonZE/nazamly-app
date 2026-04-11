@@ -1,5 +1,14 @@
 // src/services/ai.service.js
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const axios = require('axios');
+
+// In-Memory Model Cache for zero-latency hot-swapping
+let activeGeminiModelCache = null;
+
+const updateActiveGeminiModel = (model) => {
+    activeGeminiModelCache = model;
+    console.log(`[AI Cache] Active Gemini model hot-swapped to: ${model}`);
+};
 
 // Initialize AI (Gemini)
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -34,7 +43,8 @@ const extractScheduleFromImages = async (files) => {
         console.log(`📤 Dispatching request to Gemini Flash...`);
         
         // Recommended to use explicit model version
-        const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        const geminiModel = genAI.getGenerativeModel({ model: modelName });
         
         const geminiImageParts = files.map(file => ({
             inlineData: { data: file.buffer.toString("base64"), mimeType: file.mimetype }
@@ -83,7 +93,8 @@ const extractLectureConcepts = async (pdfBuffer) => {
 
     try {
         console.log('[AI Service] Sending PDF to Gemini for concept extraction...');
-        const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        const geminiModel = genAI.getGenerativeModel({ model: modelName });
         const pdfPart = {
             inlineData: {
                 data: pdfBuffer.toString('base64'),
@@ -100,8 +111,9 @@ const extractLectureConcepts = async (pdfBuffer) => {
                 break; // Exit retry loop on success
             } catch (err) {
                 if (attempt === MAX_RETRIES) throw err;
-                console.warn(`[AI Service] Attempt ${attempt} failed: ${err.message}, retrying in 5s...`);
-                await new Promise(res => setTimeout(res, 5000));
+                const delayMs = Math.pow(2, attempt) * 1000;
+                console.warn(`[AI Service] Attempt ${attempt} failed: ${err.message}, retrying in ${delayMs / 1000}s...`);
+                await new Promise(res => setTimeout(res, delayMs));
             }
         }
 
@@ -157,7 +169,8 @@ const parseExamAndLinkToLectures = async (pdfBuffer, examDetails = '', lectureCo
     try {
         console.log('[AI Service] Sending exam PDF to Gemini for smart extraction and linking...');
 
-        const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        const geminiModel = genAI.getGenerativeModel({ model: modelName });
 
         // Encode the PDF buffer as base64 and pass it as inline multimodal data
         const pdfPart = {
@@ -183,8 +196,9 @@ const parseExamAndLinkToLectures = async (pdfBuffer, examDetails = '', lectureCo
                 break; // Exit retry loop on success
             } catch (err) {
                 if (attempt === MAX_RETRIES) throw err;
-                console.warn(`[AI Service] Attempt ${attempt} failed: ${err.message}, retrying in 5s...`);
-                await new Promise(res => setTimeout(res, 5000));
+                const delayMs = Math.pow(2, attempt) * 1000;
+                console.warn(`[AI Service] Attempt ${attempt} failed: ${err.message}, retrying in ${delayMs / 1000}s...`);
+                await new Promise(res => setTimeout(res, delayMs));
             }
         }
 
@@ -218,7 +232,8 @@ const analyzeProfessorStyle = async (questionsArray) => {
     try {
         console.log(`[AI Service] Analyzing professor style from ${questionsArray.length} questions...`);
 
-        const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        const geminiModel = genAI.getGenerativeModel({ model: modelName });
 
         // Pass the questions array as a stringified text payload alongside the prompt
         const questionsPayload = JSON.stringify(questionsArray);
@@ -266,7 +281,8 @@ const generateCustomExamWithRAG = async (aggregatedConcepts, professorProfile, e
     try {
         console.log(`[AI Service] Generating ${examType} exam with ${questionCount} questions using RAG...`);
 
-        const geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        const geminiModel = genAI.getGenerativeModel({ model: modelName });
 
         const result = await geminiModel.generateContent(prompt);
         const responseText = result.response.text();
@@ -294,4 +310,90 @@ const generateCustomExamWithRAG = async (aggregatedConcepts, professorProfile, e
     }
 };
 
-module.exports = { extractScheduleFromImages, extractLectureConcepts, parseExamAndLinkToLectures, analyzeProfessorStyle, generateCustomExamWithRAG };
+/**
+ * Evaluates a batch of essay questions and answers using Gemini.
+ * Returns strict binary validation and explanation.
+ * @param {Array<{id: string, questionText: string, correctAnswer: string, studentAnswer: string}>} essayBatch
+ */
+const evaluateEssayAnswers = async (essayBatch) => {
+    if (!essayBatch || essayBatch.length === 0) return [];
+
+    const prompt = `
+You are an intelligent, fair, and flexible academic Teaching Assistant. Your job is to grade a student's short-answer/essay response.
+You will be provided with: 1. The Question, 2. The Model Answer / Required Concepts, 3. The Student's Answer.
+
+CRITICAL GRADING RULES:
+- Evaluate SEMANTIC MEANING, not exact wording. If the student's answer captures the core idea and demonstrates understanding, you MUST mark isCorrect: true.
+- Accept synonyms, different phrasing, and bullet points. Do not penalize for spelling or grammatical errors.
+- Only mark isCorrect: false if the answer is fundamentally wrong, hallucinates completely unrelated info, or misses the absolute core technical concept entirely.
+- Provide brief, encouraging feedback in the explanation field. If they got it right but missed a tiny detail, mark it true but mention the detail in the explanation.
+
+Output ONLY a valid JSON array matching this exact schema: [{"questionId": "string", "isCorrect": boolean, "explanation": "string"}]
+
+Input Batch:
+${JSON.stringify(essayBatch, null, 2)}
+`;
+
+    try {
+        console.log(`[AI Service] Evaluating ${essayBatch.length} essay answers...`);
+        const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        const geminiModel = genAI.getGenerativeModel({ model: modelName });
+        
+        const result = await geminiModel.generateContent(prompt);
+        const responseText = result.response.text();
+        
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) {
+            throw new Error("Gemini did not return a valid JSON array.");
+        }
+
+        const parsed = JSON.parse(jsonMatch[0].trim());
+        console.log(`[AI Service] Essay evaluation completed gracefully.`);
+        return parsed;
+
+    } catch (error) {
+        console.error(`[AI Service] Essay Evaluation Failed: ${error.message}`);
+        throw new Error(`AI Grader Failed: ${error.message}`);
+    }
+};
+
+/**
+ * Dynamically fetches available Gemini models from Google REST API.
+ * Filters for models supporting 'generateContent'.
+ */
+const fetchAvailableGeminiModels = async () => {
+    try {
+        const apiKey = process.env.GEMINI_API_KEY;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+        
+        console.log('[AI Service] Fetching available Gemini models from Google REST API...');
+        const response = await axios.get(url);
+        
+        if (!response.data || !Array.isArray(response.data.models)) {
+            throw new Error('Invalid response structure from Google API');
+        }
+
+        const models = response.data.models
+            .filter(m => m.supportedGenerationMethods.includes('generateContent'))
+            .map(m => m.name.replace('models/', ''));
+
+        console.log(`[AI Service] Successfully discovered ${models.length} dynamic models.`);
+        return models;
+
+    } catch (error) {
+        console.error(`[AI Service] Dynamic model discovery failed: ${error.message}. Falling back to defaults.`);
+        // Production fallback to ensure zero downtime
+        return ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+    }
+};
+
+module.exports = { 
+    extractScheduleFromImages, 
+    extractLectureConcepts, 
+    parseExamAndLinkToLectures, 
+    analyzeProfessorStyle, 
+    generateCustomExamWithRAG, 
+    evaluateEssayAnswers, 
+    updateActiveGeminiModel,
+    fetchAvailableGeminiModels 
+};

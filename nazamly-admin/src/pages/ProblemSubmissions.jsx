@@ -70,17 +70,17 @@ function ProblemSubmissions() {
       {error && (
         <div style={{
           padding: '12px 16px',
-          background: 'rgba(239, 68, 68, 0.15)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
+          background: 'rgba(220, 38, 38, 0.15)',
+          border: '1px solid rgba(220, 38, 38, 0.3)',
           borderRadius: '10px',
-          color: '#fca5a5',
+          color: 'var(--error)',
           marginBottom: '16px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
           {error}
-          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: '18px' }}>×</button>
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: '18px' }}>×</button>
         </div>
       )}
 
@@ -107,7 +107,7 @@ function ProblemSubmissions() {
                 return (
                   <>
                     <tr key={rowId}>
-                      <td style={{ color: '#e8f9f0', fontWeight: 500 }}>
+                      <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
                         {sub.studentId?._id || sub.studentId || '—'}
                       </td>
                       <td>
@@ -130,12 +130,12 @@ function ProblemSubmissions() {
                             margin: 0,
                             padding: '16px 24px',
                             background: 'rgba(0, 0, 0, 0.3)',
-                            color: '#a3c9b4',
+                            color: 'var(--text-secondary)',
                             fontSize: '13px',
                             fontFamily: 'monospace',
                             whiteSpace: 'pre-wrap',
                             wordBreak: 'break-all',
-                            borderTop: '1px solid rgba(52, 211, 153, 0.1)',
+                            borderTop: '1px solid rgba(59, 109, 224, 0.1)',
                           }}>
                             {sub.code || '(no code available)'}
                           </pre>
@@ -161,14 +161,14 @@ function ProblemSubmissions() {
           letter-spacing: 0.5px;
         }
         .verdict-ac {
-          background: rgba(16, 185, 129, 0.2);
-          color: #6ee7b7;
-          border: 1px solid rgba(16, 185, 129, 0.3);
+          background: rgba(37, 99, 235, 0.2);
+          color: var(--blue-700);
+          border: 1px solid rgba(37, 99, 235, 0.3);
         }
         .verdict-wa {
-          background: rgba(239, 68, 68, 0.15);
-          color: #fca5a5;
-          border: 1px solid rgba(239, 68, 68, 0.3);
+          background: rgba(220, 38, 38, 0.15);
+          color: var(--error);
+          border: 1px solid rgba(220, 38, 38, 0.3);
         }
         .verdict-error {
           background: rgba(245, 158, 11, 0.15);
@@ -177,7 +177,7 @@ function ProblemSubmissions() {
         }
         .verdict-other {
           background: rgba(163, 201, 180, 0.1);
-          color: #a3c9b4;
+          color: var(--text-secondary);
           border: 1px solid rgba(163, 201, 180, 0.2);
         }
       `}</style>

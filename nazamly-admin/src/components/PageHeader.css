@@ -5,13 +5,13 @@
 .page-title {
   font-size: 28px;
   font-weight: 700;
-  color: #e8f9f0;
+  color: var(--text-primary);
   margin: 0 0 8px 0;
-  text-shadow: 0 0 20px rgba(110, 231, 183, 0.2);
+  text-shadow: 0 0 20px rgba(37, 99, 235, 0.2);
 }
 
 .page-description {
   font-size: 14px;
-  color: #a3c9b4;
+  color: var(--text-secondary);
   margin: 0;
 }

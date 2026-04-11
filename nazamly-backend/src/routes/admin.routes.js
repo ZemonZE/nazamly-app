@@ -183,6 +183,7 @@ router.post('/course-materials/:courseCode/upload/:subFolderType', upload.single
  * @access  Private/Admin
  */
 router.delete('/course-materials/:courseCode/files/:subFolderType/:fileId', courseMaterialsCtrl.deleteFileFromSubFolder);
+router.post('/materials/reprocess/:courseCode/:subFolderType/:fileId', courseMaterialsCtrl.reprocessFile);
 
 // ── Users ──
 /**
@@ -208,5 +209,16 @@ router.patch('/users/:id/status', adminCtrl.updateUserStatus);
 
 // ── Past Exams Ingestion ──
 router.post('/upload-past-exam', upload.single('pdf'), adminCtrl.uploadPastExam);
+
+// ── Doctor ↔ Course Linkage & Profiling ──
+// Use these endpoints to wire doctors to courses and back-fill DoctorInsight records.
+// Step 1: Link a doctor to a course (creates a CourseInstance)
+router.post('/link-doctor-to-course', adminCtrl.linkDoctorToCourse);
+// Step 2: Trigger professor-style profiling using existing archived questions
+router.post('/trigger-profiling/:courseId', adminCtrl.triggerProfiling);
+
+// ── AI Configuration ──
+router.get('/ai/settings', adminCtrl.getAiSettings);
+router.post('/ai/settings', adminCtrl.updateAiSettings);
 
 module.exports = router;

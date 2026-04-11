@@ -194,7 +194,23 @@ exports.getSubFolderFiles = async (req, res) => {
     const subFolder = cm.subFolders.find((sf) => sf.type === subFolderType);
     if (!subFolder) return res.status(404).json({ error: `Sub-folder "${subFolderType}" not found` });
 
-    const files = await driveService.listFiles(subFolder.driveFolderId);
+    let files = await driveService.listFiles(subFolder.driveFolderId);
+    
+    // Enrich Drive files with MongoDB status mapping (aiStatus, aiError, mongoId)
+    const MaterialFile = require('../models/materials/materialFile.model');
+    const driveFileIds = files.map(f => f.id);
+    const mongoMaterials = await MaterialFile.find({ driveFileId: { $in: driveFileIds } });
+    
+    files = files.map(f => {
+      const match = mongoMaterials.find(m => m.driveFileId === f.id);
+      return {
+        ...f,
+        mongoId: match ? match._id : null,
+        aiStatus: match ? match.aiStatus : 'PENDING',
+        aiError: match ? match.aiError : null
+      };
+    });
+
     res.json({
       courseCode: cm.courseCode,
       courseName: cm.courseName,
@@ -253,8 +269,11 @@ exports.uploadToSubFolder = async (req, res) => {
 
     if (['lectures', 'Lectures', 'المحاضرات'].includes(subFolderType)) {
       const lectureProcessor = require('../services/lectureProcessor.service');
-      // Fire-and-forget: AI triggered and concepts will be saved linked to the real materialId!
-      lectureProcessor.processLectureBackground(savedMaterial._id, driveFile.id);
+      // Resolve courseId so the processor can link to doctor via CourseInstance
+      const Course = require('../models/academic/course.model');
+      const courseDoc = await Course.findOne({ courseCode: courseCode.toUpperCase().trim() }).lean();
+      // Fire-and-forget: pass courseId for professor-style profiling
+      lectureProcessor.processLectureBackground(savedMaterial._id, driveFile.id, courseDoc?._id || null);
     } else if (['mids', 'midterms', 'finals', 'final', 'امتحانات'].includes(subFolderType)) {
       console.log('[ExamProcessor] Triggered for:', subFolderType);
       
@@ -323,7 +342,7 @@ exports.uploadToSubFolder = async (req, res) => {
                        linkedLectureId: bestLectureId,
                        questionText: q.questionText,
                        options: Array.isArray(q.options) ? q.options : [],
-                       correctAnswer: q.correctAnswer || "",
+                       correctAnswer: q.correctAnswer || 'Not provided in exam file',
                        examType,
                        year: new Date().getFullYear() // Default year
                    });
@@ -495,5 +514,47 @@ exports.syncDriveToDatabase = async (req, res) => {
   } catch (error) {
     console.error('Error syncing drive to database:', error.message);
     res.status(500).json({ error: 'Failed to sync drive to database' });
+  }
+};
+
+/**
+ * POST /api/admin/materials/reprocess/:courseCode/:subFolderType/:fileId
+ * Manually re-trigger AI processing for a failed file without re-uploading to Drive.
+ */
+exports.reprocessFile = async (req, res) => {
+  try {
+    const { courseCode, subFolderType, fileId } = req.params;
+    console.log(`[Reprocess] Triggered for fileId=${fileId} in course=${courseCode}`);
+
+    const MaterialFile = require('../models/materials/materialFile.model');
+    const file = await MaterialFile.findById(fileId);
+
+    if (!file) {
+      return res.status(404).json({ error: 'Material file not found' });
+    }
+
+    if (!file.driveFileId) {
+      return res.status(400).json({ error: 'File lacks a driveFileId for processing' });
+    }
+
+    // Set status to processing immediately so the UI reflects it
+    await MaterialFile.findByIdAndUpdate(fileId, { aiStatus: 'PROCESSING', aiError: null });
+
+    // Fire-and-forget the reprocessing — resolve courseId via MaterialFile → Course link if possible
+    const lectureProcessor = require('../services/lectureProcessor.service');
+    // Try to resolve courseId from the material's folder; fall back gracefully if not found
+    let reprocessCourseId = null;
+    try {
+      const CourseMaterial = require('../models/materials/courseMaterial.model');
+      const cm = await CourseMaterial.findOne({ 'subFolders.driveWebViewLink': { $exists: true } }).lean();
+      // Lightweight approach: pass null and let lectureProcessor skip profiling gracefully
+    } catch (_) { /* ignore */ }
+    lectureProcessor.processLectureBackground(fileId, file.driveFileId, reprocessCourseId);
+
+    res.json({ message: 'Reprocessing triggered successfully', status: 'PROCESSING' });
+
+  } catch (error) {
+    console.error('[Reprocess] Error triggering reprocess:', error.message);
+    res.status(500).json({ error: 'Failed to trigger reprocessing' });
   }
 };

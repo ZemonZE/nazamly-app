@@ -106,9 +106,9 @@ function Courses() {
       <PageHeader title="Courses" description="Manage academic courses" />
 
       {error && (
-        <div style={{ padding: '12px 16px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '10px', color: '#fca5a5', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '12px 16px', background: 'rgba(220, 38, 38, 0.15)', border: '1px solid rgba(220, 38, 38, 0.3)', borderRadius: '10px', color: 'var(--error)', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {error}
-          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: '#fca5a5', cursor: 'pointer', fontSize: '18px' }}>×</button>
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: '18px' }}>×</button>
         </div>
       )}
 
@@ -146,7 +146,7 @@ function Courses() {
               filteredCourses.map(course => (
                 <tr key={course._id}>
                   <td><span className="role-badge">{course.courseCode}</span></td>
-                  <td style={{ color: '#e8f9f0', fontWeight: 500 }}>{course.courseName}</td>
+                  <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{course.courseName}</td>
                   <td>{course.level}</td>
                   <td>{course.creditHours}</td>
                   <td>{'⭐'.repeat(course.difficulty || 3)}</td>
