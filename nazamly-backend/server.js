@@ -33,6 +33,48 @@ connectDB()
       console.log("=".repeat(60));
       console.log("💡 Use the Network URL in your mobile app");
       console.log("=".repeat(60));
+
+      // ── START PYTHON OCR SERVICE AUTOMATICALLY ──
+      const { spawn } = require('child_process');
+      const path = require('path');
+      const fs = require('fs');
+
+      const isWindows = os.platform() === 'win32';
+      // Target the virtual environment python if it exists
+      const venvPythonPath = path.join(__dirname, 'ocr-service', 'venv', isWindows ? 'Scripts' : 'bin', isWindows ? 'python.exe' : 'python');
+      const pythonExecutable = fs.existsSync(venvPythonPath) ? venvPythonPath : 'python';
+
+      console.log(`🤖 Starting OCR Service using: ${pythonExecutable === 'python' ? 'System Python' : 'Virtual Environment'}`);
+      
+      const pythonProcess = spawn(pythonExecutable, ['app.py'], {
+        cwd: path.join(__dirname, 'ocr-service'),
+        shell: false
+      });
+
+      pythonProcess.stdout.on('data', (data) => {
+        console.log(`[🐍 PYTHON OCR]: ${data.toString().trim()}`);
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        console.error(`[🐍 PYTHON ERR]: ${data.toString().trim()}`);
+      });
+
+      pythonProcess.on('close', (code) => {
+        console.log(`[🐍 PYTHON OCR]: Process exited with code ${code}`);
+      });
+
+      // Ensure child process is killed when Node exits
+      const killPython = () => {
+        if (pythonProcess && !pythonProcess.killed) {
+          pythonProcess.kill();
+        }
+      };
+
+      process.on('exit', killPython);
+      process.on('SIGINT', () => { killPython(); process.exit(); });
+      process.on('SIGTERM', () => { killPython(); process.exit(); });
+      // Nodemon uses SIGUSR2 for restarts
+      process.once('SIGUSR2', () => { killPython(); process.kill(process.pid, 'SIGUSR2'); });
     });
   })
   .catch((err) => {

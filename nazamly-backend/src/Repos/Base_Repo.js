@@ -132,7 +132,7 @@ class Base_Repo {
       { _id: id, isDeleted: { $ne: true } },
       data,
       {
-        new: true,
+        returnDocument: 'after',
         runValidators: true,
       },
     );
@@ -154,7 +154,7 @@ class Base_Repo {
     return await this.model.findByIdAndUpdate(
       id,
       { isDeleted: true, deletedAt: new Date() },
-      { new: true },
+      { returnDocument: 'after' },
     );
   }
 
@@ -181,7 +181,7 @@ class Base_Repo {
     return await this.model.findByIdAndUpdate(
       id,
       { isDeleted: false, $unset: { deletedAt: 1 } },
-      { new: true },
+      { returnDocument: 'after' },
     );
   }
 

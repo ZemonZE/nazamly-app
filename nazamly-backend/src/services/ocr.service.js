@@ -1,54 +1,36 @@
-const axios = require('axios');
+const axios    = require('axios');
 const FormData = require('form-data');
+const fs       = require('fs');
 
-const OCR_SERVICE_URL = process.env.OCR_SERVICE_URL || 'http://localhost:5001';
+const OCR_URL = process.env.OCR_SERVICE_URL || 'http://localhost:5001';
 
 /**
- * extractTranscript
- * Sends a file buffer to the Python OCR microservice and returns extracted courses.
- * @param {Buffer} fileBuffer - The uploaded file buffer from multer memoryStorage
- * @param {string} originalName - Original filename (used to determine extension)
- * @param {string} mimeType - MIME type of the file
- * @returns {Promise<object>} Extracted transcript data from the OCR service
+ * Send a file to the Python OCR microservice for extraction.
+ *
+ * @param {string} filePath  Absolute path to the uploaded file on disk
+ * @returns {Promise<object>} { courses[], semester, student_id, confidence, source }
+ * @throws Will throw if the service is unreachable or returns an error
  */
-async function extractTranscript(fileBuffer, originalName, mimeType) {
+async function extractTranscript(filePath) {
   const form = new FormData();
-  form.append('file', fileBuffer, {
-    filename: originalName,
-    contentType: mimeType,
-  });
+  form.append('file', fs.createReadStream(filePath));
 
   try {
-    const response = await axios.post(`${OCR_SERVICE_URL}/extract`, form, {
+    const response = await axios.post(`${OCR_URL}/extract`, form, {
       headers: { ...form.getHeaders() },
-      timeout: 45000, // 45s timeout for large images / Gemini latency
+      timeout: 60_000,   // 60s — Gemini Vision calls can take time for large images
     });
-
     return response.data;
-  } catch (error) {
-    if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-      throw new Error('OCR service unavailable');
+  } catch (err) {
+    if (err.code === 'ECONNREFUSED') {
+      throw new Error('OCR service is not running. Start it with: cd ocr-service && python app.py');
     }
-    if (error.response) {
-      const msg = error.response.data?.error || error.message;
+    if (err.response) {
+      const msg = err.response.data?.error || err.response.data?.message || err.message;
       throw new Error(`OCR service error: ${msg}`);
     }
-    throw new Error(`OCR service unreachable: ${error.message}`);
+    throw new Error(`OCR request failed: ${err.message}`);
   }
 }
 
-/**
- * checkOcrHealth
- * Pings the OCR service health endpoint.
- * @returns {Promise<boolean>}
- */
-async function checkOcrHealth() {
-  try {
-    const response = await axios.get(`${OCR_SERVICE_URL}/health`, { timeout: 5000 });
-    return response.data?.status === 'ok';
-  } catch {
-    return false;
-  }
-}
-
-module.exports = { extractTranscript, checkOcrHealth };
+module.exports = { extractTranscript };

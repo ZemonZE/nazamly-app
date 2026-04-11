@@ -13,8 +13,8 @@ const ALLOWED_UPDATE_FIELDS = [
   "studentCardPhotoURL",
   "accessStatus",
   "role",
-  "currentCGPA",
-  "earnedCreditHours",
+  "cgpa",
+  "completedHours",
   "pastSemesters",
   "termCourses"
 ];
@@ -81,7 +81,7 @@ class User_Repo extends Base_Repo {
       { _id: id, isDeleted: { $ne: true } },
       validData,
       {
-        new: true,
+        returnDocument: 'after',
         runValidators: true,
       },
     );
@@ -135,7 +135,7 @@ class User_Repo extends Base_Repo {
       { firebaseUid, isDeleted: { $ne: true } },
       validData,
       {
-        new: true,
+        returnDocument: 'after',
         runValidators: true,
       },
     );
@@ -150,7 +150,7 @@ class User_Repo extends Base_Repo {
     return await this.model.findOneAndUpdate(
       { firebaseUid, isDeleted: { $ne: true } },
       { isDeleted: true, deletedAt: new Date() },
-      { new: true },
+      { returnDocument: 'after' },
     );
   }
 

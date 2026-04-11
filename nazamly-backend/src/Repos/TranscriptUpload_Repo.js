@@ -42,6 +42,23 @@ class TranscriptUpload_Repo extends Base_Repo {
       { new: true }
     );
   }
+  /**
+   * getCompletedByUserId - Fetches completed transcripts for GPA history logic safely scoped.
+   * @param {String} userId - The MongoDB ObjectId of the user
+   * @param {Number} limit - Optional limit of records to fetch
+   * @returns {Promise<Array>}
+   */
+  async getCompletedByUserId(userId, limit = 20) {
+    return await this.model.find({
+      userId,
+      status: 'completed',
+      isDeleted: { $ne: true }
+    })
+      .sort({ createdAt: -1 })
+      .limit(Number(limit))
+      .select('semester termGPA totalCreditHours createdAt ocrSource')
+      .lean();
+  }
 }
 
 module.exports = new TranscriptUpload_Repo();

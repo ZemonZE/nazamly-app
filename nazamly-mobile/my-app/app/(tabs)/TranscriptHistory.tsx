@@ -95,17 +95,49 @@ export default function TranscriptHistoryScreen() {
             <Text style={[s.loadingText, { color: colors.textMuted }]}>Loading history...</Text>
           </View>
         ) : history.length === 0 ? (
-          <View style={[s.emptyCard, { backgroundColor: colors.card }]}>
-            <Feather name="file-text" size={40} color={colors.indigoLight} />
-            <Text style={[s.emptyTitle, { color: colors.textSecondary }]}>No transcripts yet</Text>
-            <Text style={[s.emptySub, { color: colors.textMuted }]}>Upload your first transcript to get started</Text>
+          <View style={s.emptyWrap}>
+            {/* Decorative blurred circles */}
+            <View style={[s.blob1, { backgroundColor: colors.indigo + '18' }]} />
+            <View style={[s.blob2, { backgroundColor: colors.teal + '12' }]} />
+
+            {/* Icon container */}
+            <View style={[s.emptyIconRing, { borderColor: colors.indigoLight + '40', backgroundColor: colors.indigoPale }]}>
+              <View style={[s.emptyIconInner, { backgroundColor: colors.indigo + '20' }]}>
+                <Feather name="file-text" size={36} color={colors.indigo} />
+              </View>
+            </View>
+
+            <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>No transcripts yet</Text>
+            <Text style={[s.emptySub, { color: colors.textMuted }]}>
+              Upload your academic transcript and let AI extract your grades automatically
+            </Text>
+
+            {/* Feature pills */}
+            <View style={s.pillRow}>
+              {[
+                { icon: 'cpu', label: 'AI Powered' },
+                { icon: 'zap', label: 'Instant' },
+                { icon: 'shield', label: 'Secure' },
+              ].map(p => (
+                <View key={p.label} style={[s.pill, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Feather name={p.icon as any} size={12} color={colors.indigo} />
+                  <Text style={[s.pillText, { color: colors.textSecondary }]}>{p.label}</Text>
+                </View>
+              ))}
+            </View>
+
             <TouchableOpacity
               style={[s.uploadBtn, { backgroundColor: colors.indigo }]}
               onPress={() => router.push('/(tabs)/TranscriptUpload' as any)}
+              activeOpacity={0.85}
             >
               <Feather name="upload" size={16} color="#fff" />
-              <Text style={s.uploadBtnText}>Upload Transcript</Text>
+              <Text style={s.uploadBtnText}>Upload Your First Transcript</Text>
             </TouchableOpacity>
+
+            <Text style={[s.emptyHint, { color: colors.textMuted }]}>
+              Supports PDF, JPG, PNG and WEBP
+            </Text>
           </View>
         ) : (
           history.map(item => (
@@ -161,11 +193,19 @@ const s = StyleSheet.create({
   subtitle: { fontSize: 13, marginTop: 2 },
   centered: { alignItems: 'center', paddingTop: 60, gap: 12 },
   loadingText: { fontSize: 14 },
-  emptyCard: { borderRadius: 20, padding: 40, alignItems: 'center', gap: 12, marginTop: 20 },
-  emptyTitle: { fontSize: 17, fontWeight: '700' },
-  emptySub: { fontSize: 14, textAlign: 'center' },
-  uploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 8 },
-  uploadBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  emptyWrap: { alignItems: 'center', paddingTop: 32, paddingBottom: 20, paddingHorizontal: 8, overflow: 'hidden' },
+  blob1: { position: 'absolute', width: 220, height: 220, borderRadius: 110, top: -20, left: -60 },
+  blob2: { position: 'absolute', width: 160, height: 160, borderRadius: 80, top: 60, right: -40 },
+  emptyIconRing: { width: 100, height: 100, borderRadius: 50, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  emptyIconInner: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
+  emptyTitle: { fontSize: 20, fontWeight: '800', marginBottom: 10, textAlign: 'center' },
+  emptySub: { fontSize: 14, textAlign: 'center', lineHeight: 22, paddingHorizontal: 16, marginBottom: 24 },
+  pillRow: { flexDirection: 'row', gap: 8, marginBottom: 28 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
+  pillText: { fontSize: 12, fontWeight: '600' },
+  uploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
+  uploadBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  emptyHint: { fontSize: 12, marginTop: 14 },
   card: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
   cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 14 },
   fileIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
