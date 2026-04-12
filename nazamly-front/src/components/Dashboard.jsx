@@ -5,6 +5,7 @@ import {
   IconBook,
   IconQuestion,
   IconTable,
+  IconCode,
 } from "../Icons/DashboardIcons";
 
 const tools = [
@@ -37,6 +38,12 @@ const tools = [
     icon: <IconTable />,
     label: "Schedule Generator",
     desc: "Convert your data into professionally formatted schedules",
+  },
+  {
+    path: "/dashboard/coding",
+    icon: <IconCode />,
+    label: "Coding Practice",
+    desc: "Sharpen your programming skills with interactive challenges and real-time feedback.",
   },
 ];
 

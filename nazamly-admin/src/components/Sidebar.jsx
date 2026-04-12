@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { 
-  IconBrain, 
-  IconChevronLeft, 
+import { useState } from "react";
+import { NavLink } from "react-router-dom";
+import {
+  IconBrain,
+  IconChevronLeft,
   IconChevronRight,
   IconUser,
   IconDepartments,
@@ -17,15 +17,16 @@ import {
   IconAdmin,
   IconCode,
   IconSun,
-  IconMoon
-} from '../Icons/Icons';
-import './Sidebar.css';
+  IconMoon,
+  IconHome,
+} from "../Icons/Icons";
+import "./Sidebar.css";
 
 function Sidebar({ onLogout, userData, onFoldChange, isDark, onToggleTheme }) {
   const [isFolded, setIsFolded] = useState(false);
-  const userEmail = userData?.user?.email || 'admin@nazamly.com';
-  const userName = userData?.user?.name || 'Admin User';
-  const userRole = userData?.user?.role || 'admin';
+  const userEmail = userData?.user?.email || "admin@nazamly.com";
+  const userName = userData?.user?.name || "Admin User";
+  const userRole = userData?.user?.role || "admin";
 
   const toggleSidebar = () => {
     const newFoldedState = !isFolded;
@@ -36,13 +37,17 @@ function Sidebar({ onLogout, userData, onFoldChange, isDark, onToggleTheme }) {
   };
 
   const getRoleIcon = () => {
-    return userRole === 'student' ? <IconStudent /> : <IconAdmin />;
+    return userRole === "student" ? <IconStudent /> : <IconAdmin />;
   };
 
   return (
-    <div className={`sidebar ${isFolded ? 'folded' : ''}`}>
+    <div className={`sidebar ${isFolded ? "folded" : ""}`}>
       <div className="sidebar-header">
-        <button className="toggle-btn" onClick={toggleSidebar} title={isFolded ? 'Expand' : 'Collapse'}>
+        <button
+          className="toggle-btn"
+          onClick={toggleSidebar}
+          title={isFolded ? "Expand" : "Collapse"}
+        >
           {isFolded ? <IconChevronRight /> : <IconChevronLeft />}
         </button>
         <div className="sidebar-header-content">
@@ -58,7 +63,17 @@ function Sidebar({ onLogout, userData, onFoldChange, isDark, onToggleTheme }) {
 
       <nav className="sidebar-nav">
         <div className="nav-section">
-          {!isFolded && <div className="nav-section-title">USER MANAGEMENT</div>}
+          {!isFolded && <div className="nav-section-title">OVERVIEW</div>}
+          <NavLink to="/" className="nav-link" title="Home">
+            <IconHome />
+            {!isFolded && <span>Home</span>}
+          </NavLink>
+        </div>
+
+        <div className="nav-section">
+          {!isFolded && (
+            <div className="nav-section-title">USER MANAGEMENT</div>
+          )}
           <NavLink to="/users" className="nav-link" title="Users">
             <IconUser />
             {!isFolded && <span>Users</span>}
@@ -66,7 +81,9 @@ function Sidebar({ onLogout, userData, onFoldChange, isDark, onToggleTheme }) {
         </div>
 
         <div className="nav-section">
-          {!isFolded && <div className="nav-section-title">ACADEMIC CATALOG</div>}
+          {!isFolded && (
+            <div className="nav-section-title">ACADEMIC CATALOG</div>
+          )}
           <NavLink to="/departments" className="nav-link" title="Departments">
             <IconDepartments />
             {!isFolded && <span>Departments</span>}
@@ -79,7 +96,11 @@ function Sidebar({ onLogout, userData, onFoldChange, isDark, onToggleTheme }) {
             <IconDoctors />
             {!isFolded && <span>Doctors</span>}
           </NavLink>
-          <NavLink to="/course-instances" className="nav-link" title="Course Instances">
+          <NavLink
+            to="/course-instances"
+            className="nav-link"
+            title="Course Instances"
+          >
             <IconCourseInstances />
             {!isFolded && <span>Course Instances</span>}
           </NavLink>
@@ -90,12 +111,18 @@ function Sidebar({ onLogout, userData, onFoldChange, isDark, onToggleTheme }) {
         </div>
 
         <div className="nav-section">
-          {!isFolded && <div className="nav-section-title">CONTENT MANAGEMENT</div>}
+          {!isFolded && (
+            <div className="nav-section-title">CONTENT MANAGEMENT</div>
+          )}
           <NavLink to="/materials" className="nav-link" title="Materials">
             <IconMaterials />
             {!isFolded && <span>Materials</span>}
           </NavLink>
-          <NavLink to="/coding-problems" className="nav-link" title="Coding Problems">
+          <NavLink
+            to="/coding-problems"
+            className="nav-link"
+            title="Coding Problems"
+          >
             <IconCode />
             {!isFolded && <span>Coding Problems</span>}
           </NavLink>
@@ -119,9 +146,7 @@ function Sidebar({ onLogout, userData, onFoldChange, isDark, onToggleTheme }) {
             <div className="user-details">
               <div className="user-role-container">
                 <div className="admin-label">{userName}</div>
-                <div className="user-role-badge">
-                  {getRoleIcon()}
-                </div>
+                <div className="user-role-badge">{getRoleIcon()}</div>
               </div>
               <div className="admin-email">{userEmail}</div>
             </div>
@@ -130,26 +155,41 @@ function Sidebar({ onLogout, userData, onFoldChange, isDark, onToggleTheme }) {
               <button
                 className="theme-toggle-btn"
                 onClick={onToggleTheme}
-                title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
               >
                 {isDark ? <IconSun /> : <IconMoon />}
               </button>
-              <button className="sign-out-btn-inline" onClick={onLogout} title="Sign Out">
+              <button
+                className="sign-out-btn-inline"
+                onClick={onLogout}
+                title="Sign Out"
+              >
                 <IconSignOut />
               </button>
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
             {/* Theme toggle in folded state */}
             <button
               className="theme-toggle-btn"
               onClick={onToggleTheme}
-              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {isDark ? <IconSun /> : <IconMoon />}
             </button>
-            <button className="sign-out-btn-folded" onClick={onLogout} title="Sign Out">
+            <button
+              className="sign-out-btn-folded"
+              onClick={onLogout}
+              title="Sign Out"
+            >
               <IconSignOut />
             </button>
           </div>

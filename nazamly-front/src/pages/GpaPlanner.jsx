@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import "../styles/GpaPlanner.css";
 import {
   calculateTermGPA as apiCalculate,
@@ -112,11 +113,18 @@ function CircularProgress({
    MAIN COMPONENT
 ══════════════════════════════════════ */
 function GpaPlanner() {
+  const location = useLocation();
   const [profile, setProfile] = useState(null);
   const [cgpaInput, setCgpaInput] = useState("");
   const [hoursInput, setHoursInput] = useState("");
   const [profileError, setProfileError] = useState("");
   const [activeTab, setActiveTab] = useState("calculator");
+
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+  }, [location.state]);
 
   /* Dynamic courses loaded from API */
   const [courses, setCourses] = useState([]);

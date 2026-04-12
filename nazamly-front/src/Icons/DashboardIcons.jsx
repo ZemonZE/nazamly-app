@@ -111,3 +111,19 @@ export const IconTrash = (props) => (
     <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
   </svg>
 );
+
+/* ── Coding (code) ── */
+export const IconCode = (props) => (
+  <svg {...iconProps} {...props}>
+    <polyline points="16 18 22 12 16 6" />
+    <polyline points="8 6 2 12 8 18" />
+  </svg>
+);
+
+/* ── Profile (user) ── */
+export const IconProfile = (props) => (
+  <svg {...iconProps} {...props}>
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);

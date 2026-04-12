@@ -56,29 +56,48 @@
   opacity: 0.6;
 }
 
-.cp-sort-btn {
-  padding: 0.3rem 0.75rem;
-  border-radius: 20px;
-  border: 1px solid var(--border-color, #ddd);
+.cp-sort-btn-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color, #334155);
   background: transparent;
   cursor: pointer;
   font-size: 0.82rem;
-  color: inherit;
-  transition: background 0.15s, border-color 0.15s;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
 }
 
-.cp-sort-btn:hover {
-  background: var(--hover-bg, rgba(0,0,0,0.05));
+.cp-sort-btn-pill:hover {
+  background: rgba(59, 130, 246, 0.08); /* slight blue tint */
+  border-color: rgba(96, 165, 250, 0.4);
 }
 
-.cp-sort-btn.active {
-  background: var(--accent, #4f46e5);
-  color: #fff;
-  border-color: var(--accent, #4f46e5);
+.cp-sort-btn-pill.active {
+  background: rgba(59, 130, 246, 0.15); /* active blue bg */
+  color: var(--blue-400, #60a5fa);
+  border-color: var(--blue-500, #3b82f6);
+}
+
+.cp-sort-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
 }
 
 .cp-sort-arrow {
-  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.cp-sort-arrow.rotated {
+  transform: rotate(180deg);
 }
 
 /* Topic group */
@@ -122,10 +141,27 @@
   border-left: 3px solid #22c55e;
 }
 
-.cp-status-icon {
-  font-size: 1rem;
-  min-width: 1.2rem;
-  text-align: center;
+.cp-status-svg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+}
+
+.icon-solved {
+  color: #22c55e;
+}
+
+.icon-attempted {
+  color: #f59e0b;
+}
+
+.icon-unsolved-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color, #475569);
+  opacity: 0.5;
 }
 
 .cp-problem-title {
@@ -153,8 +189,15 @@
 .diff-hard { background: #fee2e2; color: #dc2626; }
 
 .cp-ac-count {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   font-size: 0.78rem;
   opacity: 0.6;
+}
+
+.cp-ac-icon {
+  opacity: 0.8;
 }
 
 .cp-langs {
@@ -212,16 +255,37 @@
   font-size: 0.9rem;
 }
 
-.cp-empty {
+.cp-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 3rem;
-  opacity: 0.6;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
   text-align: center;
+  background: var(--glass-bg, rgba(30, 41, 59, 0.4));
+  border: 1px dashed var(--border-color, #475569);
+  border-radius: 16px;
+  margin-top: 2rem;
 }
 
-.cp-empty-icon {
-  font-size: 2.5rem;
+.cp-empty-svg {
+  color: var(--blue-400, #60a5fa);
+  opacity: 0.7;
+  margin-bottom: 0.5rem;
+}
+
+.cp-empty-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary, #f1f5f9);
+  margin: 0;
+}
+
+.cp-empty-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted, #94a3b8);
+  max-width: 350px;
+  line-height: 1.5;
+  margin: 0;
 }

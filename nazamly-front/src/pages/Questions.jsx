@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getMyCoursesMaterials, getSubFolderFiles } from "../services/materialsService";
 import { API_URL, auth } from "../firebase";
+import { useLocation } from "react-router-dom";
 
 import {
   GenerateIcon, ArchiveIcon, BrainIcon, QuizIcon, MidtermIcon, FinalIcon,
@@ -34,7 +35,25 @@ const EXAM_CONFIG = {
   Final:   { total: 60, mcq: 30, tf: 30 },
 };
 
+const getQuestionType = (q) => {
+  if (q.type) {
+    const t = q.type.toLowerCase();
+    if (t === "t/f" || t === "true/false") return "tf";
+    return t;
+  }
+  if (q.options && q.options.length === 2 && q.options.some(opt => opt.toLowerCase() === "true" || opt.toLowerCase() === "false")) return "tf";
+  if (q.options && q.options.length > 2) return "mcq";
+  return "essay";
+};
 
+const sortQuestionsByType = (questions) => {
+  const typeOrder = { mcq: 1, tf: 2, essay: 3 };
+  return [...questions].sort((a, b) => {
+    const typeA = getQuestionType(a);
+    const typeB = getQuestionType(b);
+    return (typeOrder[typeA] || 4) - (typeOrder[typeB] || 4);
+  });
+};
 
 // ══════════════════════════════════════════════
 //  CUSTOM SELECT COMPONENT
@@ -94,8 +113,15 @@ function NseCustomSelect({ value, onChange, options, placeholder, disabled, icon
 //  MAIN COMPONENT
 // ══════════════════════════════════════════════
 function Questions() {
+  const location = useLocation();
   // ── Tab Navigation ──
   const [activeMainTab, setActiveMainTab] = useState("generate"); // "generate" | "archive"
+
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveMainTab(location.state.activeTab);
+    }
+  }, [location.state]);
 
   // ── Step 1: Course Data ──
   const [courses, setCourses] = useState([]);
@@ -240,7 +266,7 @@ function Questions() {
         if (data.status === "generating") {
           setAiStatusMessage(data.message || "Generating questions...");
         } else if (data.status === "ready") {
-          setAiQuestions(data.questions || []);
+          setAiQuestions(sortQuestionsByType(data.questions || []));
           setAiLoading(false);
           setAiStatusMessage("");
           eventSource.close();
@@ -345,7 +371,7 @@ function Questions() {
       
       // Override local unstructured aiQuestions with the definitively graded snapshot
       if (responseData.attempt && responseData.attempt.questionsSnapshot) {
-          setAiQuestions(responseData.attempt.questionsSnapshot);
+          setAiQuestions(sortQuestionsByType(responseData.attempt.questionsSnapshot));
       }
       
       setAiSubmitted(true);
@@ -420,7 +446,9 @@ function Questions() {
         if (q.hasOwnProperty("isCorrect")) {
            return q.isCorrect ? acc + 1 : acc;
         }
-        return aiUserAnswers[idx] === q.correctAnswer ? acc + 1 : acc;
+        const ans = aiUserAnswers[idx] || "";
+        const correctAns = q.correctAnswer || "";
+        return ans.trim().toLowerCase() === correctAns.trim().toLowerCase() ? acc + 1 : acc;
       }, 0)
     : 0;
 
@@ -429,27 +457,40 @@ function Questions() {
       ? Math.round((aiScore / aiQuestions.length) * 100)
       : 0;
 
-  // ── Per-type breakdown (MCQ vs T/F) ──
-  const mcqQuestions = aiSubmitted ? aiQuestions.filter(q => q.type === "mcq") : [];
-  const tfQuestions  = aiSubmitted ? aiQuestions.filter(q => q.type === "tf")  : [];
+  // ── Per-type breakdown (MCQ vs T/F vs Essay) ──
+  const mcqQuestions = aiSubmitted ? aiQuestions.filter(q => getQuestionType(q) === "mcq") : [];
+  const tfQuestions  = aiSubmitted ? aiQuestions.filter(q => getQuestionType(q) === "tf")  : [];
+  const essayQuestions = aiSubmitted ? aiQuestions.filter(q => getQuestionType(q) === "essay") : [];
 
   const mcqCorrect = mcqQuestions.reduce((acc, q) => {
     const idx = aiQuestions.indexOf(q);
-    return aiUserAnswers[idx] === q.correctAnswer ? acc + 1 : acc;
+    const ans = aiUserAnswers[idx] || "";
+    const correctAns = q.correctAnswer || "";
+    return ans.trim().toLowerCase() === correctAns.trim().toLowerCase() ? acc + 1 : acc;
   }, 0);
+
   const tfCorrect = tfQuestions.reduce((acc, q) => {
     const idx = aiQuestions.indexOf(q);
-    return aiUserAnswers[idx] === q.correctAnswer ? acc + 1 : acc;
+    const ans = aiUserAnswers[idx] || "";
+    const correctAns = q.correctAnswer || "";
+    return ans.trim().toLowerCase() === correctAns.trim().toLowerCase() ? acc + 1 : acc;
+  }, 0);
+
+  const essayCorrect = essayQuestions.reduce((acc, q) => {
+    const idx = aiQuestions.indexOf(q);
+    const ans = aiUserAnswers[idx] || "";
+    return ans.trim().length > 0 ? acc + 1 : acc;
   }, 0);
 
   const mcqPercent = mcqQuestions.length > 0 ? Math.round((mcqCorrect / mcqQuestions.length) * 100) : 0;
   const tfPercent  = tfQuestions.length  > 0 ? Math.round((tfCorrect  / tfQuestions.length)  * 100) : 0;
+  const essayPercent = essayQuestions.length > 0 ? Math.round((essayCorrect / essayQuestions.length) * 100) : 0;
 
   const getBreakdownFeedback = (percent, type) => {
-    if (percent >= 90) return type === "mcq" ? "Outstanding concept mastery." : "Excellent true/false judgment.";
-    if (percent >= 70) return type === "mcq" ? "Solid understanding of concepts." : "Good grasp of core facts.";
-    if (percent >= 50) return type === "mcq" ? "Review key topics to strengthen MCQ skills." : "Revisit fundamentals for T/F accuracy.";
-    return type === "mcq" ? "Focus on understanding core concepts." : "Review your T/F basics.";
+    if (percent >= 90) return type === "mcq" ? "Outstanding concept mastery." : type === "tf" ? "Excellent true/false judgment." : "Great analytical writing.";
+    if (percent >= 70) return type === "mcq" ? "Solid understanding of concepts." : type === "tf" ? "Good grasp of core facts." : "Good expression of ideas.";
+    if (percent >= 50) return type === "mcq" ? "Review key topics to strengthen MCQ skills." : type === "tf" ? "Revisit fundamentals for T/F accuracy." : "Work on expanding your arguments.";
+    return type === "mcq" ? "Focus on understanding core concepts." : type === "tf" ? "Review your T/F basics." : "Practice writing more detailed answers.";
   };
 
   // ── Build select options ──
@@ -664,17 +705,40 @@ function Questions() {
 
           {/* ── Error State ── */}
           {aiError && !aiLoading && aiQuestions.length === 0 && (
-            <div className="tool-card nse-error-card" style={{ marginTop: '30px', textAlign: 'center' }}>
-              <div className="nse-error-icon">{<WarningIcon size={28} />}</div>
-              <h3 style={{ margin: '15px 0' }}>Generation Failed</h3>
-              <p style={{ marginBottom: '20px', color: 'var(--text-secondary)' }}>{aiError}</p>
-              <button
-                type="button"
-                className="gen-tab-btn active"
-                onClick={handleResetAiExam}
-              >
-                Configure New Exam
-              </button>
+            <div className="qb-error-card-modern">
+              <div className="qb-error-icon-glow">
+                <WarningIcon size={42} />
+              </div>
+              <h3 className="qb-error-head">AI Assistant is Taking a Short Break</h3>
+              <p className="qb-error-body">
+                We're having trouble connecting to our AI service right now. This is usually
+                <br />a temporary issue that resolves quickly.
+              </p>
+              
+              <div className="qb-error-btn-group">
+                <button
+                  type="button"
+                  className="qb-error-btn-primary"
+                  onClick={handleResetAiExam}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 2v6h-6"></path>
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  </svg>
+                  <span>Try Again</span>
+                </button>
+                <button
+                  type="button"
+                  className="qb-error-btn-secondary"
+                  onClick={() => window.location.reload()}
+                >
+                  Refresh Page
+                </button>
+              </div>
+
+              <p className="qb-error-footer">
+                If this issue persists, please contact support or try again later.
+              </p>
             </div>
           )}
 
@@ -719,39 +783,62 @@ function Questions() {
                     </h4>
                     <div className="nse-breakdown-bars">
                       {/* MCQ Bar */}
-                      <div className="nse-breakdown-item">
-                        <div className="nse-breakdown-header">
-                          <span className="nse-breakdown-label">
-                            <span className="nse-qtype-badge nse-qtype-mcq" style={{fontSize: '0.62rem', padding: '2px 8px'}}>MCQ</span>
-                            <span className="nse-breakdown-count">{mcqCorrect}/{mcqQuestions.length} Correct</span>
-                          </span>
-                          <span className="nse-breakdown-percent">{mcqPercent}%</span>
+                      {mcqQuestions.length > 0 && (
+                        <div className="nse-breakdown-item">
+                          <div className="nse-breakdown-header">
+                            <span className="nse-breakdown-label">
+                              <span className="nse-qtype-badge nse-qtype-mcq" style={{fontSize: '0.62rem', padding: '2px 8px'}}>MCQ</span>
+                              <span className="nse-breakdown-count">{mcqCorrect}/{mcqQuestions.length} Correct</span>
+                            </span>
+                            <span className="nse-breakdown-percent">{mcqPercent}%</span>
+                          </div>
+                          <div className="nse-breakdown-track">
+                            <div
+                              className={`nse-breakdown-fill nse-breakdown-fill-mcq ${mcqPercent === 100 ? 'complete' : ''}`}
+                              style={{ width: `${mcqPercent}%` }}
+                            />
+                          </div>
+                          <p className="nse-breakdown-insight">{getBreakdownFeedback(mcqPercent, 'mcq')}</p>
                         </div>
-                        <div className="nse-breakdown-track">
-                          <div
-                            className={`nse-breakdown-fill nse-breakdown-fill-mcq ${mcqPercent === 100 ? 'complete' : ''}`}
-                            style={{ width: `${mcqPercent}%` }}
-                          />
-                        </div>
-                        <p className="nse-breakdown-insight">{getBreakdownFeedback(mcqPercent, 'mcq')}</p>
-                      </div>
+                      )}
                       {/* T/F Bar */}
-                      <div className="nse-breakdown-item">
-                        <div className="nse-breakdown-header">
-                          <span className="nse-breakdown-label">
-                            <span className="nse-qtype-badge nse-qtype-tf" style={{fontSize: '0.62rem', padding: '2px 8px'}}>T / F</span>
-                            <span className="nse-breakdown-count">{tfCorrect}/{tfQuestions.length} Correct</span>
-                          </span>
-                          <span className="nse-breakdown-percent">{tfPercent}%</span>
+                      {tfQuestions.length > 0 && (
+                        <div className="nse-breakdown-item">
+                          <div className="nse-breakdown-header">
+                            <span className="nse-breakdown-label">
+                              <span className="nse-qtype-badge nse-qtype-tf" style={{fontSize: '0.62rem', padding: '2px 8px'}}>T / F</span>
+                              <span className="nse-breakdown-count">{tfCorrect}/{tfQuestions.length} Correct</span>
+                            </span>
+                            <span className="nse-breakdown-percent">{tfPercent}%</span>
+                          </div>
+                          <div className="nse-breakdown-track">
+                            <div
+                              className={`nse-breakdown-fill nse-breakdown-fill-tf ${tfPercent === 100 ? 'complete' : ''}`}
+                              style={{ width: `${tfPercent}%` }}
+                            />
+                          </div>
+                          <p className="nse-breakdown-insight">{getBreakdownFeedback(tfPercent, 'tf')}</p>
                         </div>
-                        <div className="nse-breakdown-track">
-                          <div
-                            className={`nse-breakdown-fill nse-breakdown-fill-tf ${tfPercent === 100 ? 'complete' : ''}`}
-                            style={{ width: `${tfPercent}%` }}
-                          />
+                      )}
+                      {/* Essay Bar */}
+                      {essayQuestions.length > 0 && (
+                        <div className="nse-breakdown-item">
+                          <div className="nse-breakdown-header">
+                            <span className="nse-breakdown-label">
+                              <span className="nse-qtype-badge nse-qtype-essay" style={{fontSize: '0.62rem', padding: '2px 8px'}}>Essay</span>
+                              <span className="nse-breakdown-count">{essayCorrect}/{essayQuestions.length} Completed</span>
+                            </span>
+                            <span className="nse-breakdown-percent">{essayPercent}%</span>
+                          </div>
+                          <div className="nse-breakdown-track">
+                            <div
+                              className={`nse-breakdown-fill nse-breakdown-fill-essay ${essayPercent === 100 ? 'complete' : ''}`}
+                              style={{ width: `${essayPercent}%` }}
+                            />
+                          </div>
+                          <p className="nse-breakdown-insight">{getBreakdownFeedback(essayPercent, 'essay')}</p>
                         </div>
-                        <p className="nse-breakdown-insight">{getBreakdownFeedback(tfPercent, 'tf')}</p>
-                      </div>
+                      )}
                     </div>
                   </div>
 

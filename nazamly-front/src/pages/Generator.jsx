@@ -143,7 +143,8 @@ function buildFriendlyAiError(rawError) {
    MAIN COMPONENT
 ═══════════════════════════════════ */
 function Generator() {
-  const [tab, setTab] = useState("manual"); // "manual" | "smart"
+  const [tab, setTab] = useState("smart"); // "smart" | "manual"
+
 
   /* ── Manual state ── */
   const [schedules, setSchedules] = useState(() => {
@@ -800,16 +801,16 @@ function Generator() {
       {/* ── Tab Switcher ── */}
       <div className="gen-tabs">
         <button
-          className={`gen-tab-btn ${tab === "manual" ? "active" : ""}`}
-          onClick={() => setTab("manual")}
-        >
-          📝 Manual Schedule
-        </button>
-        <button
           className={`gen-tab-btn ${tab === "smart" ? "active" : ""}`}
           onClick={() => setTab("smart")}
         >
           🤖 Smart Schedule
+        </button>
+        <button
+          className={`gen-tab-btn ${tab === "manual" ? "active" : ""}`}
+          onClick={() => setTab("manual")}
+        >
+          📝 Manual Schedule
         </button>
       </div>
 
