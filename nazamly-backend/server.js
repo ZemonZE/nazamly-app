@@ -39,15 +39,17 @@ connectDB()
       const path = require('path');
       const fs = require('fs');
 
+      const ocrDir = path.join(__dirname, 'ocr-service');
       const isWindows = os.platform() === 'win32';
-      // Target the virtual environment python if it exists
-      const venvPythonPath = path.join(__dirname, 'ocr-service', 'venv', isWindows ? 'Scripts' : 'bin', isWindows ? 'python.exe' : 'python');
-      const pythonExecutable = fs.existsSync(venvPythonPath) ? venvPythonPath : 'python';
 
-      console.log(`🤖 Starting OCR Service using: ${pythonExecutable === 'python' ? 'System Python' : 'Virtual Environment'}`);
-      
-      const pythonProcess = spawn(pythonExecutable, ['app.py'], {
-        cwd: path.join(__dirname, 'ocr-service'),
+      // Use the venv in nazamly-backend/venv
+      const venvPython = path.join(__dirname, 'venv', isWindows ? 'Scripts\\python.exe' : 'bin/python');
+      const pythonExe = fs.existsSync(venvPython) ? venvPython : (isWindows ? 'py' : 'python3');
+
+      console.log(`🤖 Starting OCR Service using: ${fs.existsSync(venvPython) ? 'venv' : 'system python'}`);
+
+      const pythonProcess = spawn(pythonExe, ['app.py'], {
+        cwd: ocrDir,
         shell: false
       });
 
@@ -63,17 +65,13 @@ connectDB()
         console.log(`[🐍 PYTHON OCR]: Process exited with code ${code}`);
       });
 
-      // Ensure child process is killed when Node exits
       const killPython = () => {
-        if (pythonProcess && !pythonProcess.killed) {
-          pythonProcess.kill();
-        }
+        if (pythonProcess && !pythonProcess.killed) pythonProcess.kill();
       };
 
       process.on('exit', killPython);
       process.on('SIGINT', () => { killPython(); process.exit(); });
       process.on('SIGTERM', () => { killPython(); process.exit(); });
-      // Nodemon uses SIGUSR2 for restarts
       process.once('SIGUSR2', () => { killPython(); process.kill(process.pid, 'SIGUSR2'); });
     });
   })

@@ -93,9 +93,14 @@ export async function getTranscriptById(id: string, token: string): Promise<Tran
 }
 
 export async function deleteTranscript(id: string, token: string): Promise<void> {
-  await axios.delete(`${API_URL}/api/gpa/transcripts/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  try {
+    await axios.delete(`${API_URL}/api/gpa/transcripts/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (err: any) {
+    const message = err?.response?.data?.message || err?.message || 'Delete failed';
+    throw new Error(message);
+  }
 }
 
 export async function updateTranscript(

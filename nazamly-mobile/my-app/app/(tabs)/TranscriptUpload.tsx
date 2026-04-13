@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
   ScrollView, ActivityIndicator, Alert, TextInput,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useAppTheme } from '@/constants/theme';
 import { uploadTranscript, ExtractedCourse } from '@/services/transcriptService';
 
 type UploadState = 'idle' | 'uploading' | 'processing' | 'review' | 'error';
+
+const STORAGE_KEY = 'transcript_upload_state';
 
 export default function TranscriptUploadScreen() {
   const { colors } = useAppTheme();
@@ -26,11 +29,53 @@ export default function TranscriptUploadScreen() {
   const [transcriptId, setTranscriptId] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Load saved state on mount
+  useEffect(() => {
+    const loadSavedState = async () => {
+      try {
+        const saved = await AsyncStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const state = JSON.parse(saved);
+          setUploadState(state.uploadState);
+          setSelectedFile(state.selectedFile);
+          setCourses(state.courses);
+          setTermGPA(state.termGPA);
+          setTotalHours(state.totalHours);
+          setConfidence(state.confidence);
+          setTranscriptId(state.transcriptId);
+        }
+      } catch (err) {
+        console.error('Failed to load saved state:', err);
+      }
+    };
+    loadSavedState();
+  }, []);
+
+  // Save state whenever it changes
+  const saveState = async (state: UploadState, file: any, data: ExtractedCourse[], gpa: number, hours: number, conf: number, id: string) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({
+        uploadState: state,
+        selectedFile: file,
+        courses: data,
+        termGPA: gpa,
+        totalHours: hours,
+        confidence: conf,
+        transcriptId: id,
+      }));
+    } catch (err) {
+      console.error('Failed to save state:', err);
+    }
+  };
+
   const recalcGPA = (updated: ExtractedCourse[]) => {
     const pts = updated.reduce((s, c) => s + (c.gradePoints || 0) * (c.creditHours || 3), 0);
     const hrs = updated.reduce((s, c) => s + (c.creditHours || 3), 0);
-    setTermGPA(hrs > 0 ? parseFloat((pts / hrs).toFixed(2)) : 0);
+    const newGPA = hrs > 0 ? parseFloat((pts / hrs).toFixed(2)) : 0;
+    setTermGPA(newGPA);
     setTotalHours(hrs);
+    setCourses(updated);
+    saveState(uploadState, selectedFile, updated, newGPA, hrs, confidence, transcriptId);
   };
 
   const handlePickFile = async () => {
@@ -43,14 +88,21 @@ export default function TranscriptUploadScreen() {
       if (result.canceled) return;
 
       const asset = result.assets[0];
-      setSelectedFile({
+      const newFile = {
         uri: asset.uri,
         name: asset.name,
         mimeType: asset.mimeType || 'application/octet-stream',
         size: asset.size || 0,
-      });
+      };
+      setSelectedFile(newFile);
       setUploadState('idle');
       setErrorMsg('');
+      // Clear previous data when new file is selected
+      setCourses([]);
+      setTermGPA(0);
+      setTotalHours(0);
+      setTranscriptId('');
+      saveState('idle', newFile, [], 0, 0, 0, '');
     } catch {
       Alert.alert('Error', 'Failed to pick file. Please try again.');
     }
@@ -78,13 +130,16 @@ export default function TranscriptUploadScreen() {
         setConfidence(result.ocrConfidence);
         setTranscriptId(result.transcriptId);
         setUploadState('review');
+        saveState('review', selectedFile, result.extractedCourses, result.termGPA, result.totalCreditHours, result.ocrConfidence, result.transcriptId);
       } else {
         setErrorMsg(result.errorMessage || 'No courses could be extracted. Try uploading a clearer image.');
         setUploadState('error');
+        saveState('error', selectedFile, [], 0, 0, 0, '');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Upload failed. Please try again.');
       setUploadState('error');
+      saveState('error', selectedFile, [], 0, 0, 0, '');
     }
   };
 
@@ -95,14 +150,30 @@ export default function TranscriptUploadScreen() {
     } else {
       (updated[index] as any)[field] = value;
     }
-    setCourses(updated);
     recalcGPA(updated);
   };
 
   const removeCourse = (index: number) => {
     const updated = courses.filter((_, i) => i !== index);
-    setCourses(updated);
     recalcGPA(updated);
+  };
+
+  const handleSave = async () => {
+    Alert.alert('Saved', `Term GPA ${termGPA.toFixed(2)} saved to your history.`);
+    // Clear saved state after saving
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    router.back();
+  };
+
+  const handleUploadAnother = async () => {
+    // Clear saved state
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    setUploadState('idle');
+    setSelectedFile(null);
+    setCourses([]);
+    setTermGPA(0);
+    setTotalHours(0);
+    setTranscriptId('');
   };
 
   const formatBytes = (bytes: number) => {
@@ -230,11 +301,19 @@ export default function TranscriptUploadScreen() {
             {courses.map((course, index) => (
               <View key={index} style={[s.courseCard, { backgroundColor: colors.card }]}>
                 <View style={s.courseHeader}>
-                  <TextInput
-                    style={[s.courseCode, { color: colors.indigo }]}
-                    value={course.courseCode}
-                    onChangeText={v => updateCourse(index, 'courseCode', v)}
-                  />
+                  <View style={s.courseCodeWrap}>
+                    <Text style={[s.courseCodeLabel, { color: colors.textMuted }]}>Course Code</Text>
+                    <TextInput
+                      style={[s.courseCode, { color: colors.indigo }]}
+                      value={course.courseCode}
+                      onChangeText={v => updateCourse(index, 'courseCode', v)}
+                    />
+                    {(course as any).rawCode && (course as any).rawCode !== course.courseCode && (
+                      <Text style={[s.rawCode, { color: colors.textMuted }]}>
+                        {(course as any).rawCode}
+                      </Text>
+                    )}
+                  </View>
                   <TouchableOpacity onPress={() => removeCourse(index)}>
                     <Feather name="trash-2" size={16} color={colors.red} />
                   </TouchableOpacity>
@@ -274,10 +353,7 @@ export default function TranscriptUploadScreen() {
             {/* Actions */}
             <TouchableOpacity
               style={[s.uploadBtn, { backgroundColor: colors.teal }]}
-              onPress={() => {
-                Alert.alert('Saved', `Term GPA ${termGPA.toFixed(2)} saved to your history.`);
-                router.back();
-              }}
+              onPress={handleSave}
               activeOpacity={0.85}
             >
               <Feather name="check" size={18} color="#fff" />
@@ -286,7 +362,7 @@ export default function TranscriptUploadScreen() {
 
             <TouchableOpacity
               style={[s.secondaryBtn, { borderColor: colors.border }]}
-              onPress={() => { setUploadState('idle'); setSelectedFile(null); }}
+              onPress={handleUploadAnother}
             >
               <Text style={[s.secondaryBtnText, { color: colors.textSecondary }]}>Upload Another</Text>
             </TouchableOpacity>
@@ -330,8 +406,11 @@ const s = StyleSheet.create({
   summaryDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)' },
   confidenceText: { fontSize: 12, color: 'rgba(255,255,255,0.75)', textAlign: 'center' },
   courseCard: { borderRadius: 14, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  courseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  courseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  courseCodeWrap: { flex: 1 },
+  courseCodeLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', marginBottom: 2 },
   courseCode: { fontSize: 16, fontWeight: '800' },
+  rawCode: { fontSize: 11, marginTop: 2 },
   courseFields: { flexDirection: 'row', gap: 10 },
   fieldGroup: { flex: 1 },
   fieldLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4 },

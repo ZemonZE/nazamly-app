@@ -14,6 +14,7 @@ import {
 } from '@/services/transcriptService';
 
 const STORAGE_KEY = '@nazamly_gpa_profile';
+const COURSES_STORAGE_KEY = '@nazamly_gpa_courses';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -358,6 +359,7 @@ function HistoryFlow({
 }) {
   const [history, setHistory] = useState<TranscriptHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -438,20 +440,22 @@ function HistoryFlow({
           <TouchableOpacity
             key={item.id}
             style={[h.card, { backgroundColor: colors.card, opacity: item.status !== 'completed' ? 0.5 : 1 }]}
-            onPress={() => {
+            onPress={async () => {
               if (item.status !== 'completed') return;
-              // Build placeholder courses from history item (no full course list in history)
-              const placeholder: Course[] = Array.from({ length: Math.max(1, Math.round(item.totalCreditHours / 3)) }, (_, i) => ({
-                id: `hist_${item.id}_${i}`,
-                name: `Course ${i + 1}`,
-                code: `C${i + 1}`,
-                credits: 3,
-              }));
-              const grades: Record<string, number> = {};
-              placeholder.forEach(c => { grades[c.id] = item.termGPA ?? 0; });
-              onDone(placeholder, grades);
+              try {
+                setLoadingId(item.id);
+                const token = await user!.getIdToken();
+                const { getTranscriptById } = require('@/services/transcriptService');
+                const full = await getTranscriptById(item.id, token);
+                const { courses: c, grades: g } = extractedToCourses(full.extractedCourses || []);
+                onDone(c, g);
+              } catch (err: any) {
+                Alert.alert('Error', err.message || 'Failed to load transcript');
+              } finally {
+                setLoadingId(null);
+              }
             }}
-            disabled={item.status !== 'completed'}
+            disabled={item.status !== 'completed' || loadingId === item.id}
           >
             <View style={h.cardLeft}>
               <View style={[h.fileIcon, { backgroundColor: colors.indigoPale }]}>
@@ -475,7 +479,10 @@ function HistoryFlow({
             <View style={h.cardRight}>
               {item.status === 'completed' && (
                 <View style={[h.useBadge, { backgroundColor: colors.indigoPale }]}>
-                  <Text style={[h.useText, { color: colors.indigo }]}>Use</Text>
+                  {loadingId === item.id
+                    ? <ActivityIndicator size="small" color={colors.indigo} />
+                    : <Text style={[h.useText, { color: colors.indigo }]}>Use</Text>
+                  }
                 </View>
               )}
               <TouchableOpacity onPress={() => handleDelete(item)} disabled={deletingId === item.id} style={h.deleteBtn}>
@@ -526,6 +533,16 @@ export default function GpaPlannerScreen() {
         if (p.cgpa !== undefined && p.hours !== undefined) setProfile(p);
       } catch { }
     });
+    // Load saved courses & grades
+    AsyncStorage.getItem(COURSES_STORAGE_KEY).then(saved => {
+      if (!saved) return;
+      try {
+        const { courses: c, grades: g, dataSource: ds } = JSON.parse(saved);
+        if (c) setCourses(c);
+        if (g) setGrades(g);
+        if (ds) setDataSource(ds);
+      } catch { }
+    });
   }, []);
 
   const saveProfile = useCallback(() => {
@@ -543,11 +560,16 @@ export default function GpaPlannerScreen() {
     if (profile) { setCgpaInput(String(profile.cgpa)); setHoursInput(String(profile.hours)); }
     setProfile(null);
     setStrategy(null);
+    setCourses([]);
+    setGrades({});
+    AsyncStorage.removeItem(COURSES_STORAGE_KEY);
   };
 
   const handleGradeChange = (id: string, value: string) => {
     let v = Math.max(0, Math.min(5, Math.round((parseFloat(value) || 0) * 100) / 100));
-    setGrades(prev => ({ ...prev, [id]: v }));
+    const updatedGrades = { ...grades, [id]: v };
+    setGrades(updatedGrades);
+    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses, grades: updatedGrades, dataSource }));
   };
 
   const handleSourceSelect = (src: DataSource) => {
@@ -565,22 +587,32 @@ export default function GpaPlannerScreen() {
     setCourses(newCourses);
     setGrades(newGrades);
     setActiveFlow('none');
+    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: newCourses, grades: newGrades, dataSource }));
   };
 
   const addManualCourse = () => {
     const id = `manual_${Date.now()}`;
     const newCourse: Course = { id, name: '', code: '', credits: 3 };
-    setCourses(prev => [...prev, newCourse]);
-    setGrades(prev => ({ ...prev, [id]: 4.0 }));
+    const updatedCourses = [...courses, newCourse];
+    const updatedGrades = { ...grades, [id]: 4.0 };
+    setCourses(updatedCourses);
+    setGrades(updatedGrades);
+    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades: updatedGrades, dataSource }));
   };
 
   const updateManualCourse = (id: string, field: keyof Course, value: string) => {
-    setCourses(prev => prev.map(c => c.id === id ? { ...c, [field]: field === 'credits' ? parseInt(value) || 0 : value } : c));
+    const updatedCourses = courses.map(c => c.id === id ? { ...c, [field]: field === 'credits' ? parseInt(value) || 0 : value } : c);
+    setCourses(updatedCourses);
+    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades, dataSource }));
   };
 
   const removeManualCourse = (id: string) => {
-    setCourses(prev => prev.filter(c => c.id !== id));
-    setGrades(prev => { const g = { ...prev }; delete g[id]; return g; });
+    const updatedCourses = courses.filter(c => c.id !== id);
+    const updatedGrades = { ...grades };
+    delete updatedGrades[id];
+    setCourses(updatedCourses);
+    setGrades(updatedGrades);
+    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades: updatedGrades, dataSource }));
   };
 
   const calculations = useMemo(() => {

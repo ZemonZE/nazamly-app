@@ -45,11 +45,13 @@ export default function TranscriptHistoryScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('[Delete] item.id =', item.id, typeof item.id);
               setDeletingId(item.id);
               const token = await user!.getIdToken();
               await deleteTranscript(item.id, token);
               setHistory(prev => prev.filter(h => h.id !== item.id));
             } catch (err: any) {
+              console.error('[Delete] error =', err.message);
               Alert.alert('Error', err.message || 'Delete failed');
             } finally {
               setDeletingId(null);
@@ -172,7 +174,9 @@ export default function TranscriptHistoryScreen() {
               >
                 {deletingId === item.id
                   ? <ActivityIndicator size="small" color={colors.red} />
-                  : <Feather name="trash-2" size={18} color={colors.red} />
+                  : (item.status === 'completed' || item.status === 'failed')
+                    ? <Feather name="trash-2" size={18} color={colors.red} />
+                    : null
                 }
               </TouchableOpacity>
             </View>

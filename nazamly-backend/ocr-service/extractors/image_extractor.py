@@ -1,21 +1,12 @@
 import os
-import base64
 import json
-import requests
+from google import genai
+from google.genai import types
 
-# ── Gemini 2.0 Flash endpoint ───────────────────────────────────────────────
-GEMINI_MODEL   = "gemini-2.0-flash"
-GEMINI_API_URL = (
-    f"https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{GEMINI_MODEL}:generateContent"
-)
+# ── Gemma 4 via Gemini API ───────────────────────────────────────────────────
+GEMMA_MODEL = "gemma-4-31b-it"
 
 # ── Prompt ──────────────────────────────────────────────────────────────────
-# Designed specifically for the Arabic RTL transcript format used by
-# Egyptian universities. The table columns are (right to left):
-#   الرمز | المقدر | النقاط | الدرجة النهائية | كود المادة | كود الطالب | الفصل الدراسي
-#
-# The prompt forces JSON-only output and preserves Arabic text exactly.
 EXTRACTION_PROMPT = """\
 You are reading an Arabic university academic transcript table.
 The table is written right-to-left (RTL) and contains student grade records.
@@ -68,7 +59,7 @@ MIME_MAP = {
 
 def extract_from_image(file_bytes: bytes, extension: str) -> dict:
     """
-    Send an image to Gemini 2.0 Flash and return structured transcript data.
+    Send an image to Gemma 4 (via Gemini API) and return structured transcript data.
 
     Args:
         file_bytes: Raw bytes of the image file.
@@ -76,7 +67,7 @@ def extract_from_image(file_bytes: bytes, extension: str) -> dict:
 
     Returns:
         {
-          'source': 'gemini_vision',
+          'source': 'gemma_vision',
           'confidence': float,
           'semester': str | None,
           'student_id': str | None,
@@ -95,59 +86,24 @@ def extract_from_image(file_bytes: bytes, extension: str) -> dict:
         )
 
     mime_type = MIME_MAP.get(extension, 'image/jpeg')
-    image_b64 = base64.b64encode(file_bytes).decode('utf-8')
 
-    # ── Build Gemini request payload ─────────────────────────────────────────
-    payload = {
-        "contents": [
-            {
-                "parts": [
-                    {
-                        "inline_data": {
-                            "mime_type": mime_type,
-                            "data": image_b64
-                        }
-                    },
-                    {
-                        "text": EXTRACTION_PROMPT
-                    }
-                ]
-            }
-        ],
-        "generationConfig": {
-            "temperature": 0.1,          # Low temp → consistent structured output
-            "maxOutputTokens": 2048,
-            "responseMimeType": "application/json"  # Force JSON response mode
-        }
-    }
+    # ── Build Gemma 4 request via google-genai SDK ───────────────────────────
+    client = genai.Client(api_key=api_key)
 
-    # ── Call Gemini REST API ─────────────────────────────────────────────────
-    try:
-        response = requests.post(
-            f"{GEMINI_API_URL}?key={api_key}",
-            json=payload,
-            timeout=45    # 45s — large images can take time
+    image_part = types.Part.from_bytes(data=file_bytes, mime_type=mime_type)
+
+    response = client.models.generate_content(
+        model=GEMMA_MODEL,
+        contents=[image_part, EXTRACTION_PROMPT],
+        config=types.GenerateContentConfig(
+            temperature=0.1,
+            max_output_tokens=2048,
         )
-    except requests.exceptions.Timeout:
-        raise Exception("Gemini API request timed out after 45 seconds.")
-    except requests.exceptions.ConnectionError:
-        raise Exception("Could not connect to Gemini API. Check internet access.")
+    )
 
-    if response.status_code != 200:
-        raise Exception(
-            f"Gemini API returned {response.status_code}: {response.text[:300]}"
-        )
+    content_text = response.text.strip()
 
-    # ── Parse Gemini response ────────────────────────────────────────────────
-    raw = response.json()
-
-    try:
-        content_text = raw["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError) as e:
-        raise Exception(f"Unexpected Gemini response structure: {e}. Raw: {str(raw)[:300]}")
-
-    # Strip accidental markdown code fences if Gemini adds them
-    content_text = content_text.strip()
+    # Strip accidental markdown code fences if model adds them
     if content_text.startswith("```"):
         content_text = content_text.split("```")[1]
         if content_text.startswith("json"):
@@ -158,7 +114,7 @@ def extract_from_image(file_bytes: bytes, extension: str) -> dict:
         parsed = json.loads(content_text)
     except json.JSONDecodeError as e:
         raise Exception(
-            f"Gemini returned non-JSON content: {e}. "
+            f"Gemma 4 returned non-JSON content: {e}. "
             f"Raw text: {content_text[:400]}"
         )
 
@@ -174,13 +130,11 @@ def extract_from_image(file_bytes: bytes, extension: str) -> dict:
             "mark":         _safe_number(c.get("final_mark")),
             "gradePoints":  _safe_number(c.get("grade_points")),
             "creditHours":  _safe_number(c.get("credit_hours")),
-            "rating":       c.get("rating"),             # Arabic, e.g. "جيد جداً"
-            "symbol":       c.get("symbol"),             # Arabic, e.g. "ب"
+            "rating":       c.get("rating"),
+            "symbol":       c.get("symbol"),
             "semester":     parsed.get("semester"),
         })
 
-    # Gemini confidence heuristic:
-    # If all courses have both mark and gradePoints → high confidence
     has_full_data = all(
         c["mark"] is not None and c["gradePoints"] is not None
         for c in courses
@@ -188,7 +142,7 @@ def extract_from_image(file_bytes: bytes, extension: str) -> dict:
     confidence = 0.92 if (courses and has_full_data) else 0.65
 
     return {
-        "source":     "gemini_vision",
+        "source":     "gemma_vision",
         "confidence": confidence,
         "semester":   parsed.get("semester"),
         "student_id": parsed.get("student_id"),
