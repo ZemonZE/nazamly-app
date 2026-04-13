@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView,
-  ScrollView, ActivityIndicator, Alert,
+  ScrollView, ActivityIndicator, Alert, Modal, Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -17,6 +17,7 @@ export default function TranscriptHistoryScreen() {
   const [history, setHistory] = useState<TranscriptHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmItem, setConfirmItem] = useState<TranscriptHistoryItem | null>(null);
 
   const fetchHistory = useCallback(async () => {
     if (!user) return;
@@ -35,31 +36,23 @@ export default function TranscriptHistoryScreen() {
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
   const handleDelete = (item: TranscriptHistoryItem) => {
-    Alert.alert(
-      'Delete Transcript',
-      `Delete "${item.fileName}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('[Delete] item.id =', item.id, typeof item.id);
-              setDeletingId(item.id);
-              const token = await user!.getIdToken();
-              await deleteTranscript(item.id, token);
-              setHistory(prev => prev.filter(h => h.id !== item.id));
-            } catch (err: any) {
-              console.error('[Delete] error =', err.message);
-              Alert.alert('Error', err.message || 'Delete failed');
-            } finally {
-              setDeletingId(null);
-            }
-          },
-        },
-      ]
-    );
+    setConfirmItem(item);
+  };
+
+  const confirmDelete = async () => {
+    if (!confirmItem) return;
+    const id = String(confirmItem.id);
+    setConfirmItem(null);
+    try {
+      setDeletingId(id);
+      const token = await user!.getIdToken();
+      await deleteTranscript(id, token);
+      setHistory(prev => prev.filter(h => String(h.id) !== id));
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Delete failed');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const statusColor = (status: string) => {
@@ -75,6 +68,36 @@ export default function TranscriptHistoryScreen() {
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
+
+      {/* Confirm Delete Modal */}
+      <Modal visible={!!confirmItem} transparent animationType="fade" onRequestClose={() => setConfirmItem(null)}>
+        <View style={s.modalOverlay}>
+          <View style={[s.modalBox, { backgroundColor: colors.card }]}>
+            <View style={[s.modalIconWrap, { backgroundColor: colors.red + '15' }]}>
+              <Feather name="trash-2" size={28} color={colors.red} />
+            </View>
+            <Text style={[s.modalTitle, { color: colors.textPrimary }]}>Delete Transcript</Text>
+            <Text style={[s.modalMsg, { color: colors.textMuted }]}>
+              Delete "{confirmItem?.fileName}"?{'\n'}This cannot be undone.
+            </Text>
+            <View style={s.modalBtns}>
+              <TouchableOpacity
+                style={[s.modalBtn, { backgroundColor: colors.bg, borderColor: colors.border, borderWidth: 1 }]}
+                onPress={() => setConfirmItem(null)}
+              >
+                <Text style={[s.modalBtnText, { color: colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.modalBtn, { backgroundColor: colors.red }]}
+                onPress={confirmDelete}
+              >
+                <Text style={[s.modalBtnText, { color: '#fff' }]}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
@@ -169,14 +192,14 @@ export default function TranscriptHistoryScreen() {
               </View>
               <TouchableOpacity
                 onPress={() => handleDelete(item)}
-                disabled={deletingId === item.id}
+                disabled={deletingId === String(item.id)}
                 style={s.deleteBtn}
+                hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                activeOpacity={0.6}
               >
-                {deletingId === item.id
+                {deletingId === String(item.id)
                   ? <ActivityIndicator size="small" color={colors.red} />
-                  : (item.status === 'completed' || item.status === 'failed')
-                    ? <Feather name="trash-2" size={18} color={colors.red} />
-                    : null
+                  : <Feather name="trash-2" size={20} color={colors.red} />
                 }
               </TouchableOpacity>
             </View>
@@ -211,7 +234,7 @@ const s = StyleSheet.create({
   uploadBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
   emptyHint: { fontSize: 12, marginTop: 14 },
   card: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 14 },
+  cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 14, marginRight: 8 },
   fileIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   cardInfo: { flex: 1 },
   fileName: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
@@ -220,5 +243,13 @@ const s = StyleSheet.create({
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   statusText: { fontSize: 11, fontWeight: '700' },
   gpaText: { fontSize: 12 },
-  deleteBtn: { padding: 8 },
+  deleteBtn: { padding: 12, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalBox: { width: '100%', maxWidth: 340, borderRadius: 20, padding: 24, alignItems: 'center' },
+  modalIconWrap: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontWeight: '800', marginBottom: 8 },
+  modalMsg: { fontSize: 14, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  modalBtns: { flexDirection: 'row', gap: 12, width: '100%' },
+  modalBtn: { flex: 1, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  modalBtnText: { fontSize: 15, fontWeight: '700' },
 });

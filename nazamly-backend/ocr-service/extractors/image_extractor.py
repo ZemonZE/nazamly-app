@@ -4,7 +4,7 @@ from google import genai
 from google.genai import types
 
 # ── Gemma 4 via Gemini API ───────────────────────────────────────────────────
-GEMMA_MODEL = "gemma-4-31b-it"
+GEMMA_MODEL = "gemma-3-27b-it"
 
 # ── Prompt ──────────────────────────────────────────────────────────────────
 EXTRACTION_PROMPT = """\

@@ -28,7 +28,7 @@ app.use(helmet());
 // CORS Configuration
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',') 
-  : [/^http:\/\/localhost(:\d+)?$/]; // Allows any localhost port
+  : true; // Allow all origins in development
 
 app.use(cors({
   origin: allowedOrigins,

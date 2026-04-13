@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { API_URL } from '@/firebase';
 import { Platform } from 'react-native';
 
@@ -30,6 +29,18 @@ export interface TranscriptHistoryItem {
   createdAt: string;
 }
 
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    let message = `Request failed with status ${res.status}`;
+    try {
+      const data = await res.json();
+      message = data?.message || data?.error || message;
+    } catch (_) {}
+    throw new Error(message);
+  }
+  return res.json();
+}
+
 export async function uploadTranscript(
   fileUri: string,
   mimeType: string,
@@ -40,67 +51,43 @@ export async function uploadTranscript(
   const formData = new FormData();
 
   if (Platform.OS === 'web' && fileObj) {
-    // For Web: Append the raw browser File object directly
-    formData.append('transcript', fileObj); 
+    formData.append('transcript', fileObj);
   } else {
-    // For Native: Append the React Native file descriptor object
-    formData.append('transcript', {
-      uri: fileUri,
-      type: mimeType,
-      name: fileName,
-    } as any);
+    formData.append('transcript', { uri: fileUri, type: mimeType, name: fileName } as any);
   }
 
-  const response = await fetch(`${API_URL}/api/gpa/upload-transcript`, {
+  const res = await fetch(`${API_URL}/api/gpa/upload-transcript`, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
 
-  if (!response.ok) {
-    let errorMessage = `Upload failed with status ${response.status}`;
-    try {
-      const errorData = await response.json();
-      if (errorData?.message) {
-        errorMessage = errorData.error ? `${errorData.message} | ${errorData.error}` : errorData.message;
-      } else if (errorData?.error) {
-        errorMessage = errorData.error;
-      }
-    } catch (e) {
-      // Ignore JSON parse errors for non-JSON responses
-    }
-    throw new Error(errorMessage);
-  }
-
-  const result = await response.json();
-  return result.data as TranscriptResult;
+  const result = await handleResponse<{ data: TranscriptResult }>(res);
+  return result.data;
 }
 
 export async function getTranscriptHistory(token: string): Promise<TranscriptHistoryItem[]> {
-  const response = await axios.get(`${API_URL}/api/gpa/transcripts`, {
+  const res = await fetch(`${API_URL}/api/gpa/transcripts`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return response.data.data as TranscriptHistoryItem[];
+  const result = await handleResponse<{ data: TranscriptHistoryItem[] }>(res);
+  return result.data;
 }
 
 export async function getTranscriptById(id: string, token: string): Promise<TranscriptResult> {
-  const response = await axios.get(`${API_URL}/api/gpa/transcripts/${id}`, {
+  const res = await fetch(`${API_URL}/api/gpa/transcripts/${id}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return response.data.data as TranscriptResult;
+  const result = await handleResponse<{ data: TranscriptResult }>(res);
+  return result.data;
 }
 
 export async function deleteTranscript(id: string, token: string): Promise<void> {
-  try {
-    await axios.delete(`${API_URL}/api/gpa/transcripts/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  } catch (err: any) {
-    const message = err?.response?.data?.message || err?.message || 'Delete failed';
-    throw new Error(message);
-  }
+  const res = await fetch(`${API_URL}/api/gpa/transcripts/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  await handleResponse<any>(res);
 }
 
 export async function updateTranscript(
@@ -108,10 +95,13 @@ export async function updateTranscript(
   courses: Partial<ExtractedCourse>[],
   token: string
 ): Promise<any> {
-  const response = await axios.patch(
-    `${API_URL}/api/gpa/transcripts/${id}`,
-    { courses },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return response.data;
+  const res = await fetch(`${API_URL}/api/gpa/transcripts/${id}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ courses }),
+  });
+  return handleResponse<any>(res);
 }

@@ -38,8 +38,8 @@ class TranscriptUpload_Repo extends Base_Repo {
   async deleteUserTranscript(id, userId) {
     return await this.model.findOneAndUpdate(
       { _id: id, userId, isDeleted: { $ne: true } },
-      { isDeleted: true, deletedAt: new Date() },
-      { new: true }
+      { $set: { isDeleted: true, deletedAt: new Date() } },
+      { new: true, runValidators: false }
     );
   }
   /**

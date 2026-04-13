@@ -409,10 +409,20 @@ const updateTranscript = async (req, res) => {
 const deleteTranscript = async (req, res) => {
     try {
         const { id } = req.params;
+        console.log(`[deleteTranscript] id=${id}, uid=${req.user?.uid}`);
+
         const student = await User_Repo.findByFirebaseUid(req.user.uid);
         if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
 
+        console.log(`[deleteTranscript] student._id=${student._id}`);
+
+        // First check if transcript exists at all (without userId filter)
+        const exists = await TranscriptUpload_Repo.model.findById(id).lean();
+        console.log(`[deleteTranscript] exists=`, exists ? `userId=${exists.userId}, isDeleted=${exists.isDeleted}` : 'not found');
+
         const transcript = await TranscriptUpload_Repo.deleteUserTranscript(id, student._id);
+        console.log(`[deleteTranscript] deleted=`, transcript ? 'yes' : 'no');
+
         if (!transcript) return res.status(404).json({ success: false, message: 'Transcript not found or already deleted.' });
 
         return res.status(200).json({ success: true, message: 'Transcript deleted successfully.' });
