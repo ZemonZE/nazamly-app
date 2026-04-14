@@ -60,7 +60,7 @@ const TranscriptUploadSchema = new mongoose.Schema({
     ocrConfidence:  { type: Number, min: 0, max: 1, default: null },
     ocrSource: {
         type: String,
-        enum: ['pdf_text_layer', 'gemini_vision', 'gemma_vision', null],
+        enum: ['pdf_text_layer', 'gemini_vision', 'gemma_vision', 'pdf_via_vision', null],
         default: null
     },
     requiresReview: { type: Boolean, default: false },
