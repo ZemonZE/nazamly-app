@@ -103,6 +103,8 @@ export default function TabLayout() {
           title: "GpaPlanner",
         }}
       />
+      <Tabs.Screen name="TranscriptHistory" options={{ href: null }} />
+      <Tabs.Screen name="TranscriptUpload" options={{ href: null }} />
       <Tabs.Screen
         name="Profile"
         options={{

@@ -96,7 +96,10 @@ const setupProfile = async (req, res) => {
     if (earnedCreditHours < 0)
       return res.status(400).json({ success: false, message: "earnedCreditHours cannot be negative" });
 
-    const updatedUser = await userRepo.update(dbUser._id, { currentCGPA, earnedCreditHours });
+    const updatedUser = await userRepo.update(dbUser._id, {
+      cgpa: currentCGPA,
+      completedHours: earnedCreditHours,
+    });
     if (!updatedUser) return res.status(404).json({ success: false, message: "User not found" });
 
     return res.status(200).json({ success: true, message: "Profile updated successfully", data: updatedUser });
