@@ -81,12 +81,20 @@ export default function ProblemSolver() {
         headers: await authHeaders(),
         body: JSON.stringify({ showDifficulty: next }),
       });
-      if (res.ok) {
-        setProblem(p => ({
-          ...p,
-          showDifficulty: next,
-          ...(next ? { difficulty: difficultyRef.current } : { difficulty: undefined }),
-        }));
+      if (!res.ok) return;
+
+      if (next) {
+        // Re-fetch so the backend returns the difficulty value now that showDifficulty=true
+        // but preserve the current code/language — only update problem metadata
+        const pRes  = await fetch(`${API_URL}/api/coding/problems/${id}`, { headers: await authHeaders() });
+        const pJson = await pRes.json();
+        if (pRes.ok) {
+          const updated = pJson.data || pJson.problem || pJson;
+          setProblem(p => ({ ...p, showDifficulty: true, difficulty: updated.difficulty }));
+          if (updated.difficulty != null) difficultyRef.current = updated.difficulty;
+        }
+      } else {
+        setProblem(p => ({ ...p, showDifficulty: false, difficulty: undefined }));
       }
     } finally {
       setDiffToggling(false);
