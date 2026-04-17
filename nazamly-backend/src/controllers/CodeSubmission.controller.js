@@ -13,7 +13,6 @@ const submitSchema = Joi.object({
 
 /**
  * submitCode - POST /api/coding/submissions
- * Validates input, runs all test cases through Piston, saves submission, updates progress.
  */
 async function submitCode(req, res) {
   const { error, value } = submitSchema.validate(req.body);
@@ -48,7 +47,6 @@ async function submitCode(req, res) {
 
       if (!passed && verdict === 'AC') {
         verdict = 'WA';
-        // Include first failure if it's visible OR it's the first failure (always include)
         firstFailure = {
           input: testCase.input,
           expectedOutput: testCase.expectedOutput,
@@ -108,8 +106,53 @@ async function submitCode(req, res) {
 }
 
 /**
+ * runCode - POST /api/coding/run
+ * Runs code against visible sample test cases only. No DB save, no progress update.
+ */
+async function runCode(req, res) {
+  const { error, value } = submitSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ success: false, message: error.details[0].message, code: 'VALIDATION_ERROR' });
+  }
+
+  const { problemId, language, code } = value;
+
+  const problem = await codingProblemRepo.findById(problemId);
+  if (!problem || problem.isDeleted) {
+    return res.status(404).json({ success: false, message: 'Problem not found.' });
+  }
+
+  const sampleCases = problem.testCases.filter(tc => tc.visible);
+  if (sampleCases.length === 0) {
+    return res.status(200).json({ success: true, results: [], message: 'No visible sample test cases for this problem.' });
+  }
+
+  const results = [];
+  try {
+    for (let i = 0; i < sampleCases.length; i++) {
+      const tc = sampleCases[i];
+      const result = await pistonService.execute(language, code, tc.input);
+      results.push({
+        index: i,
+        input: tc.input,
+        expectedOutput: tc.expectedOutput,
+        actualOutput: result.stdout,
+        stderr: result.stderr,
+        passed: result.stdout.trim() === tc.expectedOutput.trim(),
+      });
+    }
+  } catch (err) {
+    if (err instanceof PistonLanguageUnavailableError) {
+      return res.status(503).json({ success: false, message: err.message, code: 'LANGUAGE_UNAVAILABLE' });
+    }
+    return res.status(503).json({ success: false, message: err.message || 'Code execution failed.', code: 'JUDGE_UNAVAILABLE' });
+  }
+
+  return res.status(200).json({ success: true, results });
+}
+
+/**
  * getSubmissions - GET /api/coding/submissions?problemId=
- * Returns last 20 submissions for the authenticated student on a problem.
  */
 async function getSubmissions(req, res) {
   const { problemId } = req.query;
@@ -119,7 +162,6 @@ async function getSubmissions(req, res) {
 
 /**
  * getAdminSubmissions - GET /api/admin/coding/problems/:id/submissions
- * Returns all submissions for a problem (admin view).
  */
 async function getAdminSubmissions(req, res) {
   const problemId = req.params.id;
@@ -127,4 +169,4 @@ async function getAdminSubmissions(req, res) {
   return res.status(200).json({ success: true, data: submissions });
 }
 
-module.exports = { submitCode, getSubmissions, getAdminSubmissions };
+module.exports = { submitCode, runCode, getSubmissions, getAdminSubmissions };
