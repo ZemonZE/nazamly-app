@@ -5,16 +5,34 @@ import {
   getSubFolderFiles,
 } from "../services/materialsService";
 import { IconBook } from "../Icons/DashboardIcons";
+import {
+  LecturesIcon,
+  SectionsIcon,
+  VideosIcon,
+  FinalsIcon,
+  MidtermsIcon,
+  AssignmentsIcon,
+} from "../Icons/Icons";
 
-/* ── Sub-folder icons (emoji-based) ── */
+/* ── Sub-folder icons (SVG-based) ── */
 const SUB_FOLDER_ICONS = {
-  lectures: "📚",
-  sections: "📝",
-  videos: "🎥",
-  finals: "📋",
-  mids: "📄",
-  assignments: "📎",
-  other: "📁",
+  lectures: <LecturesIcon size={16} />,
+  sections: <SectionsIcon size={16} />,
+  videos: <VideosIcon size={16} />,
+  finals: <FinalsIcon size={16} />,
+  mids: <MidtermsIcon size={16} />,
+  assignments: <AssignmentsIcon size={16} />,
+  other: "�",
+};
+
+/* ── Sub-folder label translations ── */
+const SUB_FOLDER_LABELS = {
+  lectures: "Lectures",
+  sections: "Sections",
+  videos: "Videos",
+  finals: "Finals",
+  mids: "Midterms",
+  assignments: "Assignments",
 };
 
 /* ── File type icon based on mimeType ── */
@@ -165,7 +183,7 @@ function Materials() {
               <span className="mat-tab-icon">
                 {SUB_FOLDER_ICONS[sf.type] || "📁"}
               </span>
-              <span>{sf.label}</span>
+              <span>{SUB_FOLDER_LABELS[sf.type] || sf.label}</span>
             </button>
           ))}
         </div>

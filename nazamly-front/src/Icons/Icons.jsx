@@ -195,3 +195,28 @@ export const TypeIcon = ({ size = 18, className = "nse-icon" }) => (
 export const CheckCircleIcon = ({ size = 18, className = "nse-icon" }) => (
   <svg {...svgBase} className={className} width={size} height={size}><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
 );
+
+// Materials Page Icons
+export const LecturesIcon = ({ size = 18, className = "nse-icon" }) => (
+  <svg {...svgBase} className={className} width={size} height={size}><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+);
+
+export const SectionsIcon = ({ size = 18, className = "nse-icon" }) => (
+  <svg {...svgBase} className={className} width={size} height={size}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+);
+
+export const VideosIcon = ({ size = 18, className = "nse-icon" }) => (
+  <svg {...svgBase} className={className} width={size} height={size}><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+);
+
+export const FinalsIcon = ({ size = 18, className = "nse-icon" }) => (
+  <svg {...svgBase} className={className} width={size} height={size}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg>
+);
+
+export const MidtermsIcon = ({ size = 18, className = "nse-icon" }) => (
+  <svg {...svgBase} className={className} width={size} height={size}><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/></svg>
+);
+
+export const AssignmentsIcon = ({ size = 18, className = "nse-icon" }) => (
+  <svg {...svgBase} className={className} width={size} height={size}><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+);

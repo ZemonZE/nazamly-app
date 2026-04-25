@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "../App.css";
 import "../styles/Dashboard.css";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { NavLink, Outlet, useLocation, Link } from "react-router-dom";
 import logo from "../assets/logo.jpg";
 import {
   IconHome,
@@ -14,6 +14,8 @@ import {
   IconLogout,
   IconChevronRight,
   IconChevronLeft,
+  IconCode,
+  IconProfile,
 } from "../Icons/DashboardIcons";
 
 const navItems = [
@@ -46,7 +48,12 @@ const navItems = [
   {
     path: "/dashboard/coding",
     label: "Coding Practice",
-    icon: <IconQuestion />,
+    icon: <IconCode />,
+  },
+  {
+    path: "/dashboard/profile",
+    label: "Profile",
+    icon: <IconProfile />,
   },
 ];
 
@@ -93,6 +100,11 @@ const PAGE_META = {
     title: "Coding Practice",
     subtitle: "Browse and solve coding problems for your courses.",
   },
+  "/dashboard/profile": {
+    icon: <IconProfile width={22} height={22} />,
+    title: "Student Profile",
+    subtitle: "View your academic info and registered courses.",
+  },
 };
 
 function DashboardLayout({ user, onLogout }) {
@@ -135,14 +147,20 @@ function DashboardLayout({ user, onLogout }) {
         {/* User Info */}
         {sidebarOpen && (
           <div className="dash-user">
-            <div className="dash-avatar">{avatar}</div>
+            <Link to="/dashboard/profile" style={{ textDecoration: 'none' }}>
+              <div className="dash-avatar">{avatar}</div>
+            </Link>
             <div className="dash-user-info">
               <p className="dash-username">{name}</p>
               <p className="dash-email">{email}</p>
             </div>
           </div>
         )}
-        {!sidebarOpen && <div className="dash-avatar-small">{avatar}</div>}
+        {!sidebarOpen && (
+          <Link to="/dashboard/profile" style={{ textDecoration: 'none', display: 'flex' }}>
+            <div className="dash-avatar-small">{avatar}</div>
+          </Link>
+        )}
         {/* Nav */}
         <nav className="dash-nav">
           {navItems.map((item) => (
