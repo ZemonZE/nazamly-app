@@ -6,6 +6,11 @@ const upload = require('../middlewares/upload.middleware');
 const authMiddleware = require('../middlewares/auth.middleware'); 
 const { generateScheduleFromFiles } = require('../controllers/ai.controller');
 
+/**
+ * @route   POST /api/ai/generate
+ * @desc    Generate a schedule from uploaded image files
+ * @access  Private
+ */
 router.post('/generate', authMiddleware, upload.array('scheduleFiles', 5), generateScheduleFromFiles);
 
 module.exports = router;

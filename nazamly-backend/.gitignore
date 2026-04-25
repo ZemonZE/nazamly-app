@@ -27,5 +27,12 @@ dist/
 build/
 
 *.md
+*.txt
+
 *.pdf
 
+# Uploaded transcripts (temporary, cleaned up after processing)
+uploads/
+
+# Python virtual environment
+venv/

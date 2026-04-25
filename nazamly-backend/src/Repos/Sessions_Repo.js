@@ -74,7 +74,7 @@ class Sessions_Repo extends Base_Repo {
       { _id: id, isDeleted: { $ne: true } },
       validData,
       {
-        new: true,
+        returnDocument: 'after',
         runValidators: true,
       },
     );
