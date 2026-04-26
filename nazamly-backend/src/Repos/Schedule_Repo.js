@@ -137,7 +137,7 @@ class Schedule_Repo extends Base_Repo {
       const result = await this.model.findByIdAndUpdate(
         scheduleId,
         { isActive: true },
-        { new: true, runValidators: true, session },
+        { returnDocument: 'after', runValidators: true, session },
       );
 
       // ✅ العمليتين نجحوا - احفظ التغييرات
@@ -163,7 +163,7 @@ class Schedule_Repo extends Base_Repo {
     return await this.model.findOneAndUpdate(
       { _id: timeTableId, isDeleted: { $ne: true } },
       { $addToSet: { entries: entryId } },
-      { new: true, runValidators: true },
+      { returnDocument: 'after', runValidators: true },
     );
   }
 
@@ -177,7 +177,7 @@ class Schedule_Repo extends Base_Repo {
     return await this.model.findOneAndUpdate(
       { _id: timeTableId, isDeleted: { $ne: true } },
       { $pull: { entries: entryId } },
-      { new: true, runValidators: true },
+      { returnDocument: 'after', runValidators: true },
     );
   }
 
@@ -192,7 +192,7 @@ class Schedule_Repo extends Base_Repo {
     return await this.model.findOneAndUpdate(
       { _id: scheduleId, isDeleted: { $ne: true } },
       { totalCreditHours },
-      { new: true, runValidators: true },
+      { returnDocument: 'after', runValidators: true },
     );
   }
 

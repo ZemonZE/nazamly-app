@@ -1,5 +1,5 @@
 const QuizAttempt = require('../models/quiz/quizAttempt.model');
-const User = require('../models/user/user.model');
+const userRepo = require('../Repos/User_Repo');
 const aiService = require('../services/ai.service');
 
 /**
@@ -16,8 +16,8 @@ exports.submitQuiz = async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Resolve the Mongoose User _id from the Firebase UID
-    const user = await User.findOne({ firebaseUid });
+    // Resolve the Mongoose User _id from the Firebase UID via repo
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
     if (!user) {
       return res.status(404).json({ error: 'User profile not found' });
     }
@@ -107,8 +107,8 @@ exports.getQuizHistory = async (req, res) => {
   try {
     const firebaseUid = req.user.uid;
 
-    // Resolve the Mongoose User _id from the Firebase UID
-    const user = await User.findOne({ firebaseUid });
+    // Resolve the Mongoose User _id from the Firebase UID via repo
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
     if (!user) {
       return res.status(404).json({ error: 'User profile not found' });
     }

@@ -109,6 +109,32 @@ class User_Repo extends Base_Repo {
   }
 
   /**
+   * findOrCreateByEmail - بتعمل upsert لـ user عن طريق الإيميل
+   * لو الـ user موجود بيحدث الحقول في $set بس
+   * لو الـ user مش موجود بينشئ واحد جديد بالـ $set و $setOnInsert مع بعض
+   *
+   * @param {String} email - الإيميل بتاع الـ user
+   * @param {Object} setData - الحقول اللي هتتحدث دايماً ($set)
+   * @param {Object} setOnInsertData - الحقول اللي هتتحط بس لو الـ user جديد ($setOnInsert)
+   * @returns {Promise<Object>} الـ user بعد العملية
+   */
+  async findOrCreateByEmail(email, setData = {}, setOnInsertData = {}) {
+    return await this.model.findOneAndUpdate(
+      { email },
+      {
+        $set: setData,
+        $setOnInsert: setOnInsertData,
+      },
+      {
+        upsert: true,
+        returnDocument: 'after',
+        setDefaultsOnInsert: true,
+        runValidators: true,
+      }
+    );
+  }
+
+  /**
    * findByRole - بتجيب كل الـ users اللي ليهم role معين
    * @param {String} role - الـ role اللي عايز تفلتر بيه (مثلاً "student", "admin")
    * @returns {Promise<Array>} array فيه كل الـ users اللي ليهم الـ role ده

@@ -26,6 +26,7 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth, API_URL, GOOGLE_WEB_CLIENT_ID,Google_Android_Id } from "@/firebase";
+import { getProfile, syncUser } from '@/services/authService';
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
@@ -45,7 +46,6 @@ export default function LoginScreen() {
   // 🌟 إعداد OAuth للموبايل (Expo Go / React Native)
   const redirectUri = makeRedirectUri({
     scheme: "nazamly",
-    path: "redirect",
   });
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
@@ -61,45 +61,31 @@ export default function LoginScreen() {
   }, [request, redirectUri]);
 
   const syncWithBackend = useCallback(async (user: any) => {
-    const token = await user.getIdToken();
-    const res = await fetch(`${API_URL}/api/auth/sync`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const body = await res.json();
-    if (!res.ok) {
-      if (res.status === 401) {
+    try {
+      const token = await user.getIdToken();
+      const response = await syncUser(token);
+      if (response.message === "unauthorized") {
         Alert.alert('Cancel', 'Cancel');
         router.replace("/(auth)/Login");
         return;
       }
-      console.error("[Login] /api/auth/sync failed:", res.status, body);
+    } catch (err) {
+      console.error("[Login] syncUser failed:", err);
     }
-    return body;
   }, [router]);
 
   // 🌟 جلب بيانات المستخدم من الباك إند
   const fetchUserProfile = useCallback(async (user: any) => {
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${API_URL}/api/auth/get-profile`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const body = await res.json();
-      
-      if (res.ok && body.success) {
-        console.log("[Login] Profile fetched successfully:", body.data);
-        setBackendUser(body.data);
-        return body.data;
+      const response = await getProfile(token);
+
+      if (response.success && response.data) {
+        console.log("[Login] Profile fetched successfully:", response.data);
+        setBackendUser(response.data);
+        return response.data;
       } else {
-        console.error("[Login] Failed to fetch profile:", body);
+        console.error("[Login] Failed to fetch profile:", response);
       }
     } catch (error) {
       console.error("[Login] Error fetching profile:", error);

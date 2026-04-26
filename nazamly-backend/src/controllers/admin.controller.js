@@ -6,6 +6,8 @@ const User = require('../models/user/user.model');
 const SystemSetting = require('../models/settings/SystemSetting.model');
 const admin = require('../config/firebase');
 const aiService = require('../services/ai.service');
+const userRepo = require('../Repos/User_Repo');
+const courseRepo = require('../Repos/Course_Repo');
 
 // ═══════════════════════════════════════════
 //  COURSES
@@ -14,8 +16,8 @@ const aiService = require('../services/ai.service');
 /** GET /api/admin/courses */
 exports.getCourses = async (req, res) => {
   try {
-    const courses = await Course.find().sort({ courseCode: 1 });
-    res.json(courses);
+    const result = await courseRepo.findAll({ limit: 100, sort: { courseCode: 1 } });
+    res.json(result.data);
   } catch (error) {
     console.error('Error fetching courses:', error.message);
     res.status(500).json({ error: 'Failed to fetch courses' });
@@ -29,7 +31,7 @@ exports.createCourse = async (req, res) => {
     if (!courseCode || !courseName || !level || creditHours == null) {
       return res.status(400).json({ error: 'courseCode, courseName, level, and creditHours are required' });
     }
-    const course = await Course.create({ courseCode, courseName, level, creditHours, difficulty, department });
+    const course = await courseRepo.create({ courseCode, courseName, level, creditHours, difficulty, department });
     res.status(201).json(course);
   } catch (error) {
     console.error('Error creating course:', error.message);
@@ -41,12 +43,8 @@ exports.createCourse = async (req, res) => {
 /** PUT /api/admin/courses/:id */
 exports.updateCourse = async (req, res) => {
   try {
-    const { courseCode, courseName, level, creditHours, difficulty, department } = req.body;
-    const course = await Course.findByIdAndUpdate(
-      req.params.id,
-      { courseCode, courseName, level, creditHours, difficulty, department },
-      { returnDocument: 'after', runValidators: true }
-    );
+    const { courseName, level, creditHours } = req.body;
+    const course = await courseRepo.update(req.params.id, { courseName, level, creditHours });
     if (!course) return res.status(404).json({ error: 'Course not found' });
     res.json(course);
   } catch (error) {
@@ -63,7 +61,7 @@ exports.deleteCourse = async (req, res) => {
     if (instances > 0) {
       return res.status(400).json({ error: `Cannot delete: ${instances} course instance(s) reference this course` });
     }
-    const course = await Course.findByIdAndDelete(req.params.id);
+    const course = await courseRepo.delete(req.params.id);
     if (!course) return res.status(404).json({ error: 'Course not found' });
     res.json({ message: 'Course deleted successfully' });
   } catch (error) {
@@ -259,24 +257,26 @@ exports.updateUser = async (req, res) => {
     }
 
     // req.params.id may be a MongoDB _id or a firebaseUid (for users not yet in MongoDB)
-    let user = await User.findById(req.params.id).catch(() => null);
-    if (!user) user = await User.findOne({ firebaseUid: req.params.id });
+    let user = await userRepo.findById(req.params.id).catch(() => null);
+    if (!user) user = await userRepo.findByFirebaseUid(req.params.id);
 
     // Resolve the firebaseUid we'll use to update Firebase Auth
     const firebaseUid = user ? user.firebaseUid : req.params.id;
 
     if (user) {
-      const conflict = await User.findOne({ email, _id: { $ne: user._id } });
-      if (conflict) return res.status(409).json({ error: 'Email already in use' });
-      user = await User.findByIdAndUpdate(
-        user._id,
-        { email, displayName, role, accessStatus },
-        { returnDocument: 'after', runValidators: true }
-      );
+      const existingByEmail = await userRepo.findByEmail(email);
+      if (existingByEmail && existingByEmail._id.toString() !== user._id.toString()) {
+        return res.status(409).json({ error: 'Email already in use' });
+      }
+      user = await userRepo.update(user._id, { displayName, role, accessStatus });
     } else {
-      const conflict = await User.findOne({ email });
-      if (conflict) return res.status(409).json({ error: 'Email already in use' });
-      user = await User.create({ firebaseUid, email, displayName, role, accessStatus });
+      const existingByEmail = await userRepo.findByEmail(email);
+      if (existingByEmail) return res.status(409).json({ error: 'Email already in use' });
+      user = await userRepo.findOrCreateByEmail(
+        email,
+        { firebaseUid, displayName, role, accessStatus },
+        {}
+      );
     }
 
     // Sync to Firebase Auth: email, displayName, disabled flag, and admin custom claim
@@ -305,18 +305,10 @@ exports.updateUserStatus = async (req, res) => {
     }
 
     // Try by MongoDB _id first, then by firebaseUid
-    let user = await User.findByIdAndUpdate(
-      req.params.id,
-      { accessStatus },
-      { returnDocument: 'after', runValidators: true }
-    ).catch(() => null);
+    let user = await userRepo.update(req.params.id, { accessStatus }).catch(() => null);
 
     if (!user) {
-      user = await User.findOneAndUpdate(
-        { firebaseUid: req.params.id },
-        { accessStatus },
-        { returnDocument: 'after', runValidators: true }
-      );
+      user = await userRepo.updateByFirebaseUid(req.params.id, { accessStatus });
     }
 
     if (!user) return res.status(404).json({ error: 'User not found' });

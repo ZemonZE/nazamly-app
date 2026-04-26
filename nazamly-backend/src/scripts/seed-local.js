@@ -26,6 +26,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
+const { EJSON } = require('bson');
 
 // ── Configuration ──────────────────────────────────────────────────────────────
 const BACKUP_DIR = path.resolve(__dirname, '../../data-backup');
@@ -83,9 +84,9 @@ async function seed() {
     const collectionName = path.basename(file, '.json');
 
     try {
-      // Read and parse the JSON file
+      // Read and parse the JSON file utilizing EJSON for MongoDB extended format ($oid, $date, etc)
       const rawContent = fs.readFileSync(filePath, 'utf-8');
-      const documents = JSON.parse(rawContent);
+      const documents = EJSON.parse(rawContent);
 
       // Validate parsed content is an array
       if (!Array.isArray(documents)) {

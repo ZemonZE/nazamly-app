@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/context/AuthContext';
 import { API_URL } from '@/firebase';
 import { useAppTheme } from '@/constants/theme';
+import { getStudentCard, uploadStudentCard } from '@/services/authService';
 
 import { useRouter } from 'expo-router';
 
@@ -108,10 +109,13 @@ const HomeScreen = () => {
     if (!user) return;
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${API_URL}/api/auth/student-card`, { headers: { Authorization: `Bearer ${token}` } });
-      const body = await res.json();
-      if (res.ok && body.success && body.studentCardPhotoURL) setStudentCardUrl(body.studentCardPhotoURL);
-    } catch (err) { console.error('[HomePage] fetch student card error:', err); }
+      const response = await getStudentCard(token);
+      if (response.success && response.studentCardPhotoURL) {
+        setStudentCardUrl(response.studentCardPhotoURL);
+      }
+    } catch (err) {
+      console.error('[HomePage] fetch student card error:', err);
+    }
   }, [user]);
 
   useEffect(() => { fetchSchedule(); }, [fetchSchedule]);
@@ -147,21 +151,23 @@ const HomeScreen = () => {
       const saved = await rendered.saveAsync({ compress: 0.6, format: ImageManipulator.SaveFormat.JPEG });
       setCardUploadProgress(30);
       const token = await user?.getIdToken();
-      const formData = new FormData();
-      if (Platform.OS === 'web') { const response = await fetch(saved.uri); const blob = await response.blob(); formData.append('photo', blob, 'card.jpg'); }
-      else { formData.append('photo', { uri: saved.uri, name: 'card.jpg', type: 'image/jpeg' } as any); }
-      const res = await fetch(`${API_URL}/api/auth/upload-student-card`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
       setCardUploadProgress(90);
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || 'فشل الرفع');
+      const response = await uploadStudentCard(saved.uri, 'image/jpeg', 'card.jpg', token!);
       setCardUploadProgress(100);
-      if (data.data?.studentCardPhotoURL) setStudentCardUrl(data.data.studentCardPhotoURL);
-      if (backendUser) setBackendUser({ ...backendUser, studentCardPhotoURL: data.data?.studentCardPhotoURL });
+      if (response.success && response.data?.studentCardPhotoURL) {
+        setStudentCardUrl(response.data.studentCardPhotoURL);
+        if (backendUser) setBackendUser({ ...backendUser, studentCardPhotoURL: response.data.studentCardPhotoURL });
+      }
       setLocalCardUri(null);
       if (Platform.OS === 'android') { ToastAndroid.showWithGravity('Updated!', ToastAndroid.SHORT, ToastAndroid.BOTTOM); }
       else { Alert.alert('Saved', 'Saved'); }
-    } catch (err: any) { setLocalCardUri(null); Alert.alert('Error', err.message); }
-    finally { setIsUploadingCard(false); setCardUploadProgress(0); }
+    } catch (err: any) {
+      setLocalCardUri(null);
+      Alert.alert('Error', err.message || 'Upload failed');
+    } finally {
+      setIsUploadingCard(false);
+      setCardUploadProgress(0);
+    }
   };
 
   const navigateToGpa = () => router.push('/(tabs)/GpaPlanner' as any);

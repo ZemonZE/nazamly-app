@@ -97,6 +97,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="Coding"
+        options={{
+          title: "Coding",
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="code-braces" size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="GpaPlanner"
         options={{
           href: null,

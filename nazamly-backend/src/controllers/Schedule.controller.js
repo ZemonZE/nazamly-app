@@ -1,10 +1,7 @@
 const scheduleRepo = require("../Repos/Schedule_Repo");
 const sessionsRepo = require("../Repos/Sessions_Repo");
 const userRepo = require("../Repos/User_Repo");
-const { TimeTable, TimeTableEntry } = require("../models/schedule");
-// ── OLD BRANCH (commented out — userRepo already handles user lookups) ──────
-// const { User } = require("../models");
-// ── END OLD BRANCH ──────────────────────────────────────────────────────────
+// ── Models no longer imported directly — all DB access goes through repos ──
 
 /**
  * Day name → number mapping for AI-generated schedules
@@ -448,7 +445,7 @@ const addTimeTableEntry = async (req, res) => {
       if (existing && existing.length > 0) {
         timeTableId = existing[0]._id;
       } else {
-        const newSched = await TimeTable.create({
+        const newSched = await scheduleRepo.create({
           userId,
           entries: [],
           title: "My Schedule",
@@ -458,7 +455,7 @@ const addTimeTableEntry = async (req, res) => {
     }
 
     // 1. إنشاء العنصر الجديد في قاعدة البيانات
-    const newEntry = await TimeTableEntry.create({
+    const newEntry = await sessionsRepo.create({
       userId,
       timeTableId,
       courseId,
@@ -471,11 +468,7 @@ const addTimeTableEntry = async (req, res) => {
     });
 
     // 2. إضافة الـ ID الخاص بهذا العنصر إلى مصفوفة entries في الجدول الأساسي
-    await TimeTable.findByIdAndUpdate(
-      timeTableId,
-      { $push: { entries: newEntry._id } },
-      { new: true },
-    );
+    await scheduleRepo.addEntry(timeTableId, newEntry._id);
 
     return res.status(201).json({ success: true, data: newEntry });
   } catch (error) {
@@ -488,13 +481,7 @@ const getTimeTable = async (req, res) => {
   try {
     const { timeTableId } = req.params;
 
-    const timeTable = await TimeTable.findById(timeTableId).populate({
-      path: "entries", // جلب تفاصيل المحاضرات
-      populate: {
-        path: "courseId", // بداخل كل محاضرة، اجلب تفاصيل المادة
-        select: "courseName courseCode color", // updated to match actual DB fields courseName & courseCode
-      },
-    });
+    const timeTable = await scheduleRepo.findById(timeTableId);
 
     if (!timeTable) {
       return res
@@ -508,6 +495,155 @@ const getTimeTable = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Import classes from a schedule image/PDF via OCR
+ * @route   POST /api/schedule/import-from-image
+ * @access  Private (Authenticated User)
+ *
+ * Accepts a multipart file upload (image or PDF of a schedule/timetable),
+ * sends it to the Python OCR microservice for Gemma 3 vision extraction,
+ * and creates TimeTableEntry records from the extracted classes.
+ *
+ * Body: multipart/form-data with field 'file'
+ */
+const importScheduleFromImage = async (req, res) => {
+  const fs = require('fs');
+  const { extractSchedule } = require('../services/ocr.service');
+
+  let filePath = null;
+
+  try {
+    // 1. Validate file
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No file uploaded. Please upload a schedule image or PDF.",
+      });
+    }
+    filePath = req.file.path;
+
+    // 2. Get MongoDB User from Firebase UID
+    const firebaseUid = req.user.uid;
+    const user = await userRepo.findByFirebaseUid(firebaseUid);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    const userId = user._id;
+
+    // 3. Call OCR service
+    const ocrResult = await extractSchedule(filePath);
+
+    const extractedClasses = ocrResult.classes || [];
+    if (extractedClasses.length === 0) {
+      return res.status(422).json({
+        success: false,
+        message: "Could not extract any classes from the uploaded file. Please try a clearer image.",
+        confidence: ocrResult.confidence || 0,
+      });
+    }
+
+    // 4. Find or create the user's timetable
+    const existingSchedules = await scheduleRepo.findByUserId(userId);
+    let timetableId;
+
+    if (existingSchedules && existingSchedules.length > 0) {
+      timetableId = existingSchedules[0]._id;
+    } else {
+      const newSched = await scheduleRepo.create({
+        userId,
+        entries: [],
+        title: "My Schedule",
+        totalCreditHours: 0,
+        sourceType: "manual",
+      });
+      timetableId = newSched._id;
+    }
+
+    // 5. Pad time helper
+    const padTime = (t) => {
+      if (!t) return "08:00";
+      const [h, m] = t.split(":");
+      return `${h.padStart(2, "0")}:${(m || "00").padStart(2, "0")}`;
+    };
+
+    const toMinutes = (t) => {
+      if (!t) return 0;
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    };
+
+    // 6. Build entry documents matching TimeTableEntry model
+    const entryDocs = extractedClasses.map((cls) => {
+      const start = padTime(cls.startTime);
+      let end = padTime(cls.endTime);
+      // Ensure endTime is always after startTime
+      if (toMinutes(end) <= toMinutes(start)) {
+        const [h, m] = start.split(":").map(Number);
+        const endMins = h * 60 + m + 60; // default +1 hour
+        end = `${String(Math.floor(endMins / 60) % 24).padStart(2, "0")}:${String(endMins % 60).padStart(2, "0")}`;
+      }
+      return {
+        userId,
+        timeTableId: timetableId,
+        courseCode: cls.courseCode || "",
+        courseName: cls.courseName || cls.courseCode || "",
+        dayOfWeek: typeof cls.dayOfWeek === "number" ? cls.dayOfWeek : 0,
+        startTime: start,
+        endTime: end,
+        groupNumber: cls.groupNumber || "",
+        sessionType: cls.sessionType || "Lecture",
+        location: cls.location || "",
+      };
+    });
+
+    // 7. Create entries in DB
+    const createdEntries = await sessionsRepo.createMany(entryDocs);
+    const entryIds = createdEntries.map((e) => e._id);
+
+    // 8. Add entry IDs to the timetable
+    for (const entryId of entryIds) {
+      await scheduleRepo.addEntry(timetableId, entryId);
+    }
+
+    // 9. Clean up uploaded file
+    try { fs.unlinkSync(filePath); } catch (_) { /* ignore cleanup errors */ }
+
+    return res.status(201).json({
+      success: true,
+      message: `${createdEntries.length} classes imported successfully from ${ocrResult.source || "OCR"}`,
+      data: {
+        timetableId,
+        entriesCount: createdEntries.length,
+        confidence: ocrResult.confidence,
+        entries: createdEntries.map((e) => ({
+          _id: e._id,
+          courseCode: e.courseCode,
+          courseName: e.courseName,
+          dayOfWeek: e.dayOfWeek,
+          startTime: e.startTime,
+          endTime: e.endTime,
+          sessionType: e.sessionType,
+          groupNumber: e.groupNumber,
+          location: e.location,
+        })),
+      },
+    });
+  } catch (error) {
+    // Clean up file on error
+    if (filePath) {
+      try { require('fs').unlinkSync(filePath); } catch (_) { /* ignore */ }
+    }
+    console.error("❌ Import Schedule from Image Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Error importing schedule from image",
+    });
+  }
+};
+
 module.exports = {
   addOrUpdateSchedule,
   getMySchedule,
@@ -516,4 +652,5 @@ module.exports = {
   getTimeTable,
   saveAISchedule,
   getMyTimetable,
+  importScheduleFromImage,
 };

@@ -11,6 +11,7 @@ import { auth, API_URL } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'expo-router';
 import { useAppTheme } from '@/constants/theme';
+import { getProfile, setupProfile, uploadPhoto } from '@/services/authService';
 interface ProfileDetailProps {
   icon: keyof typeof Feather.glyphMap;
   label: string;
@@ -39,17 +40,17 @@ const ProfileScreen = () => {
     try {
       setProfileLoading(true);
       const token = await user.getIdToken(true);
-      const res = await fetch(`${API_URL}/api/auth/get-profile`, { headers: { Authorization: `Bearer ${token}` } });
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) { setProfileLoading(false); return; }
-      const body = await res.json();
-      if (res.ok && body.success) {
-        setBackendUser(body.data);
-        setCgpaInput(body.data?.currentCGPA?.toString() || '');
-        setCreditsInput(body.data?.earnedCreditHours?.toString() || '');
+      const response = await getProfile(token);
+      if (response.success && response.data) {
+        setBackendUser(response.data);
+        setCgpaInput(response.data?.currentCGPA?.toString() || '');
+        setCreditsInput(response.data?.earnedCreditHours?.toString() || '');
       }
-    } catch (err) { console.error('[Profile] fetch error:', err); }
-    finally { setProfileLoading(false); }
+    } catch (err) {
+      console.error('[Profile] fetch error:', err);
+    } finally {
+      setProfileLoading(false);
+    }
   }, [user, setBackendUser]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
@@ -77,18 +78,20 @@ const ProfileScreen = () => {
     setIsSaving(true);
     try {
       const token = await user?.getIdToken();
-      const res = await fetch(`${API_URL}/api/auth/setup-profile`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ currentCGPA: cgpa, earnedCreditHours: credits }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        await refreshProfile(); setEditModalVisible(false);
+      const response = await setupProfile({ currentCGPA: cgpa, earnedCreditHours: credits }, token!);
+      if (response.success) {
+        await refreshProfile();
+        setEditModalVisible(false);
         if (Platform.OS === 'android') { ToastAndroid.showWithGravity('Profile updated successfully', ToastAndroid.SHORT, ToastAndroid.BOTTOM); }
         else { Alert.alert('Success', 'Profile updated successfully'); }
-      } else { throw new Error(data.message || 'Failed to save profile'); }
-    } catch (err: any) { Alert.alert('Error', err.message || 'Failed to update profile'); }
-    finally { setIsSaving(false); }
+      } else {
+        throw new Error(response.message || 'Failed to save profile');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePhotoUpload = async () => {
@@ -105,20 +108,22 @@ const ProfileScreen = () => {
       const saved = await rendered.saveAsync({ compress: 0.6, format: ImageManipulator.SaveFormat.JPEG });
       setUploadProgress(30);
       const token = await user?.getIdToken();
-      const formData = new FormData();
-      if (Platform.OS === 'web') { const response = await fetch(saved.uri); const blob = await response.blob(); formData.append('photo', blob, 'photo.jpg'); }
-      else { formData.append('photo', { uri: saved.uri, name: 'photo.jpg', type: 'image/jpeg' } as any); }
-      const res = await fetch(`${API_URL}/api/auth/upload-photo`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
       setUploadProgress(90);
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || 'Upload failed');
+      const response = await uploadPhoto(saved.uri, 'image/jpeg', 'photo.jpg', token!);
       setUploadProgress(100);
-      if (backendUser) setBackendUser({ ...backendUser, photoURL: data.photoURL });
+      if (response.success && response.photoURL) {
+        if (backendUser) setBackendUser({ ...backendUser, photoURL: response.photoURL });
+      }
       setLocalPhotoUri(null);
       if (Platform.OS === 'android') { ToastAndroid.showWithGravity('Profile photo updated', ToastAndroid.SHORT, ToastAndroid.BOTTOM); }
       else { Alert.alert('Success', 'Profile photo updated'); }
-    } catch (err: any) { setLocalPhotoUri(null); Alert.alert('Upload Failed', err.message || 'Failed to upload photo.'); }
-    finally { setIsUploadingPhoto(false); setUploadProgress(0); }
+    } catch (err: any) {
+      setLocalPhotoUri(null);
+      Alert.alert('Upload Failed', err.message || 'Failed to upload photo.');
+    } finally {
+      setIsUploadingPhoto(false);
+      setUploadProgress(0);
+    }
   };
 
   const displayName = user?.displayName || 'Student';

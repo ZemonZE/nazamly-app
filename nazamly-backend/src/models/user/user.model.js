@@ -14,6 +14,9 @@ const userSchema = new mongoose.Schema({
     courseCode: { type: String, required: true },
     creditHours: { type: Number, required: true, min: 1, max: 10 },
   }],
+  // Soft-delete support (required by Base_Repo)
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

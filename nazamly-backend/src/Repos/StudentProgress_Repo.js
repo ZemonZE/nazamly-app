@@ -14,7 +14,7 @@ class StudentProgress_Repo extends Base_Repo {
     return await this.model.findOneAndUpdate(
       { studentId, courseId },
       { $setOnInsert: { studentId, courseId, problems: [] } },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
   }
 
@@ -41,7 +41,7 @@ class StudentProgress_Repo extends Base_Repo {
       return await this.model.findOneAndUpdate(
         { studentId, courseId },
         { $set: updateFields },
-        { arrayFilters: [{ 'elem.problemId': problemId }], new: true }
+        { arrayFilters: [{ 'elem.problemId': problemId }], returnDocument: 'after' }
       );
     } else {
       const newEntry = {
@@ -54,7 +54,7 @@ class StudentProgress_Repo extends Base_Repo {
       return await this.model.findOneAndUpdate(
         { studentId, courseId },
         { $push: { problems: newEntry } },
-        { new: true }
+        { returnDocument: 'after' }
       );
     }
   }
@@ -81,7 +81,7 @@ class StudentProgress_Repo extends Base_Repo {
     const result = await this.model.findOneAndUpdate(
       { studentId, courseId, 'problems.problemId': problemId },
       { $set: { 'problems.$[elem].showDifficulty': value } },
-      { arrayFilters: [{ 'elem.problemId': problemId }], new: true }
+      { arrayFilters: [{ 'elem.problemId': problemId }], returnDocument: 'after' }
     );
 
     // If no entry existed for this problem, push a new one
@@ -92,7 +92,7 @@ class StudentProgress_Repo extends Base_Repo {
           $setOnInsert: { studentId, courseId },
           $push: { problems: { problemId, status: 'attempted', showDifficulty: value } },
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     }
 

@@ -7,24 +7,13 @@ const authMiddleware = async (req, res, next) => {
         const token = req.headers.authorization?.split("Bearer ")[1];
         if (!token) return res.status(401).json({ message: "Unauthorized" });
 
-        let decodedToken;
-        
-        if (admin.apps.length > 0) {
-            // Verify token if Firebase Admin is initialized
-            decodedToken = await admin.auth().verifyIdToken(token);
-        } else {
-            // Fallback: decode JWT manually without verification (Local Mock Mode)
-            console.warn("⚠️ Firebase Admin not initialized. Decoding token without verification.");
-            const payloadBase64 = token.split('.')[1];
-            if (!payloadBase64) throw new Error("Invalid JWT Format");
-            decodedToken = JSON.parse(Buffer.from(payloadBase64, 'base64').toString('utf8'));
-            
-            // Firebase ID Tokens commonly store UID in `user_id` or `uid`
-            if (!decodedToken.uid) {
-                decodedToken.uid = decodedToken.user_id || decodedToken.sub;
-            }
+        // Firebase Admin must be initialized — refuse to serve otherwise
+        if (!admin.apps || admin.apps.length === 0) {
+            console.error("🚨 Firebase Admin not initialized. Rejecting request for security.");
+            return res.status(503).json({ message: "Authentication service unavailable" });
         }
-        
+
+        const decodedToken = await admin.auth().verifyIdToken(token);
         req.user = decodedToken; 
         
         next();

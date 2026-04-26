@@ -22,7 +22,8 @@
         "foregroundImage": "./assets/images/Logo.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.nazamly.myapp"
+      "package": "com.nazamly.myapp",
+      "usesCleartextTraffic": true
     },
     "web": {
       "bundler": "metro",

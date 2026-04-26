@@ -3,6 +3,7 @@ const router = express.Router();
 
 // FIXED: Renamed the variable to match the routes below
 const requireAuth = require("../middlewares/auth.middleware"); 
+const upload = require("../middlewares/upload.middleware");
 
 const {
   addOrUpdateSchedule,
@@ -12,6 +13,7 @@ const {
   getMyTimetable,
   addTimeTableEntry,
   getTimeTable,
+  importScheduleFromImage,
 } = require("../controllers/Schedule.controller");
 
 // ── Legacy Routes ──
@@ -66,5 +68,12 @@ router.post("/add-entry", requireAuth, addTimeTableEntry);
  * @access  Private
  */
 router.get("/timetable/:timeTableId", requireAuth, getTimeTable);
+
+/**
+ * @route   POST /api/schedule/import-from-image
+ * @desc    Upload schedule image/PDF → OCR extract → add classes to timetable
+ * @access  Private
+ */
+router.post("/import-from-image", requireAuth, upload.single('file'), importScheduleFromImage);
 
 module.exports = router;

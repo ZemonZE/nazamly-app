@@ -12,6 +12,10 @@ import {
   uploadTranscript, getTranscriptHistory, deleteTranscript, updateTranscript,
   ExtractedCourse, TranscriptHistoryItem,
 } from '@/services/transcriptService';
+import {
+  getTermCourses, addTermCourse, removeTermCourse,
+  calculateTermGPA, generateTargetPlan, updateGpaProfile,
+} from '@/services/gpaService';
 
 const STORAGE_KEY = '@nazamly_gpa_profile';
 const COURSES_STORAGE_KEY = '@nazamly_gpa_courses';
@@ -533,7 +537,7 @@ export default function GpaPlannerScreen() {
         if (p.cgpa !== undefined && p.hours !== undefined) setProfile(p);
       } catch { }
     });
-    // Load saved courses & grades
+    // Load saved courses & grades (local first, then try backend)
     AsyncStorage.getItem(COURSES_STORAGE_KEY).then(saved => {
       if (!saved) return;
       try {
@@ -543,9 +547,37 @@ export default function GpaPlannerScreen() {
         if (ds) setDataSource(ds);
       } catch { }
     });
-  }, []);
+    // Also try loading courses from backend
+    if (user) {
+      (async () => {
+        try {
+          const token = await user.getIdToken();
+          const backendCourses = await getTermCourses(token);
+          if (backendCourses && backendCourses.length > 0) {
+            const mapped = backendCourses.map(c => ({
+              id: c._id,
+              name: c.name,
+              code: c.courseCode,
+              credits: c.creditHours,
+            }));
+            // Only use backend courses if local is empty
+            const localSaved = await AsyncStorage.getItem(COURSES_STORAGE_KEY);
+            if (!localSaved) {
+              setCourses(mapped);
+              const defaultGrades: Record<string, number> = {};
+              mapped.forEach(c => { defaultGrades[c.id] = 4.0; });
+              setGrades(defaultGrades);
+            }
+          }
+        } catch (err) {
+          // Backend unavailable — use local data
+          console.log('Backend courses unavailable, using local:', err);
+        }
+      })();
+    }
+  }, [user]);
 
-  const saveProfile = useCallback(() => {
+  const saveProfile = useCallback(async () => {
     const cgpa = parseFloat(cgpaInput);
     const hours = parseInt(hoursInput, 10);
     setProfileError('');
@@ -554,7 +586,16 @@ export default function GpaPlannerScreen() {
     const data = { cgpa, hours };
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     setProfile(data);
-  }, [cgpaInput, hoursInput]);
+    // Sync profile to backend (fire-and-forget)
+    if (user) {
+      try {
+        const token = await user.getIdToken();
+        await updateGpaProfile(cgpa, hours, token);
+      } catch (err) {
+        console.log('Failed to sync profile to backend:', err);
+      }
+    }
+  }, [cgpaInput, hoursInput, user]);
 
   const editProfile = () => {
     if (profile) { setCgpaInput(String(profile.cgpa)); setHoursInput(String(profile.hours)); }
@@ -590,7 +631,7 @@ export default function GpaPlannerScreen() {
     AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: newCourses, grades: newGrades, dataSource }));
   };
 
-  const addManualCourse = () => {
+  const addManualCourse = async () => {
     const id = `manual_${Date.now()}`;
     const newCourse: Course = { id, name: '', code: '', credits: 3 };
     const updatedCourses = [...courses, newCourse];
@@ -598,6 +639,15 @@ export default function GpaPlannerScreen() {
     setCourses(updatedCourses);
     setGrades(updatedGrades);
     AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades: updatedGrades, dataSource }));
+    // Also sync to backend (fire-and-forget)
+    if (user) {
+      try {
+        const token = await user.getIdToken();
+        await addTermCourse('New Course', '', 3, token);
+      } catch (err) {
+        console.log('Failed to add course to backend:', err);
+      }
+    }
   };
 
   const updateManualCourse = (id: string, field: keyof Course, value: string) => {
@@ -606,13 +656,22 @@ export default function GpaPlannerScreen() {
     AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades, dataSource }));
   };
 
-  const removeManualCourse = (id: string) => {
+  const removeManualCourse = async (id: string) => {
     const updatedCourses = courses.filter(c => c.id !== id);
     const updatedGrades = { ...grades };
     delete updatedGrades[id];
     setCourses(updatedCourses);
     setGrades(updatedGrades);
     AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades: updatedGrades, dataSource }));
+    // Also sync to backend (fire-and-forget)
+    if (user) {
+      try {
+        const token = await user.getIdToken();
+        await removeTermCourse(id, token);
+      } catch (err) {
+        console.log('Failed to remove course from backend:', err);
+      }
+    }
   };
 
   const calculations = useMemo(() => {
@@ -632,7 +691,7 @@ export default function GpaPlannerScreen() {
     };
   }, [profile, courses, grades]);
 
-  const computeTarget = useCallback(() => {
+  const computeTarget = useCallback(async () => {
     const target = parseFloat(targetCgpa);
     if (!profile || isNaN(target) || target < 0 || target > 5) {
       setStrategy({ error: 'Invalid Target CGPA' });
@@ -642,8 +701,29 @@ export default function GpaPlannerScreen() {
       setStrategy({ error: 'Add courses first' });
       return;
     }
+    // Try backend first, fall back to local computation
+    if (user) {
+      try {
+        const token = await user.getIdToken();
+        const backendPlan = await generateTargetPlan(
+          target,
+          courses.map(c => ({ courseCode: c.code, creditHours: c.credits })),
+          token,
+        );
+        setStrategy({
+          possible: true,
+          requiredTermGpa: backendPlan.requiredTermAverageGPA?.toFixed(2),
+          ...backendPlan,
+          plan: backendPlan.plan || [],
+        });
+        return;
+      } catch (err) {
+        console.log('Backend strategy unavailable, using local:', err);
+      }
+    }
+    // Local fallback
     setStrategy(computeStrategy(courses, grades, profile.cgpa, profile.hours, target));
-  }, [targetCgpa, profile, courses, grades]);
+  }, [targetCgpa, profile, courses, grades, user]);
 
   const targetCls = useMemo(() => {
     const v = parseFloat(targetCgpa);

@@ -47,7 +47,11 @@ const courseSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'Department',
     required: true
-  }]
+  }],
+
+  // Soft-delete support (required by Base_Repo)
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date, default: null },
 }, {
   timestamps: true,
   collection: 'courses' // Teammate manually set collection name, we kept it

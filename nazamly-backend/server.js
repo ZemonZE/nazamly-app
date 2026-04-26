@@ -21,7 +21,6 @@ const PORT = process.env.PORT || 5000;
 
 connectDB()
   .then(() => {
-    const PORT = process.env.PORT || 5000;
     const localIP = getLocalIP();
     
     app.listen(PORT, '0.0.0.0', () => {
@@ -61,6 +60,10 @@ connectDB()
         console.error(`[🐍 PYTHON ERR]: ${data.toString().trim()}`);
       });
 
+      pythonProcess.on('error', (err) => {
+        console.error(`[🐍 PYTHON OCR]: Failed to start OCR service: ${err.message}`);
+      });
+
       pythonProcess.on('close', (code) => {
         console.log(`[🐍 PYTHON OCR]: Process exited with code ${code}`);
       });
@@ -72,7 +75,10 @@ connectDB()
       process.on('exit', killPython);
       process.on('SIGINT', () => { killPython(); process.exit(); });
       process.on('SIGTERM', () => { killPython(); process.exit(); });
-      process.once('SIGUSR2', () => { killPython(); process.kill(process.pid, 'SIGUSR2'); });
+      // SIGUSR2 is not supported on Windows — only register on Unix
+      if (os.platform() !== 'win32') {
+        process.once('SIGUSR2', () => { killPython(); process.kill(process.pid, 'SIGUSR2'); });
+      }
     });
   })
   .catch((err) => {

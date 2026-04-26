@@ -27,6 +27,7 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth, API_URL, GOOGLE_WEB_CLIENT_ID,Google_Android_Id } from "@/firebase";
+import { syncUser, getProfile } from '@/services/authService';
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
@@ -47,7 +48,6 @@ export default function RegisterScreen() {
 
   const redirectUri = makeRedirectUri({
     scheme: "nazamly",
-    path: "redirect",
   });
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
@@ -67,36 +67,17 @@ export default function RegisterScreen() {
       console.log("[Register] Getting fresh token for sync...");
       const token = await user.getIdToken(true);
       
-      console.log("[Register] Calling /api/auth/sync...");
-      const res = await fetch(`${API_URL}/api/auth/sync`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      console.log("[Register] Calling syncUser...");
+      const response = await syncUser(token);
+      console.log("[Register] Sync response:", response);
       
-      console.log("[Register] Sync response status:", res.status);
-      
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        console.error("[Register] Non-JSON response from sync");
-        throw new Error("Invalid response from server");
+      if (response.message === "unauthorized") {
+        Alert.alert('Cancel', 'Cancel');
+        router.replace("/(auth)/Login");
+        return null;
       }
-      
-      const body = await res.json();
-      console.log("[Register] Sync response:", body);
-      
-      if (!res.ok) {
-        if (res.status === 401) {
-          Alert.alert('Cancel', 'Cancel');
-          router.replace("/(auth)/Login");
-          return null;
-        }
-        throw new Error(body.message || "Failed to sync with backend");
-      }
-      
-      return body;
+
+      return response;
     } catch (error: any) {
       console.error("[Register] Sync error:", error);
       throw error;
@@ -106,21 +87,14 @@ export default function RegisterScreen() {
   const fetchUserProfile = useCallback(async (user: any) => {
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${API_URL}/api/auth/get-profile`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const body = await res.json();
-      
-      if (res.ok && body.success) {
-        console.log("[Register] Profile fetched successfully:", body.data);
-        setBackendUser(body.data);
-        return body.data;
+      const response = await getProfile(token);
+
+      if (response.success && response.data) {
+        console.log("[Register] Profile fetched successfully:", response.data);
+        setBackendUser(response.data);
+        return response.data;
       } else {
-        console.error("[Register] Failed to fetch profile:", body);
+        console.error("[Register] Failed to fetch profile:", response);
       }
     } catch (error) {
       console.error("[Register] Error fetching profile:", error);
