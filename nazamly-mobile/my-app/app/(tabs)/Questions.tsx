@@ -7,9 +7,9 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { API_URL } from '@/firebase';
 import { useAppTheme } from '@/constants/theme';
-import { getMyCoursesMaterials, getSubFolderFiles } from '@/services/materialsService';
+import { getMyCoursesMaterials, getSubFolderFiles } from '@/services/courseMaterialsService';
 import { getQuizHistory, generateExamStream, submitQuiz } from '@/services/questionsService';
-import type { CourseMaterial, DriveFile } from '@/services/materialsService';
+import type { CourseMaterial, CourseFile as DriveFile } from '@/services/courseMaterialsService';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 

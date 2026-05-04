@@ -16,6 +16,7 @@ import Generator from "./pages/Generator";
 import Settings from "./pages/Settings";
 import CodingProblems from "./pages/CodingProblems";
 import ProblemSolver from "./pages/ProblemSolver";
+import Profile from "./pages/Profile";
 
 import { auth, API_URL } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -139,6 +140,7 @@ function App() {
           <Route path="generator" element={<Generator />} />
           <Route path="settings" element={<Settings />} />
           <Route path="coding" element={<CodingProblems />} />
+          <Route path="profile" element={<Profile />} />
         </Route>
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>

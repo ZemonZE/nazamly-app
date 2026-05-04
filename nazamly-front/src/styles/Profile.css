@@ -1,0 +1,474 @@
+.profile-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header Card */
+.profile-header-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg, 16px);
+  padding: 30px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.profile-avatar-lg {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue-700), var(--blue-500));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  border: 4px solid rgba(37, 99, 235, 0.2);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.15);
+  flex-shrink: 0;
+}
+
+.profile-title-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.profile-title-info h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.profile-email {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.profile-badge {
+  margin-top: 4px;
+  padding: 4px 12px;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  text-transform: capitalize;
+}
+
+/* Stats Grid */
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.profile-stat-box {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md, 12px);
+  padding: 24px;
+  text-align: center;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.profile-stat-box:hover {
+  transform: translateY(-2px);
+  border-color: rgba(96, 165, 250, 0.4);
+}
+
+.stat-label {
+  margin: 0 0 8px 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.profile-stat-box h3 {
+  margin: 0;
+  font-size: 1.7rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+/* Courses Section */
+.profile-courses-section {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg, 16px);
+  padding: 28px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.profile-courses-section h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.profile-courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.profile-course-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md, 12px);
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.profile-course-card:hover {
+  background: rgba(37, 99, 235, 0.04);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.course-icon-bg {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--blue-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.course-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.course-details h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.course-details p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.profile-empty-text {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  font-style: italic;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* Quiz History Section */
+.nse-latest-quizzes {
+  margin-top: 10px;
+}
+
+.profile-quizzes-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-quiz-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md, 12px);
+  padding: 16px 20px;
+  transition: all 0.2s ease;
+}
+
+.profile-quiz-card:hover {
+  background: rgba(37, 99, 235, 0.04);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.quiz-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quiz-card-header h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.quiz-date {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.quiz-card-body {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.quiz-score-badge {
+  background: rgba(37, 99, 235, 0.15);
+  color: var(--blue-400);
+  padding: 6px 12px;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.quiz-percent {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.quiz-percent.good {
+  color: #22c55e;
+}
+
+.quiz-percent.average {
+  color: #eab308;
+}
+
+.quiz-percent.poor {
+  color: #ef4444;
+}
+
+.profile-quiz-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.view-all-history-btn {
+  background: transparent;
+  color: var(--blue-400);
+  border: 1px solid var(--blue-500);
+  padding: 10px 24px;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.view-all-history-btn:hover {
+  background: rgba(37, 99, 235, 0.1);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+/* GPA Status Badge */
+.profile-gpa-badge {
+  margin-top: 8px;
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--glass-border);
+}
+
+.nse-recent-coding {
+  margin-top: 10px;
+}
+
+/* Graduation Progress Tracker */
+.nse-grad-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.grad-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.grad-progress-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grad-progress-title h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.grad-progress-percent {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--blue-400);
+}
+
+.grad-progress-track {
+  width: 100%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.grad-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #d946ef);
+  border-radius: 50px;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.grad-progress-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.grad-progress-text strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* GPA Goal Tracker */
+.profile-goal-tracker-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg, 16px);
+  padding: 24px 28px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.goal-tracker-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.goal-tracker-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.goal-tracker-title h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.goal-tracker-icon {
+  color: #22c55e;
+}
+
+.goal-tracker-metrics {
+  display: flex;
+  justify-content: flex-start;
+  gap: 48px;
+  flex-wrap: wrap;
+}
+
+.goal-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.goal-metric-label {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.goal-metric-value {
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.goal-metric-value.highlight {
+  color: #22c55e;
+}
+
+.goal-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.goal-progress-track {
+  width: 100%;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.goal-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  border-radius: 50px;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.goal-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}

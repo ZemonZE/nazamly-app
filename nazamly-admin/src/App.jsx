@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import "./CSS/App.css";
+import Home from './pages/Home';
 import Sidebar from './components/Sidebar';
 import Users from './pages/Users';
 import Departments from './pages/Departments';
@@ -148,7 +149,7 @@ function App() {
         />
         <main className={`main-content ${isSidebarFolded ? 'sidebar-folded' : ''}`}>
           <Routes>
-            <Route path="/" element={<Navigate to="/users" replace />} />
+            <Route path="/" element={<Home />} />
             <Route path="/users" element={<Users />} />
             <Route path="/departments" element={<Departments />} />
             <Route path="/courses" element={<Courses />} />

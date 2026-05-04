@@ -258,9 +258,9 @@
 /* ── Sub-folder tabs ── */
 .mat-subfolder-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 20px;
-  overflow-x: auto;
   padding-bottom: 4px;
 }
 

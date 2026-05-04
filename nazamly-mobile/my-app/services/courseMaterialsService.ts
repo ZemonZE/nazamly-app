@@ -1,6 +1,8 @@
 import { API_URL } from '@/firebase';
 
 export interface CourseMaterial {
+  _id?: string;
+  courseId: string;
   courseCode: string;
   courseName: string;
   driveFolderId?: string;

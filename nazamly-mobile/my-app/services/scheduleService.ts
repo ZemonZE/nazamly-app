@@ -1,4 +1,4 @@
-﻿import { API_URL } from '@/firebase';
+import { API_URL } from '@/firebase';
 import { Platform } from 'react-native';
 
 export interface AIScheduleEntry {
@@ -129,16 +129,16 @@ export async function generateSchedule(
   // Add files to FormData
   files.forEach((file, index) => {
     if (Platform.OS === 'web' && file.file) {
-      formData.append(`files`, file.file);
+      formData.append(`scheduleFiles`, file.file);
     } else {
-      formData.append(`files`, { uri: file.uri, type: file.mimeType, name: file.name } as any);
+      formData.append(`scheduleFiles`, { uri: file.uri, type: file.mimeType, name: file.name } as any);
     }
   });
 
   // Add target courses
   formData.append('targetCourses', JSON.stringify(targetCourses));
 
-  const res = await fetch(`${API_URL}/api/schedule/generate-ai-schedule`, {
+  const res = await fetch(`${API_URL}/api/ai/generate`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
@@ -155,7 +155,7 @@ export async function saveAISchedule(
   schedule: AIScheduleEntry[],
   token: string
 ): Promise<{ success: boolean; scheduleId?: string }> {
-  const res = await fetch(`${API_URL}/api/schedule/save-ai-schedule`, {
+  const res = await fetch(`${API_URL}/api/schedule/save-ai`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -181,9 +181,9 @@ export async function importScheduleFromImage(
   const formData = new FormData();
 
   if (Platform.OS === 'web' && fileObj) {
-    formData.append('image', fileObj);
+    formData.append('file', fileObj);
   } else {
-    formData.append('image', { uri: fileUri, type: mimeType, name: fileName } as any);
+    formData.append('file', { uri: fileUri, type: mimeType, name: fileName } as any);
   }
 
   const res = await fetch(`${API_URL}/api/schedule/import-from-image`, {
