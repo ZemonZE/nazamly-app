@@ -1,508 +1,37 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Modal,
+  TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as DocumentPicker from 'expo-document-picker';
 import { useAppTheme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import {
-  uploadTranscript, getTranscriptHistory, deleteTranscript, updateTranscript,
-  ExtractedCourse, TranscriptHistoryItem,
-} from '@/services/transcriptService';
-import {
-  getTermCourses, addTermCourse, removeTermCourse,
-  calculateTermGPA, generateTargetPlan, updateGpaProfile,
-} from '@/services/gpaService';
+  DataSourceModal, UploadFlow, HistoryFlow,
+  Course, DataSource, classifyGpa, gradeLabel, computeStrategy,
+} from '@/components/gpa';
+import { API_URL } from '@/firebase';
+
+const setupProfile = async (data: { currentCGPA: number; earnedCreditHours: number }, token: string) => {
+  const res = await fetch(`${API_URL}/api/auth/setup-profile`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+};
+
 
 const STORAGE_KEY = '@nazamly_gpa_profile';
 const COURSES_STORAGE_KEY = '@nazamly_gpa_courses';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Course {
-  id: string;
-  name: string;
-  code: string;
-  credits: number;
-}
 
-type DataSource = 'manual' | 'upload' | 'history';
-type UploadState = 'idle' | 'uploading' | 'processing' | 'review' | 'error';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function classifyGpa(v: number | string) {
-  const n = typeof v === 'string' ? parseFloat(v) : v;
-  if (isNaN(n) || n < 0) return { label: '', color: 'transparent' };
-  if (n === 0) return { label: 'F', color: '#ef4444' };
-  if (n < 1.0) return { label: 'Pass', color: '#ef4444' };
-  if (n < 1.5) return { label: 'C+', color: '#f97316' };
-  if (n < 2.5) return { label: 'B', color: '#eab308' };
-  if (n < 3.5) return { label: 'B+', color: '#f59e0b' };
-  if (n < 4.0) return { label: 'A', color: '#38bdf8' };
-  if (n < 4.5) return { label: 'A+', color: '#3b82f6' };
-  if (n <= 5.0) return { label: 'A+ (Honors)', color: '#22c55e' };
-  return { label: '', color: 'transparent' };
-}
-
-function gradeLabel(val: number) {
-  const opts = [
-    { value: 4.0, label: 'A+' }, { value: 3.5, label: 'A' },
-    { value: 3.0, label: 'B+' }, { value: 2.5, label: 'B' },
-    { value: 2.0, label: 'C+' }, { value: 1.5, label: 'C' },
-  ];
-  return opts.find(o => o.value === val)?.label ?? classifyGpa(val).label;
-}
-
-function computeStrategy(courses: Course[], grades: Record<string, number>, oldCgpa: number, oldHours: number, target: number) {
-  const termHours = courses.reduce((s, c) => s + c.credits, 0);
-  const totalHours = oldHours + termHours;
-  const neededPoints = target * totalHours - oldCgpa * oldHours;
-  const maxPoints = courses.reduce((s, c) => s + 5.0 * c.credits, 0);
-  const maxCgpa = (oldCgpa * oldHours + maxPoints) / totalHours;
-
-  if (target > 5.0 || neededPoints > maxPoints)
-    return { possible: false, maxCgpa: Math.min(maxCgpa, 5.0).toFixed(2) };
-  if (neededPoints <= 0)
-    return { possible: true, requiredTermGpa: '0.00', maxCgpa: Math.min(maxCgpa, 5.0).toFixed(2), plan: courses.map(c => ({ ...c, requiredGrade: 1.5 })), note: 'Target already met.' };
-
-  let remaining = [...courses];
-  let remainingPoints = neededPoints;
-  const planGrades: Record<string, number> = {};
-
-  while (remaining.length > 0) {
-    const ppc = remainingPoints / remaining.length;
-    const overflow = remaining.filter(c => ppc / c.credits > 5.0);
-    if (overflow.length === 0) {
-      remaining.forEach(c => { planGrades[c.id] = parseFloat((ppc / c.credits).toFixed(2)); });
-      break;
-    }
-    overflow.forEach(c => { planGrades[c.id] = 4.9; remainingPoints -= 4.9 * c.credits; });
-    remaining = remaining.filter(c => planGrades[c.id] === undefined);
-    if (remaining.length === 0 && remainingPoints > 0.001)
-      return { possible: false, maxCgpa: Math.min(maxCgpa, 5.0).toFixed(2) };
-  }
-
-  return {
-    possible: true,
-    requiredTermGpa: (termHours ? neededPoints / termHours : 0).toFixed(2),
-    maxCgpa: Math.min(maxCgpa, 5.0).toFixed(2),
-    plan: courses.map(c => ({ ...c, requiredGrade: planGrades[c.id] ?? 0 })),
-  };
-}
-
-function extractedToCourses(extracted: ExtractedCourse[]): { courses: Course[]; grades: Record<string, number> } {
-  const courses: Course[] = extracted.map((c, i) => ({
-    id: `ext_${i}`,
-    name: c.courseName || c.courseCode,
-    code: c.courseCode,
-    credits: c.creditHours || 3,
-  }));
-  const grades: Record<string, number> = {};
-  extracted.forEach((c, i) => { grades[`ext_${i}`] = c.gradePoints ?? 0; });
-  return { courses, grades };
-}
-
-// ─── Data Source Picker Modal ─────────────────────────────────────────────────
-
-function DataSourceModal({
-  visible, onClose, onSelect, colors,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  onSelect: (src: DataSource) => void;
-  colors: any;
-}) {
-  const options: { src: DataSource; icon: string; title: string; desc: string }[] = [
-    { src: 'manual', icon: 'edit-3', title: 'Enter Manually', desc: 'Type in your courses and grades' },
-    { src: 'upload', icon: 'upload', title: 'Upload Transcript', desc: 'PDF or image — AI extracts grades' },
-    { src: 'history', icon: 'clock', title: 'From History', desc: 'Use a previously uploaded transcript' },
-  ];
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={m.overlay} activeOpacity={1} onPress={onClose} />
-      <View style={[m.sheet, { backgroundColor: colors.card }]}>
-        <View style={[m.handle, { backgroundColor: colors.divider }]} />
-        <Text style={[m.sheetTitle, { color: colors.textPrimary }]}>How do you want to add courses?</Text>
-        {options.map(opt => (
-          <TouchableOpacity
-            key={opt.src}
-            style={[m.option, { borderColor: colors.border }]}
-            onPress={() => { onClose(); onSelect(opt.src); }}
-          >
-            <View style={[m.optIcon, { backgroundColor: colors.indigoPale }]}>
-              <Feather name={opt.icon as any} size={20} color={colors.indigo} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[m.optTitle, { color: colors.textPrimary }]}>{opt.title}</Text>
-              <Text style={[m.optDesc, { color: colors.textMuted }]}>{opt.desc}</Text>
-            </View>
-            <Feather name="chevron-right" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
-        ))}
-        <View style={{ height: 20 }} />
-      </View>
-    </Modal>
-  );
-}
-
-// ─── Upload Flow (inline) ─────────────────────────────────────────────────────
-
-function UploadFlow({
-  colors, user, onDone, onCancel,
-}: {
-  colors: any;
-  user: any;
-  onDone: (courses: Course[], grades: Record<string, number>) => void;
-  onCancel: () => void;
-}) {
-  const [uploadState, setUploadState] = useState<UploadState>('idle');
-  const [selectedFile, setSelectedFile] = useState<{ uri: string; name: string; mimeType: string; size: number; file?: any } | null>(null);
-  const [courses, setCourses] = useState<ExtractedCourse[]>([]);
-  const [termGPA, setTermGPA] = useState(0);
-  const [totalHours, setTotalHours] = useState(0);
-  const [confidence, setConfidence] = useState(0);
-  const [transcriptId, setTranscriptId] = useState<string>('');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const recalc = (updated: ExtractedCourse[]) => {
-    const pts = updated.reduce((s, c) => s + (c.gradePoints || 0) * (c.creditHours || 3), 0);
-    const hrs = updated.reduce((s, c) => s + (c.creditHours || 3), 0);
-    setTermGPA(hrs > 0 ? parseFloat((pts / hrs).toFixed(2)) : 0);
-    setTotalHours(hrs);
-  };
-
-  const pickFile = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'image/webp'],
-        copyToCacheDirectory: true,
-      });
-      if (result.canceled) return;
-      const asset = result.assets[0];
-      setSelectedFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType || 'application/octet-stream', size: asset.size || 0, file: asset.file });
-      setUploadState('idle');
-      setErrorMsg('');
-    } catch {
-      Alert.alert('Error', 'Failed to pick file.');
-    }
-  };
-
-  const doUpload = async () => {
-    if (!selectedFile || !user) return;
-    setUploadState('uploading');
-    try {
-      const token = await user.getIdToken();
-      setUploadState('processing');
-      const result = await uploadTranscript(selectedFile.uri, selectedFile.mimeType, selectedFile.name, token, selectedFile.file);
-      if (result.status === 'completed' && result.extractedCourses?.length > 0) {
-        setTranscriptId(result.transcriptId); // Save for future patches
-        setCourses(result.extractedCourses);
-        setTermGPA(result.termGPA);
-        setTotalHours(result.totalCreditHours);
-        setConfidence(result.ocrConfidence);
-        setUploadState('review');
-      } else {
-        setErrorMsg(result.errorMessage || 'No courses extracted. Try a clearer image.');
-        setUploadState('error');
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Upload failed.');
-      setUploadState('error');
-    }
-  };
-
-  const updateCourse = (i: number, field: keyof ExtractedCourse, val: string) => {
-    const updated = [...courses];
-    if (field === 'mark' || field === 'gradePoints' || field === 'creditHours')
-      (updated[i] as any)[field] = parseFloat(val) || 0;
-    else (updated[i] as any)[field] = val;
-    setCourses(updated);
-    recalc(updated);
-  };
-
-  const formatBytes = (b: number) => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1048576).toFixed(1)} MB`;
-
-  return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-      <View style={u.topRow}>
-        <TouchableOpacity onPress={onCancel} style={u.backBtn}>
-          <Feather name="arrow-left" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[u.title, { color: colors.textPrimary }]}>Upload Transcript</Text>
-        <View style={{ width: 28 }} />
-      </View>
-
-      {(uploadState === 'idle' || uploadState === 'error') && (
-        <>
-          <TouchableOpacity style={[u.dropZone, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={pickFile} activeOpacity={0.8}>
-            <View style={[u.dropIcon, { backgroundColor: colors.indigoPale }]}>
-              <MaterialCommunityIcons name="file-upload-outline" size={38} color={colors.indigo} />
-            </View>
-            <Text style={[u.dropTitle, { color: colors.textPrimary }]}>
-              {selectedFile ? selectedFile.name : 'Tap to select your transcript'}
-            </Text>
-            <Text style={[u.dropSub, { color: colors.textMuted }]}>
-              {selectedFile ? formatBytes(selectedFile.size) : 'PDF, JPG, PNG, or WEBP'}
-            </Text>
-          </TouchableOpacity>
-
-          {uploadState === 'error' && (
-            <View style={[u.errorBox, { backgroundColor: colors.redLight, borderColor: colors.red + '40' }]}>
-              <Feather name="alert-circle" size={16} color={colors.red} />
-              <Text style={[u.errorText, { color: colors.red }]}>{errorMsg}</Text>
-            </View>
-          )}
-
-          {selectedFile && (
-            <TouchableOpacity style={[u.btn, { backgroundColor: colors.indigo }]} onPress={doUpload}>
-              <Feather name="upload" size={18} color="#fff" />
-              <Text style={u.btnText}>Extract Grades</Text>
-            </TouchableOpacity>
-          )}
-
-          <View style={u.infoRow}>
-            {[{ icon: 'file-text', label: 'PDF' }, { icon: 'image', label: 'Image' }].map(item => (
-              <View key={item.label} style={[u.infoCard, { backgroundColor: colors.card }]}>
-                <Feather name={item.icon as any} size={20} color={colors.indigo} />
-                <Text style={[u.infoLabel, { color: colors.textPrimary }]}>{item.label}</Text>
-              </View>
-            ))}
-          </View>
-        </>
-      )}
-
-      {(uploadState === 'uploading' || uploadState === 'processing') && (
-        <View style={[u.processingCard, { backgroundColor: colors.card }]}>
-          <ActivityIndicator size="large" color={colors.indigo} />
-          <Text style={[u.processingTitle, { color: colors.textPrimary }]}>
-            {uploadState === 'uploading' ? 'Uploading...' : 'Extracting grades...'}
-          </Text>
-          <Text style={[u.processingSub, { color: colors.textMuted }]}>
-            {uploadState === 'processing' ? 'AI is reading your transcript.' : 'Sending file to server...'}
-          </Text>
-        </View>
-      )}
-
-      {uploadState === 'review' && (
-        <>
-          <View style={[u.summaryCard, { backgroundColor: colors.indigo }]}>
-            <View style={u.summaryRow}>
-              <View style={u.summaryItem}><Text style={u.summaryVal}>{termGPA.toFixed(2)}</Text><Text style={u.summaryLbl}>Term GPA</Text></View>
-              <View style={u.summaryDiv} />
-              <View style={u.summaryItem}><Text style={u.summaryVal}>{totalHours}</Text><Text style={u.summaryLbl}>Credit Hrs</Text></View>
-              <View style={u.summaryDiv} />
-              <View style={u.summaryItem}><Text style={u.summaryVal}>{courses.length}</Text><Text style={u.summaryLbl}>Courses</Text></View>
-            </View>
-            <Text style={u.confidenceText}>Confidence: {Math.round(confidence * 100)}% — Review and correct if needed</Text>
-          </View>
-
-          {courses.map((course, i) => (
-            <View key={i} style={[u.courseCard, { backgroundColor: colors.card }]}>
-              <View style={u.courseHeader}>
-                <TextInput style={[u.courseCode, { color: colors.indigo }]} value={course.courseCode} onChangeText={v => updateCourse(i, 'courseCode', v)} />
-                <TouchableOpacity onPress={() => { const upd = courses.filter((_, j) => j !== i); setCourses(upd); recalc(upd); }}>
-                  <Feather name="trash-2" size={16} color={colors.red} />
-                </TouchableOpacity>
-              </View>
-              <View style={u.courseFields}>
-                {(['mark', 'gradePoints', 'creditHours'] as (keyof ExtractedCourse)[]).map(field => (
-                  <View key={field} style={u.fieldGroup}>
-                    <Text style={[u.fieldLabel, { color: colors.textMuted }]}>{field === 'gradePoints' ? 'GPA Pts' : field === 'creditHours' ? 'Credits' : 'Mark'}</Text>
-                    <TextInput
-                      style={[u.fieldInput, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.bg }]}
-                      value={String((course as any)[field] ?? '')}
-                      onChangeText={v => updateCourse(i, field, v)}
-                      keyboardType="numeric"
-                    />
-                  </View>
-                ))}
-              </View>
-            </View>
-          ))}
-
-          <TouchableOpacity style={[u.btn, { backgroundColor: colors.teal }]} onPress={async () => {
-            try {
-              if (user && transcriptId) {
-                const token = await user.getIdToken();
-                // Send the potentially corrected courses back to the backend
-                await updateTranscript(transcriptId, courses, token);
-              }
-            } catch (err: any) {
-              console.error('Failed to save corrections to history:', err);
-              // We can still proceed even if saving to history fails
-            }
-            const { courses: c, grades: g } = extractedToCourses(courses);
-            onDone(c, g);
-          }}>
-            <Feather name="check" size={18} color="#fff" />
-            <Text style={u.btnText}>Use These Courses</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[u.secondaryBtn, { borderColor: colors.border }]} onPress={() => { setUploadState('idle'); setSelectedFile(null); }}>
-            <Text style={[u.secondaryBtnText, { color: colors.textSecondary }]}>Upload Another</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </ScrollView>
-  );
-}
-
-// ─── History Picker Flow (inline) ─────────────────────────────────────────────
-
-function HistoryFlow({
-  colors, user, onDone, onCancel,
-}: {
-  colors: any;
-  user: any;
-  onDone: (courses: Course[], grades: Record<string, number>) => void;
-  onCancel: () => void;
-}) {
-  const [history, setHistory] = useState<TranscriptHistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      if (!user) return;
-      try {
-        const token = await user.getIdToken();
-        setHistory(await getTranscriptHistory(token));
-      } catch (err: any) {
-        Alert.alert('Error', err.message || 'Failed to load history');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [user]);
-
-  const handleDelete = (item: TranscriptHistoryItem) => {
-    Alert.alert('Delete Transcript', `Delete "${item.fileName}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          try {
-            setDeletingId(item.id);
-            const token = await user!.getIdToken();
-            await deleteTranscript(item.id, token);
-            setHistory(prev => prev.filter(h => h.id !== item.id));
-          } catch (err: any) {
-            Alert.alert('Error', err.message || 'Delete failed');
-          } finally {
-            setDeletingId(null);
-          }
-        },
-      },
-    ]);
-  };
-
-  const statusColor = (s: string) => s === 'completed' ? colors.teal : s === 'failed' ? colors.red : colors.amber;
-  const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-  return (
-    <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-      <View style={h.topRow}>
-        <TouchableOpacity onPress={onCancel} style={h.backBtn}>
-          <Feather name="arrow-left" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <View>
-          <Text style={[h.title, { color: colors.textPrimary }]}>Transcript History</Text>
-          <Text style={[h.subtitle, { color: colors.textMuted }]}>Tap a completed transcript to use it</Text>
-        </View>
-        <View style={{ width: 28 }} />
-      </View>
-
-      {loading ? (
-        <View style={h.centered}>
-          <ActivityIndicator size="large" color={colors.indigo} />
-          <Text style={[h.loadingText, { color: colors.textMuted }]}>Loading...</Text>
-        </View>
-      ) : history.length === 0 ? (
-        <View style={[h.emptyCard, { backgroundColor: colors.card }]}>
-          <View style={[h.emptyIconWrap, { backgroundColor: colors.indigoPale }]}>
-            <Feather name="file-text" size={36} color={colors.indigo} />
-          </View>
-          <Text style={[h.emptyTitle, { color: colors.textPrimary }]}>No transcripts yet</Text>
-          <Text style={[h.emptySub, { color: colors.textMuted }]}>
-            Upload a transcript from the{'\n'} Upload Transcript option to get started
-          </Text>
-          <TouchableOpacity
-            style={[h.emptyBtn, { backgroundColor: colors.indigo }]}
-            onPress={onCancel}
-          >
-            <Feather name="arrow-left" size={15} color="#fff" />
-            <Text style={h.emptyBtnText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        history.map(item => (
-          <TouchableOpacity
-            key={item.id}
-            style={[h.card, { backgroundColor: colors.card, opacity: item.status !== 'completed' ? 0.5 : 1 }]}
-            onPress={async () => {
-              if (item.status !== 'completed') return;
-              try {
-                setLoadingId(item.id);
-                const token = await user!.getIdToken();
-                const { getTranscriptById } = require('@/services/transcriptService');
-                const full = await getTranscriptById(item.id, token);
-                const { courses: c, grades: g } = extractedToCourses(full.extractedCourses || []);
-                onDone(c, g);
-              } catch (err: any) {
-                Alert.alert('Error', err.message || 'Failed to load transcript');
-              } finally {
-                setLoadingId(null);
-              }
-            }}
-            disabled={item.status !== 'completed' || loadingId === item.id}
-          >
-            <View style={h.cardLeft}>
-              <View style={[h.fileIcon, { backgroundColor: colors.indigoPale }]}>
-                <Feather name="file-text" size={20} color={colors.indigo} />
-              </View>
-              <View style={h.cardInfo}>
-                <Text style={[h.fileName, { color: colors.textPrimary }]} numberOfLines={1}>{item.fileName}</Text>
-                <Text style={[h.fileDate, { color: colors.textMuted }]}>{formatDate(item.createdAt)}</Text>
-                <View style={h.metaRow}>
-                  <View style={[h.statusBadge, { backgroundColor: statusColor(item.status) + '20' }]}>
-                    <Text style={[h.statusText, { color: statusColor(item.status) }]}>{item.status}</Text>
-                  </View>
-                  {item.status === 'completed' && (
-                    <Text style={[h.gpaText, { color: colors.textSecondary }]}>
-                      GPA {item.termGPA?.toFixed(2)} · {item.totalCreditHours} hrs
-                    </Text>
-                  )}
-                </View>
-              </View>
-            </View>
-            <View style={h.cardRight}>
-              {item.status === 'completed' && (
-                <View style={[h.useBadge, { backgroundColor: colors.indigoPale }]}>
-                  {loadingId === item.id
-                    ? <ActivityIndicator size="small" color={colors.indigo} />
-                    : <Text style={[h.useText, { color: colors.indigo }]}>Use</Text>
-                  }
-                </View>
-              )}
-              <TouchableOpacity onPress={() => handleDelete(item)} disabled={deletingId === item.id} style={h.deleteBtn}>
-                {deletingId === item.id
-                  ? <ActivityIndicator size="small" color={colors.red} />
-                  : <Feather name="trash-2" size={16} color={colors.red} />}
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        ))
-      )}
-    </ScrollView>
-  );
-}
-
-// ─── Main GPA Planner Screen ──────────────────────────────────────────────────
 
 export default function GpaPlannerScreen() {
   const { colors } = useAppTheme();
@@ -529,53 +58,85 @@ export default function GpaPlannerScreen() {
     return classifyGpa(v);
   }, [cgpaInput]);
 
-  useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then(saved => {
-      if (!saved) return;
-      try {
-        const p = JSON.parse(saved);
-        if (p.cgpa !== undefined && p.hours !== undefined) setProfile(p);
-      } catch { }
+
+  const getTermCourses = async (token: string) => {
+    const res = await fetch(`${API_URL}/api/gpa/my-courses`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error('Failed');
+    return res.json().then(d => d.data || []);
+  };
+
+  const addTermCourse = async (name: string, code: string, credits: number, token: string) => {
+    await fetch(`${API_URL}/api/gpa/my-courses`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courseName: name, courseCode: code, creditHours: credits })
     });
-    // Load saved courses & grades (local first, then try backend)
-    AsyncStorage.getItem(COURSES_STORAGE_KEY).then(saved => {
-      if (!saved) return;
-      try {
-        const { courses: c, grades: g, dataSource: ds } = JSON.parse(saved);
-        if (c) setCourses(c);
-        if (g) setGrades(g);
-        if (ds) setDataSource(ds);
-      } catch { }
+  };
+
+  const removeTermCourse = async (id: string, token: string) => {
+    await fetch(`${API_URL}/api/gpa/my-courses/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
     });
-    // Also try loading courses from backend
-    if (user) {
-      (async () => {
+  };
+
+  const generateTargetPlan = async (targetCGPA: number, currentCourses: any[], token: string) => {
+    const res = await fetch(`${API_URL}/api/gpa/target-strategy`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetCGPA, currentCourses })
+    });
+    if (!res.ok) throw new Error('Failed to generate plan');
+    return res.json().then(d => d.data);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem(STORAGE_KEY).then(saved => {
+        if (!saved) return;
         try {
-          const token = await user.getIdToken();
-          const backendCourses = await getTermCourses(token);
-          if (backendCourses && backendCourses.length > 0) {
-            const mapped = backendCourses.map(c => ({
-              id: c._id,
-              name: c.name,
-              code: c.courseCode,
-              credits: c.creditHours,
-            }));
-            // Only use backend courses if local is empty
-            const localSaved = await AsyncStorage.getItem(COURSES_STORAGE_KEY);
-            if (!localSaved) {
-              setCourses(mapped);
-              const defaultGrades: Record<string, number> = {};
-              mapped.forEach(c => { defaultGrades[c.id] = 4.0; });
-              setGrades(defaultGrades);
+          const p = JSON.parse(saved);
+          if (p.cgpa !== undefined && p.hours !== undefined) setProfile(p);
+        } catch { }
+      }).catch(err => console.error('[GpaPlanner] Failed to load profile:', err));
+      
+      AsyncStorage.getItem(COURSES_STORAGE_KEY).then(saved => {
+        if (!saved) return;
+        try {
+          const { courses: c, grades: g, dataSource: ds } = JSON.parse(saved);
+          if (c) setCourses(c);
+          if (g) setGrades(g);
+          if (ds) setDataSource(ds);
+        } catch { }
+      }).catch(err => console.error('[GpaPlanner] Failed to load courses:', err));
+
+      if (user) {
+        (async () => {
+          try {
+            const token = await user.getIdToken();
+            const backendCourses = await getTermCourses(token);
+            if (backendCourses && backendCourses.length > 0) {
+              const mapped = backendCourses.map((c: any) => ({
+                id: c._id,
+                name: c.name,
+                code: c.courseCode,
+                credits: c.creditHours,
+              }));
+              const localSaved = await AsyncStorage.getItem(COURSES_STORAGE_KEY);
+              if (!localSaved) {
+                setCourses(mapped);
+                const defaultGrades: Record<string, number> = {};
+                mapped.forEach((c: any) => { defaultGrades[c.id] = 4.0; });
+                setGrades(defaultGrades);
+              }
             }
+          } catch (err) {
+            console.log('Backend courses unavailable, using local:', err);
           }
-        } catch (err) {
-          // Backend unavailable — use local data
-          console.log('Backend courses unavailable, using local:', err);
-        }
-      })();
-    }
-  }, [user]);
+        })();
+      }
+    }, [user])
+  );
 
   const saveProfile = useCallback(async () => {
     const cgpa = parseFloat(cgpaInput);
@@ -584,13 +145,13 @@ export default function GpaPlannerScreen() {
     if (isNaN(cgpa) || cgpa < 0 || cgpa > 5) return setProfileError('Invalid CGPA (0–5)');
     if (isNaN(hours) || hours < 0 || hours > 300) return setProfileError('Invalid hours (0–300)');
     const data = { cgpa, hours };
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)).catch(err => console.error('[GpaPlanner] save profile error:', err));
     setProfile(data);
     // Sync profile to backend (fire-and-forget)
     if (user) {
       try {
         const token = await user.getIdToken();
-        await updateGpaProfile(cgpa, hours, token);
+        await setupProfile({ currentCGPA: cgpa, earnedCreditHours: hours }, token);
       } catch (err) {
         console.log('Failed to sync profile to backend:', err);
       }
@@ -603,14 +164,14 @@ export default function GpaPlannerScreen() {
     setStrategy(null);
     setCourses([]);
     setGrades({});
-    AsyncStorage.removeItem(COURSES_STORAGE_KEY);
+    AsyncStorage.removeItem(COURSES_STORAGE_KEY).catch(err => console.error('[GpaPlanner] remove courses error:', err));
   };
 
   const handleGradeChange = (id: string, value: string) => {
     let v = Math.max(0, Math.min(5, Math.round((parseFloat(value) || 0) * 100) / 100));
     const updatedGrades = { ...grades, [id]: v };
     setGrades(updatedGrades);
-    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses, grades: updatedGrades, dataSource }));
+    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses, grades: updatedGrades, dataSource })).catch(err => console.error('[GpaPlanner] save grades error:', err));
   };
 
   const handleSourceSelect = (src: DataSource) => {
@@ -618,7 +179,6 @@ export default function GpaPlannerScreen() {
     if (src === 'upload') setActiveFlow('upload');
     else if (src === 'history') setActiveFlow('history');
     else {
-      // manual — reset to empty editable list
       setCourses([]);
       setGrades({});
     }
@@ -628,7 +188,7 @@ export default function GpaPlannerScreen() {
     setCourses(newCourses);
     setGrades(newGrades);
     setActiveFlow('none');
-    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: newCourses, grades: newGrades, dataSource }));
+    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: newCourses, grades: newGrades, dataSource })).catch(err => console.error('[GpaPlanner] save flow error:', err));
   };
 
   const addManualCourse = async () => {
@@ -638,8 +198,8 @@ export default function GpaPlannerScreen() {
     const updatedGrades = { ...grades, [id]: 4.0 };
     setCourses(updatedCourses);
     setGrades(updatedGrades);
-    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades: updatedGrades, dataSource }));
-    // Also sync to backend (fire-and-forget)
+    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades: updatedGrades, dataSource })).catch(err => console.error('[GpaPlanner] save add error:', err));
+    
     if (user) {
       try {
         const token = await user.getIdToken();
@@ -653,7 +213,7 @@ export default function GpaPlannerScreen() {
   const updateManualCourse = (id: string, field: keyof Course, value: string) => {
     const updatedCourses = courses.map(c => c.id === id ? { ...c, [field]: field === 'credits' ? parseInt(value) || 0 : value } : c);
     setCourses(updatedCourses);
-    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades, dataSource }));
+    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades, dataSource })).catch(err => console.error('[GpaPlanner] save update error:', err));
   };
 
   const removeManualCourse = async (id: string) => {
@@ -662,9 +222,9 @@ export default function GpaPlannerScreen() {
     delete updatedGrades[id];
     setCourses(updatedCourses);
     setGrades(updatedGrades);
-    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades: updatedGrades, dataSource }));
-    // Also sync to backend (fire-and-forget)
-    if (user) {
+    AsyncStorage.setItem(COURSES_STORAGE_KEY, JSON.stringify({ courses: updatedCourses, grades: updatedGrades, dataSource })).catch(err => console.error('[GpaPlanner] save remove error:', err));
+    
+    if (user && !id.startsWith('manual_')) {
       try {
         const token = await user.getIdToken();
         await removeTermCourse(id, token);
@@ -1111,83 +671,4 @@ const s = StyleSheet.create({
   stratSub: { fontSize: 13 },
   stratReqGrade: { fontSize: 18, fontWeight: '900' },
   stratReqName: { fontSize: 11, fontWeight: '600', marginTop: 2 },
-});
-
-// Modal styles
-const m = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12 },
-  handle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
-  sheetTitle: { fontSize: 17, fontWeight: '800', marginBottom: 16 },
-  option: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 12 },
-  optIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  optTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
-  optDesc: { fontSize: 13 },
-});
-
-// Upload flow styles
-const u = StyleSheet.create({
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  backBtn: { padding: 4 },
-  title: { fontSize: 17, fontWeight: '800' },
-  dropZone: { borderRadius: 20, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center', padding: 36, marginBottom: 16 },
-  dropIcon: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  dropTitle: { fontSize: 16, fontWeight: '700', textAlign: 'center', marginBottom: 6 },
-  dropSub: { fontSize: 13, textAlign: 'center' },
-  errorBox: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 16 },
-  errorText: { flex: 1, fontSize: 13 },
-  btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 54, borderRadius: 14, gap: 10, marginBottom: 12 },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  secondaryBtn: { height: 48, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  secondaryBtnText: { fontSize: 15, fontWeight: '600' },
-  infoRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
-  infoCard: { flex: 1, borderRadius: 14, padding: 14, alignItems: 'center', gap: 6 },
-  infoLabel: { fontSize: 13, fontWeight: '700' },
-  processingCard: { borderRadius: 20, padding: 40, alignItems: 'center', gap: 16, marginTop: 20 },
-  processingTitle: { fontSize: 18, fontWeight: '700' },
-  processingSub: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
-  summaryCard: { borderRadius: 20, padding: 22, marginBottom: 20 },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 12 },
-  summaryItem: { alignItems: 'center' },
-  summaryVal: { fontSize: 28, fontWeight: '900', color: '#fff' },
-  summaryLbl: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
-  summaryDiv: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)' },
-  confidenceText: { fontSize: 12, color: 'rgba(255,255,255,0.75)', textAlign: 'center' },
-  courseCard: { borderRadius: 14, padding: 16, marginBottom: 12 },
-  courseHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  courseCode: { fontSize: 16, fontWeight: '800' },
-  courseFields: { flexDirection: 'row', gap: 10 },
-  fieldGroup: { flex: 1 },
-  fieldLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4 },
-  fieldInput: { borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, textAlign: 'center' },
-});
-
-// History flow styles
-const h = StyleSheet.create({
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
-  backBtn: { padding: 4 },
-  title: { fontSize: 17, fontWeight: '800' },
-  subtitle: { fontSize: 13, marginTop: 2 },
-  centered: { alignItems: 'center', paddingTop: 60, gap: 12 },
-  loadingText: { fontSize: 14 },
-  emptyCard: { borderRadius: 20, padding: 40, alignItems: 'center', gap: 16, marginTop: 20 },
-  emptyIconWrap: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '800' },
-  emptySub: { fontSize: 14, textAlign: 'center', lineHeight: 22 },
-  emptyBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 4 },
-  emptyBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  card: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderRadius: 16, padding: 16, marginBottom: 12 },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 14 },
-  fileIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  cardInfo: { flex: 1 },
-  fileName: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
-  fileDate: { fontSize: 12, marginBottom: 6 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  statusText: { fontSize: 11, fontWeight: '700' },
-  gpaText: { fontSize: 12 },
-  cardRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  useBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  useText: { fontSize: 12, fontWeight: '700' },
-  deleteBtn: { padding: 8 },
 });

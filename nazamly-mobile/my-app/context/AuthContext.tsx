@@ -1,7 +1,21 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "@/firebase";
-import { getProfile, syncUser } from "@/services/authService";
+import { auth, API_URL } from "@/firebase";
+
+const syncUser = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/auth/sync`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};
+
+const getProfile = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/auth/get-profile`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};
 
 interface AuthContextType {
   user: User | null;

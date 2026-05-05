@@ -26,7 +26,13 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth, API_URL, GOOGLE_WEB_CLIENT_ID,Google_Android_Id } from "@/firebase";
-import { getProfile, syncUser } from '@/services/authService';
+
+const getProfile = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/auth/get-profile`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
@@ -60,20 +66,6 @@ export default function LoginScreen() {
     }
   }, [request, redirectUri]);
 
-  const syncWithBackend = useCallback(async (user: any) => {
-    try {
-      const token = await user.getIdToken();
-      const response = await syncUser(token);
-      if (response.message === "unauthorized") {
-        Alert.alert('Cancel', 'Cancel');
-        router.replace("/(auth)/Login");
-        return;
-      }
-    } catch (err) {
-      console.error("[Login] syncUser failed:", err);
-    }
-  }, [router]);
-
   // 🌟 جلب بيانات المستخدم من الباك إند
   const fetchUserProfile = useCallback(async (user: any) => {
     try {
@@ -101,7 +93,7 @@ export default function LoginScreen() {
       setLoading(true);
       signInWithCredential(auth, credential)
         .then(async (result) => {
-          await syncWithBackend(result.user);
+
           await fetchUserProfile(result.user);
           Alert.alert("Success", "Logged in"); // Can omit translations for alerts or add to dict
           router.replace("/(tabs)/HomePage");
@@ -112,13 +104,13 @@ export default function LoginScreen() {
         })
         .finally(() => setLoading(false));
     }
-  }, [response, router, syncWithBackend, fetchUserProfile]);
+  }, [response, router, fetchUserProfile]);
 
   const handleLogin = async () => {
     setLoading(true);
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
-      await syncWithBackend(result.user);
+
       await fetchUserProfile(result.user);
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
@@ -141,7 +133,7 @@ export default function LoginScreen() {
 
       // الدالة دي هتفتح شاشة منبثقة (Popup) وتمنع الشاشة البيضاء اللي بتعلق
       const result = await signInWithPopup(auth, provider);
-      await syncWithBackend(result.user);
+
       await fetchUserProfile(result.user);
 
       router.replace("/(tabs)/HomePage");

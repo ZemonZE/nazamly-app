@@ -1,15 +1,72 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
-  ActivityIndicator, Alert, Dimensions,
+  ActivityIndicator, Dimensions,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
-import { API_URL } from '@/firebase';
 import { useAppTheme } from '@/constants/theme';
-import { getMyCoursesMaterials, getSubFolderFiles } from '@/services/courseMaterialsService';
-import { getQuizHistory, generateExamStream, submitQuiz } from '@/services/questionsService';
-import type { CourseMaterial, CourseFile as DriveFile } from '@/services/courseMaterialsService';
+import { API_URL } from '@/firebase';
+
+type CourseMaterial = { courseId: string; courseCode: string; courseName: string };
+type DriveFile = { id: string; name: string };
+
+const getMyCoursesMaterials = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/course-materials/my-courses`, { headers: { Authorization: `Bearer ${token}` } });
+  const json = await res.json();
+  return json.data || [];
+};
+
+const getSubFolderFiles = async (courseCode: string, subFolderType: string, token: string) => {
+  const res = await fetch(`${API_URL}/api/course-materials/${courseCode}/files/${subFolderType}`, { headers: { Authorization: `Bearer ${token}` } });
+  const json = await res.json();
+  return json.data || { files: [] };
+};
+
+const getQuizHistory = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/questions/archive`, { headers: { Authorization: `Bearer ${token}` } });
+  const json = await res.json();
+  return { history: json.data || [] };
+};
+
+const generateExamStream = async (opts: any, token: string, onStatus: (s: string) => void) => {
+  // Fallback to basic fetch since React Native fetch doesn't fully support SSE out-of-the-box
+  // The backend uses GET /api/questions/generate-stream?courseId=...
+  const query = new URLSearchParams({
+    courseId: opts.courseId,
+    materialFileIds: opts.materialFileIds?.join(',') || '',
+    examType: opts.examType || 'Quiz',
+    questionCount: String(opts.questionCount || 10)
+  }).toString();
+  
+  onStatus('Generating exam...');
+  const res = await fetch(`${API_URL}/api/questions/generate-stream?${query}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  
+  if (!res.ok) throw new Error('Failed to generate exam');
+  
+  // Try to parse the SSE stream into a JSON array of questions if the backend falls back to returning JSON, 
+  // or return an empty array if parsing fails.
+  try {
+    const text = await res.text();
+    // Assuming the backend sends a final event or JSON response
+    const json = JSON.parse(text);
+    return json.data || json.questions || [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const submitQuiz = async (data: any, token: string) => {
+  const res = await fetch(`${API_URL}/api/questions/submit`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  const json = await res.json();
+  return json.data || { success: true };
+};
 
 const { width: SCREEN_W } = Dimensions.get('window');
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
   Modal, TextInput, ActivityIndicator, Alert, Platform, Animated,
@@ -9,9 +10,20 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAppTheme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { API_URL } from '@/firebase';
-import { importScheduleFromImage } from '@/services/scheduleService';
 
+import { API_URL } from '@/firebase';
+
+const importScheduleFromImage = async (uri: string, mimeType: string, name: string, token: string) => {
+  const formData = new FormData();
+  formData.append('file', { uri, type: mimeType, name } as any);
+  const res = await fetch(`${API_URL}/api/schedule/import-from-image`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData
+  });
+  if (!res.ok) throw new Error('Failed to import schedule');
+  return res.json().then(d => d.data || d);
+};
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 
@@ -55,7 +67,7 @@ function to12h(time24: string): string {
 }
 
 interface ScheduleEntry {
-  id: number;
+  id: number | string;
   subject: string;
   type: string;
   day: string;
@@ -139,10 +151,38 @@ const TimetableScreen = () => {
 
   const slots = SLOTS[form.duration];
 
-  // ── Load from AsyncStorage ──
+  // ── Load from DB & AsyncStorage ──
   const loadSchedules = useCallback(async () => {
     try {
       setLoading(true);
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          const res = await fetch(`${API_URL}/api/schedule/my-timetable`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const json = await res.json();
+          if (json.success && json.data?.entries) {
+            // Map DB entries to LocalEntry
+            const dbEntries = json.data.entries.map((e: any) => ({
+              id: e._id || Date.now() + Math.random(),
+              subject: e.courseCode || e.courseName || '',
+              type: TYPE_TO_SHORT[e.sessionType] || 'Lec',
+              day: e.dayOfWeek,
+              slot: { start: to12h(e.startTime), end: to12h(e.endTime) },
+              group: e.groupNumber || '',
+              place: e.location || '',
+            }));
+            setSchedules(dbEntries);
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(dbEntries));
+            return;
+          }
+        } catch (dbErr) {
+          console.error('[Timetable] DB Load error:', dbErr);
+        }
+      }
+
+      // Fallback to AsyncStorage if DB fails
       const saved = await AsyncStorage.getItem(STORAGE_KEY);
       if (saved) setSchedules(JSON.parse(saved));
     } catch (err) {
@@ -150,9 +190,13 @@ const TimetableScreen = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
-  useEffect(() => { loadSchedules(); }, [loadSchedules]);
+  useFocusEffect(
+    useCallback(() => {
+      loadSchedules();
+    }, [loadSchedules])
+  );
 
   // ── Save to AsyncStorage whenever schedules change ──
   useEffect(() => {
@@ -201,7 +245,7 @@ const TimetableScreen = () => {
     return true;
   };
 
-  const addSchedule = () => {
+  const addSchedule = async () => {
     if (!form.subject.trim()) {
       setAddModalVisible(false);
       setTimeout(() => setConflict({ type: 'empty', msg: 'Please enter the subject name.' }), 300);
@@ -210,10 +254,39 @@ const TimetableScreen = () => {
     if (!validate()) return;
 
     const slot = slots[form.slotIndex];
+    let newEntryId = Date.now().toString() as any;
+
+    try {
+      if (user) {
+        const token = await user.getIdToken();
+        const payload = {
+          courseName: form.subject.trim(),
+          dayOfWeek: form.day,
+          startTime: to24h(slot.start),
+          endTime: to24h(slot.end),
+          sessionType: form.type === 'Lec' ? 'Lecture' : form.type === 'Sec' ? 'Section' : 'Lab',
+          location: form.place || '',
+          groupNumber: form.group || ''
+        };
+
+        const res = await fetch(`${API_URL}/api/schedule/add-entry`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        if (json.success && json.data?._id) {
+          newEntryId = json.data._id;
+        }
+      }
+    } catch (err) {
+      console.error('[TimeTable] Error saving to DB:', err);
+    }
+
     setSchedules(prev => [
       ...prev,
       {
-        id: Date.now(),
+        id: newEntryId,
         subject: form.subject.trim(),
         type: form.type,
         day: form.day,
@@ -226,13 +299,44 @@ const TimetableScreen = () => {
     setAddModalVisible(false);
   };
 
-  const removeSchedule = (id: number) => {
+  const removeSchedule = async (id: number | string) => {
+    try {
+      if (user && typeof id === 'string') {
+        const token = await user.getIdToken();
+        await fetch(`${API_URL}/api/schedule/session/${id}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (err) {
+      console.error('[TimeTable] Error deleting from DB:', err);
+    }
     setSchedules(prev => prev.filter(s => s.id !== id));
   };
 
   // ── OCR Import Functions ──
   const handleScanPress = () => {
     setSourcePickerVisible(true);
+  };
+
+  const handleOcrUpload = async (uri: string, mimeType: string, name: string) => {
+    if (!user) return;
+    try {
+      setIsUploading(true);
+      setScanModalVisible(true);
+      const token = await user.getIdToken();
+      const res = await importScheduleFromImage(uri, mimeType, name, token);
+      if (res && res.schedule) {
+        setOcrPreviewEntries(res.schedule);
+        setOcrModalVisible(true);
+      } else {
+        Alert.alert('No schedule found', 'Could not extract schedule from this image.');
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Upload failed');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const pickFromCamera = async () => {
@@ -246,8 +350,8 @@ const TimetableScreen = () => {
       mediaTypes: ['images'],
       quality: 0.9,
     });
-    if (!result.canceled && result.assets[0]) {
-      await uploadForOCR(result.assets[0].uri, result.assets[0].mimeType || 'image/jpeg', 'schedule_photo.jpg');
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      handleOcrUpload(result.assets[0].uri, 'image/jpeg', 'camera.jpg');
     }
   };
 
@@ -257,8 +361,8 @@ const TimetableScreen = () => {
       mediaTypes: ['images'],
       quality: 0.9,
     });
-    if (!result.canceled && result.assets[0]) {
-      await uploadForOCR(result.assets[0].uri, result.assets[0].mimeType || 'image/jpeg', result.assets[0].fileName || 'schedule.jpg');
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      handleOcrUpload(result.assets[0].uri, 'image/jpeg', 'gallery.jpg');
     }
   };
 
@@ -268,36 +372,8 @@ const TimetableScreen = () => {
       type: ['application/pdf', 'image/*'],
       copyToCacheDirectory: true,
     });
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      await uploadForOCR(asset.uri, asset.mimeType || 'application/pdf', asset.name || 'schedule.pdf');
-    }
-  };
-
-  const uploadForOCR = async (fileUri: string, mimeType: string, fileName: string) => {
-    if (!user) {
-      Alert.alert('Not logged in', 'Please sign in to use the scan feature.');
-      return;
-    }
-
-    setScanLoading(true);
-    try {
-      const token = await user.getIdToken();
-      const response = await importScheduleFromImage(fileUri, mimeType, fileName, token);
-
-      if (response.success && response.data) {
-        const entries: OCREntry[] = response.data.entries || [];
-        setOcrPreviewEntries(entries);
-        setOcrConfidence(response.data.confidence || 0);
-        setScanModalVisible(true);
-      } else {
-        Alert.alert('Extraction Failed', response.message || 'Could not extract classes from the image.');
-      }
-    } catch (err: any) {
-      console.error('[OCR] Upload error:', err);
-      Alert.alert('Error', err.message || 'Failed to process the image. Make sure the OCR service is running.');
-    } finally {
-      setScanLoading(false);
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      handleOcrUpload(result.assets[0].uri, result.assets[0].mimeType || 'application/pdf', result.assets[0].name);
     }
   };
 

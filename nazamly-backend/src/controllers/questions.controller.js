@@ -9,6 +9,7 @@ const { generateAndSaveCustomExam } = require('../services/examGenerator.service
  * and saves the resulting style profile to the database.
  */
 exports.analyzeStyle = async (req, res) => {
+  console.log("[questions.controller] analyzeStyle called");
   try {
     const courseId = req.params.courseId || req.body.courseId;
 
@@ -47,6 +48,7 @@ exports.analyzeStyle = async (req, res) => {
  *   - questionCount:   Number of questions to generate (defaults to 10)
  */
 exports.generateExamSSE = async (req, res) => {
+  console.log("[questions.controller] generateExamSSE called");
   // ─── SSE Headers ───
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -118,6 +120,7 @@ exports.generateExamSSE = async (req, res) => {
  * Expected query parameters: courseId, lectureId (comma-separated string of Google Drive IDs)
  */
 exports.getArchivedQuestions = async (req, res) => {
+  console.log("[questions.controller] getArchivedQuestions called");
   try {
     const { courseId, lectureId } = req.query;
 

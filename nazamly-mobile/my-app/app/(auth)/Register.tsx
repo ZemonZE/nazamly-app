@@ -27,7 +27,21 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth, API_URL, GOOGLE_WEB_CLIENT_ID,Google_Android_Id } from "@/firebase";
-import { syncUser, getProfile } from '@/services/authService';
+
+const syncUser = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/auth/sync`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};
+
+const getProfile = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/auth/get-profile`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";

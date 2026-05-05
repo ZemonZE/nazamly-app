@@ -15,6 +15,7 @@ const submitSchema = Joi.object({
  * submitCode - POST /api/coding/submissions
  */
 async function submitCode(req, res) {
+  console.log("[CodeSubmission.controller] submitCode called");
   const { error, value } = submitSchema.validate(req.body);
   if (error) {
     return res.status(400).json({ success: false, message: error.details[0].message, code: 'VALIDATION_ERROR' });
@@ -110,6 +111,7 @@ async function submitCode(req, res) {
  * Runs code against visible sample test cases only. No DB save, no progress update.
  */
 async function runCode(req, res) {
+  console.log("[CodeSubmission.controller] runCode called");
   const { error, value } = submitSchema.validate(req.body);
   if (error) {
     return res.status(400).json({ success: false, message: error.details[0].message, code: 'VALIDATION_ERROR' });
@@ -155,6 +157,7 @@ async function runCode(req, res) {
  * getSubmissions - GET /api/coding/submissions?problemId=
  */
 async function getSubmissions(req, res) {
+  console.log("[CodeSubmission.controller] getSubmissions called");
   const { problemId } = req.query;
   const submissions = await codeSubmissionRepo.findByStudentAndProblem(req.user.uid, problemId);
   return res.status(200).json({ success: true, data: submissions });
@@ -164,6 +167,7 @@ async function getSubmissions(req, res) {
  * getAdminSubmissions - GET /api/admin/coding/problems/:id/submissions
  */
 async function getAdminSubmissions(req, res) {
+  console.log("[CodeSubmission.controller] getAdminSubmissions called");
   const problemId = req.params.id;
   const submissions = await codeSubmissionRepo.findByProblem(problemId);
   return res.status(200).json({ success: true, data: submissions });

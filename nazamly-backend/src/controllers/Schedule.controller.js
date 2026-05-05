@@ -36,6 +36,7 @@ function mapAIType(type) {
  * -----------------------------------------
  */
 const addOrUpdateSchedule = async (req, res) => {
+  console.log("[Schedule.controller] addOrUpdateSchedule called");
   try {
     // ── OLD BRANCH (commented out — req.user.id doesn't exist with Firebase auth) ──
     // const userId = req.user.id;
@@ -134,6 +135,7 @@ const addOrUpdateSchedule = async (req, res) => {
  * - لو مفيش جدول بيرجع 200 OK مع data: [] (مش 404 عشان ميكسرش الـ Frontend)
  */
 const getMySchedule = async (req, res) => {
+  console.log("[Schedule.controller] getMySchedule called");
   try {
     // ✅ Get MongoDB User ID from Firebase UID
     const firebaseUid = req.user.uid;
@@ -185,6 +187,7 @@ const getMySchedule = async (req, res) => {
  * 4. بيرجع 200 OK مع success message
  */
 const deleteSession = async (req, res) => {
+  console.log("[Schedule.controller] deleteSession called");
   try {
     // ✅ Get MongoDB User ID from Firebase UID
     const firebaseUid = req.user.uid;
@@ -242,6 +245,7 @@ const deleteSession = async (req, res) => {
  * Body: { schedule: [...], title?: string }
  */
 const saveAISchedule = async (req, res) => {
+  console.log("[Schedule.controller] saveAISchedule called");
   try {
     const firebaseUid = req.user.uid;
     const { schedule, title } = req.body;
@@ -353,6 +357,7 @@ const saveAISchedule = async (req, res) => {
  * for the mobile app to render directly.
  */
 const getMyTimetable = async (req, res) => {
+  console.log("[Schedule.controller] getMyTimetable called");
   try {
     const firebaseUid = req.user.uid;
 
@@ -419,6 +424,7 @@ const getMyTimetable = async (req, res) => {
 
 // المرحلة الأولى: الباك إند (إنشاء وحفظ المحاضرة)
 const addTimeTableEntry = async (req, res) => {
+  console.log("[Schedule.controller] addTimeTableEntry called");
   try {
     let {
       timeTableId,
@@ -478,6 +484,7 @@ const addTimeTableEntry = async (req, res) => {
 
 // المرحلة الثانية: الباك إند (جلب الجدول للعرض - Populating)
 const getTimeTable = async (req, res) => {
+  console.log("[Schedule.controller] getTimeTable called");
   try {
     const { timeTableId } = req.params;
 
@@ -507,6 +514,7 @@ const getTimeTable = async (req, res) => {
  * Body: multipart/form-data with field 'file'
  */
 const importScheduleFromImage = async (req, res) => {
+  console.log("[Schedule.controller] importScheduleFromImage called");
   const fs = require('fs');
   const { extractSchedule } = require('../services/ocr.service');
 

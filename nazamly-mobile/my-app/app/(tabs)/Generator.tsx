@@ -8,9 +8,29 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/context/AuthContext';
-import { API_URL } from '@/firebase';
 import { useAppTheme } from '@/constants/theme';
-import { generateSchedule, saveAISchedule } from '@/services/scheduleService';
+
+import { API_URL } from '@/firebase';
+
+const generateSchedule = async (formData: FormData, token: string) => {
+  const res = await fetch(`${API_URL}/api/ai/generate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Generation failed');
+  return json.data || json;
+};
+
+const saveAISchedule = async (data: any, token: string) => {
+  const res = await fetch(`${API_URL}/api/schedule/save-ai`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return res.json();
+};
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const SCHEDULE_STORAGE_KEY = '@nazamly_schedules_v2';
@@ -145,7 +165,16 @@ export default function GeneratorScreen() {
     try {
       const token = await user.getIdToken(true);
       const targetCourses = courseNumbers.trim() ? courseNumbers.split(/[,،\s]+/).map(s => s.trim()).filter(Boolean) : [];
-      const response = await generateSchedule(files, targetCourses, token);
+      
+      const formData = new FormData();
+      files.forEach((f, i) => {
+        formData.append('scheduleFiles', { uri: f.uri, type: f.mimeType, name: f.name } as any);
+      });
+      if (targetCourses.length > 0) {
+        formData.append('targetCourses', JSON.stringify(targetCourses));
+      }
+
+      const response = await generateSchedule(formData, token);
       setResults(response);
       setSelectedIdx(0);
     } catch (err: any) {

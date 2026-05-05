@@ -6,10 +6,44 @@ import {
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useAppTheme } from '@/constants/theme';
-import {
-  listProblems, getProblem, submitCode, getSubmissions, getProgress, toggleDifficulty,
-  type CodingProblem, type CodeSubmission, type StudentProgress
-} from '@/services/codingService';
+
+type CodingProblem = { _id: string; title: string; difficulty: string; tags?: string[]; description?: string; examples?: any[]; constraints?: string[]; starterCode?: Record<string, string> };
+type CodeSubmission = { _id: string; status: string; submittedAt: string; language: string; testCasesPassed?: number; totalTestCases?: number; executionTime?: number; memoryUsed?: number };
+type StudentProgress = { totalProblemsSolved: number; currentStreak: number; maxStreak: number; easyCount: number; mediumCount: number; hardCount: number };
+import { API_URL } from '@/firebase';
+
+const listProblems = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/coding/problems`, { headers: { Authorization: `Bearer ${token}` } });
+  return res.json().then(d => d.data || d);
+};
+const getProblem = async (id: string, token: string) => {
+  const res = await fetch(`${API_URL}/api/coding/problems/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+  return res.json().then(d => d.data || d);
+};
+const submitCode = async (data: any, token: string) => {
+  const res = await fetch(`${API_URL}/api/coding/submissions`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return res.json().then(d => d.data || d);
+};
+const getSubmissions = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/coding/submissions`, { headers: { Authorization: `Bearer ${token}` } });
+  return res.json().then(d => d.data || d);
+};
+const getProgress = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/coding/progress`, { headers: { Authorization: `Bearer ${token}` } });
+  return res.json().then(d => d.data || d);
+};
+const toggleDifficulty = async (id: string, showDifficulty: boolean, token: string) => {
+  const res = await fetch(`${API_URL}/api/coding/problems/${id}/difficulty-preference`, { 
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ showDifficulty })
+  });
+  return res.json();
+};
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -194,11 +228,11 @@ export default function CodingScreen() {
   };
 
   // ── Handle Difficulty Toggle ──
-  const handleToggleDifficulty = async (problemId: string) => {
+  const handleToggleDifficulty = async (problemId: string, showDifficulty: boolean) => {
     if (!user) return;
     try {
       const token = await user.getIdToken();
-      await toggleDifficulty(problemId, token);
+      await toggleDifficulty(problemId, showDifficulty, token);
       // Reload problems to reflect the change
       loadProblems();
     } catch (err: any) {
@@ -296,7 +330,7 @@ export default function CodingScreen() {
                     </Text>
                     <TouchableOpacity
                       style={s.difficultyToggle}
-                      onPress={() => handleToggleDifficulty(problem._id)}
+                      onPress={() => handleToggleDifficulty(problem._id, true)}
                     >
                       <Feather name="eye" size={14} color={colors.textMuted} />
                     </TouchableOpacity>

@@ -8,6 +8,7 @@ const aiService = require('../services/ai.service');
  * Body: { courseId, totalQuestions, questionsSnapshot }
  */
 exports.submitQuiz = async (req, res) => {
+  console.log("[quiz.controller] submitQuiz called");
   try {
     const { courseId, totalQuestions, questionsSnapshot } = req.body;
     const firebaseUid = req.user.uid;
@@ -104,6 +105,7 @@ exports.submitQuiz = async (req, res) => {
  * Fetch past AI quizzes for the logged-in student.
  */
 exports.getQuizHistory = async (req, res) => {
+  console.log("[quiz.controller] getQuizHistory called");
   try {
     const firebaseUid = req.user.uid;
 

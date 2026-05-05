@@ -19,6 +19,7 @@ const TranscriptUpload_Repo = require('../Repos/TranscriptUpload_Repo');
 // ── GPA Calculation ──
 
 const calculateCurrentTerm = async (req, res) => {
+  console.log("[gpa.controller] calculateCurrentTerm called");
     try {
         const { courses } = req.body;
 
@@ -58,6 +59,7 @@ const calculateCurrentTerm = async (req, res) => {
 };
 
 const generateTargetPlan = async (req, res) => {
+  console.log("[gpa.controller] generateTargetPlan called");
     try {
         const { targetCGPA, courses } = req.body;
 
@@ -119,6 +121,7 @@ const generateTargetPlan = async (req, res) => {
 // ── Term Courses CRUD ──
 
 const getTermCourses = async (req, res) => {
+  console.log("[gpa.controller] getTermCourses called");
     try {
         const student = await User_Repo.findByFirebaseUid(req.user.uid);
         if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
@@ -130,6 +133,7 @@ const getTermCourses = async (req, res) => {
 };
 
 const addTermCourse = async (req, res) => {
+  console.log("[gpa.controller] addTermCourse called");
     try {
         const { name, courseCode, creditHours } = req.body;
         if (!name || !courseCode || !creditHours) {
@@ -149,6 +153,7 @@ const addTermCourse = async (req, res) => {
 };
 
 const removeTermCourse = async (req, res) => {
+  console.log("[gpa.controller] removeTermCourse called");
     try {
         const { courseId } = req.params;
         const student = await User_Repo.findByFirebaseUid(req.user.uid);
@@ -180,6 +185,7 @@ const removeTermCourse = async (req, res) => {
  * 8. Return enriched results to client
  */
 const uploadTranscript = async (req, res) => {
+  console.log("[gpa.controller] uploadTranscript called");
     let newTranscript = null;
     const filePath = req.file ? req.file.path : null;
 
@@ -304,6 +310,7 @@ const uploadTranscript = async (req, res) => {
 // ── Transcript History ──
 
 const getAllTranscripts = async (req, res) => {
+  console.log("[gpa.controller] getAllTranscripts called");
     try {
         const student = await User_Repo.findByFirebaseUid(req.user.uid);
         if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
@@ -334,6 +341,7 @@ const getAllTranscripts = async (req, res) => {
 };
 
 const getTranscriptById = async (req, res) => {
+  console.log("[gpa.controller] getTranscriptById called");
     try {
         const { id } = req.params;
         const student = await User_Repo.findByFirebaseUid(req.user.uid);
@@ -359,6 +367,7 @@ const getTranscriptById = async (req, res) => {
  * Body: { courses: [{ courseCode, mark?, gradePoints?, creditHours? }] }
  */
 const updateTranscript = async (req, res) => {
+  console.log("[gpa.controller] updateTranscript called");
     try {
         const { id } = req.params;
         const { courses: corrections } = req.body;
@@ -407,6 +416,7 @@ const updateTranscript = async (req, res) => {
 };
 
 const deleteTranscript = async (req, res) => {
+  console.log("[gpa.controller] deleteTranscript called");
     try {
         const { id } = req.params;
 
@@ -430,6 +440,7 @@ const deleteTranscript = async (req, res) => {
  * Returns completed transcripts with term GPA and a running cumulative GPA.
  */
 const getGPAHistory = async (req, res) => {
+  console.log("[gpa.controller] getGPAHistory called");
     try {
         const { limit = 20 } = req.query;
         const student = await User_Repo.findByFirebaseUid(req.user.uid);

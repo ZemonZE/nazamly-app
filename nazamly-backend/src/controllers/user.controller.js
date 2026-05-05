@@ -28,6 +28,7 @@ const imageUpload = multer({
 // ── Auth / Profile controllers ────────────────────────────────────────────────
 
 const syncUser = async (req, res) => {
+  console.log("[user.controller] syncUser called");
   try {
     const { uid, email, name, picture } = req.user;
     const isCollege = email?.endsWith("@std.sci.cu.edu.eg");
@@ -69,6 +70,7 @@ const syncUser = async (req, res) => {
   }
 };
 const setupProfile = async (req, res) => {
+  console.log("[user.controller] setupProfile called");
   try {
     const firebaseUid = req.user.uid;
     const dbUser = await userRepo.findByFirebaseUid(firebaseUid);
@@ -101,6 +103,7 @@ const setupProfile = async (req, res) => {
 };
 
 const getProfile = async (req, res) => {
+  console.log("[user.controller] getProfile called");
   try {
     let user = await userRepo.findByFirebaseUid(req.user.uid);
 
@@ -130,6 +133,7 @@ const getProfile = async (req, res) => {
 };
 
 const getStudentCard = async (req, res) => {
+  console.log("[user.controller] getStudentCard called");
   try {
     const user = await userRepo.findByFirebaseUid(req.user.uid);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
@@ -144,6 +148,7 @@ const getStudentCard = async (req, res) => {
 };
 
 const updatePhoto = async (req, res) => {
+  console.log("[user.controller] updatePhoto called");
   try {
     const firebaseUid = req.user.uid;
     const { photoURL } = req.body;
@@ -163,6 +168,7 @@ const updatePhoto = async (req, res) => {
 };
 
 const updateStudentCard = async (req, res) => {
+  console.log("[user.controller] updateStudentCard called");
   try {
     const firebaseUid = req.user.uid;
     const { studentCardPhotoURL } = req.body;
@@ -190,6 +196,7 @@ const updateStudentCard = async (req, res) => {
 const uploadPhotoFile = [
   imageUpload.single("photo"),
   async (req, res) => {
+    console.log("[user.controller] uploadPhotoFile called");
     try {
       if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
       const user = await userRepo.findByFirebaseUid(req.user.uid);
@@ -212,6 +219,7 @@ const uploadPhotoFile = [
 const uploadStudentCardFile = [
   imageUpload.single("photo"),
   async (req, res) => {
+    console.log("[user.controller] uploadStudentCardFile called");
     try {
       if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
       const user = await userRepo.findByFirebaseUid(req.user.uid);
@@ -227,6 +235,7 @@ const uploadStudentCardFile = [
   },
 ];
 const verifyAdmin = async (req, res) => {
+  console.log("[user.controller] verifyAdmin called");
   try {
     // req.user comes from authMiddleware (decoded Firebase token with custom claims)
     

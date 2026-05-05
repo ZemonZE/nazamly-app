@@ -9,7 +9,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useAppTheme } from '@/constants/theme';
-import { uploadTranscript, ExtractedCourse } from '@/services/transcriptService';
+
+import { API_URL } from '@/firebase';
+
+type ExtractedCourse = { courseCode: string; courseName?: string; mark?: number; gradePoints?: number; creditHours?: number };
+
+const uploadTranscript = async (uri: string, mimeType: string, name: string, token: string) => {
+  const formData = new FormData();
+  formData.append('transcript', { uri, type: mimeType, name } as any);
+  
+  const res = await fetch(`${API_URL}/api/gpa/upload-transcript`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData
+  });
+  
+  const json = await res.json();
+  if (!res.ok && !json.data) throw new Error(json.message || 'Upload failed');
+  return json.data || json; // Backend returns data nested in 'data' object on success, or directly
+};
 
 type UploadState = 'idle' | 'uploading' | 'processing' | 'review' | 'error';
 
