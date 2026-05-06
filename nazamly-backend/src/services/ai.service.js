@@ -46,8 +46,12 @@ const extractScheduleFromImages = async (files) => {
         const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
         const geminiModel = genAI.getGenerativeModel({ model: modelName });
         
-        const geminiImageParts = files.map(file => ({
-            inlineData: { data: file.buffer.toString("base64"), mimeType: file.mimetype }
+        const fs = require('fs');
+        const geminiImageParts = await Promise.all(files.map(async file => {
+            const buffer = file.buffer || await fs.promises.readFile(file.path);
+            return {
+                inlineData: { data: buffer.toString("base64"), mimeType: file.mimetype }
+            };
         }));
 
         const result = await geminiModel.generateContent([prompt, ...geminiImageParts]);
