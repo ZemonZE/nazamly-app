@@ -215,7 +215,7 @@
 
 .input-icon {
   position: absolute;
-  right: 14px;
+  left: 14px;
   color: var(--text-muted);
   pointer-events: none;
   font-size: 16px;
@@ -226,7 +226,7 @@
 
 .input-wrap input {
   width: 100%;
-  padding: 11px 42px 11px 40px;
+  padding: 11px 40px 11px 42px;
   background: var(--input-bg);
   border: 1.5px solid rgba(37, 99, 235, 0.15);
   border-radius: var(--radius-sm);
@@ -258,7 +258,7 @@
 
 .input-actions {
   position: absolute;
-  left: 10px;
+  right: 10px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -288,6 +288,34 @@
   color: var(--error);
   margin-top: 4px;
   animation: fadeUp 0.2s var(--transition);
+}
+
+/* ── Auth Error Banner (replaces alert()) ── */
+.auth-error-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  background: rgba(244, 63, 94, 0.08);
+  backdrop-filter: blur(12px) saturate(1.2);
+  -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  border-radius: var(--radius-sm);
+  animation: fadeUp 0.3s var(--transition);
+}
+
+.auth-error-banner svg {
+  flex-shrink: 0;
+  color: #f43f5e;
+  margin-top: 1px;
+}
+
+.auth-error-banner span {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #f43f5e;
+  line-height: 1.5;
 }
 
 /* ── Animation ── */

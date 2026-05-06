@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles/Signup.css";
 import FormInput from "./FormInput";
 import { IconEmail, IconLock, IconUser, GoogleLogo } from "../Icons/Icons";
@@ -8,8 +9,10 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { auth, googleProvider, API_URL } from "../firebase";
+import { getFriendlyAuthError } from "../utils/authErrors";
 
 function Signup({ onSignup, switchToLogin }) {
+  const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,8 +20,14 @@ function Signup({ onSignup, switchToLogin }) {
   const [confirm, setConfirm] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState(null);
 
-  const pwdMismatch = password && confirm && password !== confirm;
+  // Validate confirm field: required when password has a value
+  const confirmError = password && !confirm
+    ? "Please confirm your password."
+    : password && confirm && password !== confirm
+      ? "Passwords do not match."
+      : "";
 
   const syncWithBackend = async (user) => {
     const token = await user.getIdToken(true);
@@ -29,12 +38,18 @@ function Signup({ onSignup, switchToLogin }) {
         Authorization: `Bearer ${token}`,
       },
     });
+    if (!res.ok) {
+      await auth.signOut();
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || "Server sync failed. Please try again.");
+    }
     return await res.json();
   };
 
   const handleEmailSignup = async (e) => {
     e.preventDefault();
-    if (pwdMismatch) return;
+    if (confirmError) return;
+    setAuthError(null);
     setLoading(true);
     try {
       const result = await createUserWithEmailAndPassword(
@@ -45,21 +60,24 @@ function Signup({ onSignup, switchToLogin }) {
       await updateProfile(result.user, { displayName: username });
       const data = await syncWithBackend(result.user);
       onSignup(data.user);
+      navigate(data.user?.isProfileComplete === true ? "/dashboard" : "/onboarding");
     } catch (error) {
-      alert(error.message);
+      setAuthError(getFriendlyAuthError(error));
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignup = async () => {
+    setAuthError(null);
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const data = await syncWithBackend(result.user);
       onSignup(data.user);
+      navigate(data.user?.isProfileComplete === true ? "/dashboard" : "/onboarding");
     } catch (error) {
-      alert(error.message);
+      setAuthError(getFriendlyAuthError(error));
     } finally {
       setLoading(false);
     }
@@ -77,7 +95,7 @@ function Signup({ onSignup, switchToLogin }) {
           type="text"
           placeholder="Full Name"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(e) => { setUsername(e.target.value); setAuthError(null); }}
           icon={<IconUser />}
           showClear
         />
@@ -88,7 +106,7 @@ function Signup({ onSignup, switchToLogin }) {
           type="email"
           placeholder="example@example.com"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => { setEmail(e.target.value); setAuthError(null); }}
           icon={<IconEmail />}
           showClear
         />
@@ -98,7 +116,7 @@ function Signup({ onSignup, switchToLogin }) {
           label="Password"
           placeholder="Enter your password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => { setPassword(e.target.value); setAuthError(null); }}
           icon={<IconLock />}
           showClear
           showToggle
@@ -111,13 +129,13 @@ function Signup({ onSignup, switchToLogin }) {
           label="Confirm Password"
           placeholder="Re-enter your password"
           value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
+          onChange={(e) => { setConfirm(e.target.value); setAuthError(null); }}
           icon={<IconLock />}
           showClear
           showToggle
           showVisible={showConfirm}
           onToggle={() => setShowConfirm((p) => !p)}
-          errorMsg={pwdMismatch ? "Passwords do not match" : ""}
+          errorMsg={confirmError}
         />
 
         <div className="terms-row">
@@ -127,6 +145,17 @@ function Signup({ onSignup, switchToLogin }) {
             <a href="#">Privacy Policy</a>
           </label>
         </div>
+
+        {authError && (
+          <div className="auth-error-banner">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>{authError}</span>
+          </div>
+        )}
 
         <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? "Loading..." : "Sign Up"}

@@ -3,8 +3,7 @@ const Joi = require('joi');
 
 // Joi schema for student registration payload
 const registerStudentSchema = Joi.object({
-  fullName: Joi.string().trim().required().messages({
-    'any.required': 'fullName is required',
+  fullName: Joi.string().trim().optional().messages({
     'string.empty': 'fullName cannot be empty'
   }),
 

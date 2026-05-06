@@ -7,6 +7,14 @@ const userSchema = new mongoose.Schema({
   photoURL: String,
   accessStatus: { type: String, enum: ["active", "pending", "blocked"], default: "pending" },
   role: { type: String, default: "student" },
+
+  // Student onboarding / academic profile fields
+  studentCode: { type: String, unique: true, sparse: true, trim: true },
+  academicYear: { type: Number, min: 1, max: 5 },
+  department: { type: String, trim: true, default: 'General' },
+  isProfileComplete: { type: Boolean, default: false },
+
+  // GPA & Schedule fields
   cgpa: { type: Number, default: 0, min: 0, max: 5 },
   completedHours: { type: Number, default: 0, min: 0, max: 200 },
   termCourses: [{

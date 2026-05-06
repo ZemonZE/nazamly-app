@@ -96,7 +96,7 @@ const PAGE_META = {
     subtitle: "Manage your personal info and app preferences.",
   },
   "/dashboard/coding": {
-    icon: <IconQuestion width={22} height={22} />,
+    icon: <IconCode width={22} height={22} />,
     title: "Coding Practice",
     subtitle: "Browse and solve coding problems for your courses.",
   },
@@ -114,7 +114,8 @@ function DashboardLayout({ user, onLogout }) {
   const email = user?.email || "";
   const avatar = (name || "").trim().substring(0, 1).toUpperCase();
 
-  const meta = PAGE_META[location.pathname];
+  const normalizedPath = location.pathname.replace(/\/+$/, '') || '/';
+  const meta = PAGE_META[normalizedPath];
   const pageTitle = meta
     ? typeof meta.getTitle === "function"
       ? meta.getTitle(name)

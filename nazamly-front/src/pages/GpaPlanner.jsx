@@ -118,7 +118,7 @@ function GpaPlanner() {
   const [cgpaInput, setCgpaInput] = useState("");
   const [hoursInput, setHoursInput] = useState("");
   const [profileError, setProfileError] = useState("");
-  const [activeTab, setActiveTab] = useState("calculator");
+  const [activeTab, setActiveTab] = useState("planner");
 
   useEffect(() => {
     if (location.state?.activeTab) {
@@ -497,16 +497,16 @@ function GpaPlanner() {
       {/* Tabs */}
       <div className="planner-tabs">
         <button
-          className={`planner-tab ${activeTab === "calculator" ? "active" : ""}`}
-          onClick={() => setActiveTab("calculator")}
-        >
-          Current Term Calculator
-        </button>
-        <button
           className={`planner-tab ${activeTab === "planner" ? "active" : ""}`}
           onClick={() => setActiveTab("planner")}
         >
           Strategic Planning
+        </button>
+        <button
+          className={`planner-tab ${activeTab === "calculator" ? "active" : ""}`}
+          onClick={() => setActiveTab("calculator")}
+        >
+          Current Term Calculator
         </button>
       </div>
 
