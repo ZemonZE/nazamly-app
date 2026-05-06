@@ -12,20 +12,39 @@ import {
   TextInput,
   Image,
   Switch,
+  Platform,
 } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { useAuth } from "@/context/AuthContext";
 import { auth, API_URL } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAppTheme } from "@/constants/theme";
 
+const safeJsonParse = async (response: Response) => {
+  const text = await response.text();
+  if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+    console.error(`🚨 [Profile] HTML received from: ${response.url} (Status: ${response.status})`);
+    throw new Error("تلقينا صفحة ويب بدلاً من البيانات المطلوبة. تأكد من تشغيل الخادم ورابط الـ API.");
+  }
+  try {
+    const jsonData = JSON.parse(text);
+    if (!response.ok) throw new Error(jsonData.message || "حدث خطأ في جلب البيانات");
+    return jsonData;
+  } catch (parseError) {
+    console.error(`🚨 [Profile] Failed to parse JSON from: ${response.url} (Status: ${response.status})`);
+    console.error("🚨 Raw response text:", text.substring(0, 200));
+    throw new Error("بيانات الخادم غير صالحة للقراءة.");
+  }
+};
+
 const getProfile = async (token: string) => {
   const res = await fetch(`${API_URL}/api/auth/get-profile`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return res.json();
+  return safeJsonParse(res);
 };
 
 const setupProfile = async (
@@ -40,7 +59,7 @@ const setupProfile = async (
     },
     body: JSON.stringify(data),
   });
-  return res.json();
+  return safeJsonParse(res);
 };
 
 const uploadPhoto = async (
@@ -50,11 +69,22 @@ const uploadPhoto = async (
   fileName: string,
 ) => {
   const formData = new FormData();
-  formData.append("photo", {
-    uri,
-    type: mimeType,
-    name: fileName,
-  } as any);
+  // معالجة مسار الموبايل لضمان نجاح الرفع (نضيف file:// للأندرويد إذا لم تكن موجودة)
+  const finalUri = Platform.OS === 'android' && !uri.startsWith('file://') ? `file://${uri}` : uri;
+
+  if (Platform.OS === 'web') {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    // 🌟 الحل هنا: استخدام كلمة 'image' لكي يقبلها Multer
+    formData.append('image', blob, fileName); 
+  } else {
+    // 🌟 الحل هنا أيضاً: استخدام كلمة 'image'
+    formData.append('image', {
+      uri: finalUri,
+      type: mimeType,
+      name: fileName,
+    } as any);
+  }
 
   const res = await fetch(`${API_URL}/api/auth/upload-photo`, {
     method: "POST",
@@ -63,7 +93,40 @@ const uploadPhoto = async (
     },
     body: formData,
   });
-  return res.json();
+  return safeJsonParse(res);
+};
+
+const uploadStudentCard = async (
+  uri: string,
+  token: string,
+  mimeType: string,
+  fileName: string,
+) => {
+  const formData = new FormData();
+  const finalUri = Platform.OS === 'android' && !uri.startsWith('file://') ? `file://${uri}` : uri;
+
+  if (Platform.OS === 'web') {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    // 🌟 الحل هنا: استخدام كلمة 'image'
+    formData.append('image', blob, fileName); 
+  } else {
+    // 🌟 الحل هنا أيضاً: استخدام كلمة 'image'
+    formData.append('image', {
+      uri: finalUri,
+      type: mimeType,
+      name: fileName,
+    } as any);
+  }
+
+  const res = await fetch(`${API_URL}/api/auth/upload-student-card`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+  return safeJsonParse(res);
 };
 interface ProfileDetailProps {
   icon: keyof typeof Feather.glyphMap;
@@ -88,8 +151,23 @@ const ProfileScreen = () => {
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isUploadingCard, setIsUploadingCard] = useState(false);
   const [localPhotoUri, setLocalPhotoUri] = useState<string | null>(null);
+  const [localCardUri, setLocalCardUri] = useState<string | null>(null);
   const [notifEnabled, setNotifEnabled] = useState(true);
+
+  // 🌟 دالة مساعدة لضبط الرابط الكامل للصورة
+  const getFullImageUrl = (url?: string | null) => {
+    if (!url) return undefined;
+    // إذا كان الرابط كاملاً أو محلياً، نرجعه كما هو
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file://') || url.startsWith('data:')) {
+      return url;
+    }
+    // منع تكرار الشرطة المائلة (Double Slashes) الذي يمنع عرض الصورة
+    const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
+    const baseUrl = API_URL.endsWith('/') ? API_URL : `${API_URL}/`;
+    return `${baseUrl}${cleanUrl}`;
+  };
 
   const fetchProfile = useCallback(async () => {
     if (!user) {
@@ -98,7 +176,7 @@ const ProfileScreen = () => {
     }
     try {
       setProfileLoading(true);
-      const token = await user.getIdToken(true);
+      const token = await user.getIdToken();
       const response = await getProfile(token);
       if (response.success && response.data) {
         setBackendUser(response.data);
@@ -172,14 +250,21 @@ const ProfileScreen = () => {
     if (!user) return;
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.5,
+        quality: 0.7,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
+        // Manipulate image before upload
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 400 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        const uri = manipResult.uri;
+        
         setLocalPhotoUri(uri);
         setIsUploadingPhoto(true);
 
@@ -193,14 +278,23 @@ const ProfileScreen = () => {
         // Upload photo
         const res = await uploadPhoto(uri, token, mimeType, fileName);
         if (res.success && (res.photoURL || res.data?.photoURL)) {
-          setBackendUser((prev: any) => ({
-            ...prev,
-            photoURL: res.photoURL || res.data.photoURL,
-          }));
+          const serverUrl = res.photoURL || res.data?.photoURL;
+          if (res.data) {
+            setBackendUser(res.data);
+          } else {
+            setBackendUser((prev: any) => ({
+              ...prev,
+              photoURL: serverUrl,
+            }));
+          }
+          // Clear local URI so the Image component uses the persisted server URL
+          setLocalPhotoUri(null);
           if (refreshProfile) {
             await refreshProfile();
           }
         } else {
+          // Upload failed — clear the optimistic local preview
+          setLocalPhotoUri(null);
           Alert.alert("Error", res.message || "Failed to upload photo");
         }
       }
@@ -209,6 +303,71 @@ const ProfileScreen = () => {
       Alert.alert("Error", "Failed to select image.");
     } finally {
       setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleStudentCardUpload = async () => {
+    if (!user) return;
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Permission Required", "Camera roll permissions are required to upload a card.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [16, 10],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Manipulate image before upload
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 800 } }],
+          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        const uri = manipResult.uri;
+
+        setLocalCardUri(uri);
+        setIsUploadingCard(true);
+
+        const token = await user.getIdToken();
+
+        // Extract filename and mime type dynamically
+        const fileName = uri.split("/").pop() || "card.jpg";
+        const match = /\.(\w+)$/.exec(fileName);
+        const mimeType = match ? `image/${match[1]}` : "image/jpeg";
+
+        // Upload card
+        const res = await uploadStudentCard(uri, token, mimeType, fileName);
+        if (res.success && (res.studentCardPhotoURL || res.data?.studentCardPhotoURL)) {
+          const serverUrl = res.studentCardPhotoURL || res.data?.studentCardPhotoURL;
+          if (res.data) {
+            setBackendUser(res.data);
+          } else {
+            setBackendUser((prev: any) => ({
+              ...prev,
+              studentCardPhotoURL: serverUrl,
+            }));
+          }
+          // Clear local preview
+          setLocalCardUri(null);
+          if (refreshProfile) {
+            await refreshProfile();
+          }
+        } else {
+          setLocalCardUri(null);
+          Alert.alert("Error", res.message || "Failed to upload card");
+        }
+      }
+    } catch (err) {
+      console.error("Card upload error:", err);
+      Alert.alert("Error", "Failed to select or upload card.");
+    } finally {
+      setIsUploadingCard(false);
     }
   };
 
@@ -249,9 +408,10 @@ const ProfileScreen = () => {
                     },
                   ]}
                 >
-                  {localPhotoUri || backendUser?.photoURL ? (
+                  {localPhotoUri || (backendUser?.photoURL && backendUser.photoURL !== "") ? (
                     <Image
-                      source={{ uri: localPhotoUri || backendUser.photoURL }}
+                      // 🌟 نستخدم الدالة المساعدة هنا
+                      source={{ uri: localPhotoUri || getFullImageUrl(backendUser?.photoURL) }}
                       style={s.avatarImage}
                     />
                   ) : (
@@ -404,6 +564,55 @@ const ProfileScreen = () => {
                 value={(user?.uid.substring(0, 12) || "") + "..."}
                 colors={colors}
               />
+            </View>
+
+            {/* Student Card Section */}
+            <View style={[s.detailsCard, { backgroundColor: colors.card }]}>
+              <Text style={[s.detailsCardTitle, { color: colors.textMuted }]}>
+                Student Card
+              </Text>
+              {localCardUri || (backendUser?.studentCardPhotoURL && backendUser.studentCardPhotoURL !== "") ? (
+                <View style={s.cardDisplay}>
+                  <Image
+                    // 🌟 نستخدم الدالة المساعدة هنا أيضاً
+                    source={{ uri: localCardUri || getFullImageUrl(backendUser?.studentCardPhotoURL) }}
+                    style={s.cardPreview}
+                  />
+                  <TouchableOpacity
+                    style={[s.updateCardBtn, { backgroundColor: colors.indigo }]}
+                    onPress={handleStudentCardUpload}
+                    disabled={isUploadingCard}
+                  >
+                    {isUploadingCard ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Feather name="refresh-cw" size={14} color="#fff" />
+                        <Text style={s.updateCardBtnText}>Update Card</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[s.uploadCardPlaceholder, { borderColor: colors.border }]}
+                  onPress={handleStudentCardUpload}
+                  disabled={isUploadingCard}
+                >
+                  {isUploadingCard ? (
+                    <ActivityIndicator size="small" color={colors.indigo} />
+                  ) : (
+                    <>
+                      <View style={[s.uploadCardIcon, { backgroundColor: colors.indigoPale }]}>
+                        <Feather name="plus" size={20} color={colors.indigo} />
+                      </View>
+                      <Text style={[s.uploadCardText, { color: colors.textSecondary }]}>
+                        Upload Student Card
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Preferences */}
@@ -736,6 +945,34 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: 14,
   },
+  cardDisplay: { alignItems: "center", gap: 12 },
+  cardPreview: { width: "100%", height: 180, borderRadius: 12, resizeMode: "cover" },
+  updateCardBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  updateCardBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  uploadCardPlaceholder: {
+    height: 120,
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+  },
+  uploadCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  uploadCardText: { fontSize: 14, fontWeight: "600" },
   divider: { height: 1, marginVertical: 12 },
   detailRow: { justifyContent: "space-between", alignItems: "center" },
   detailLeft: { alignItems: "center", gap: 10 },

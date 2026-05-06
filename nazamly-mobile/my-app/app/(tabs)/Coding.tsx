@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
-  ActivityIndicator, Alert, Dimensions, TextInput,
+  ActivityIndicator, Alert, TextInput,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
 import { useAppTheme } from '@/constants/theme';
+import { API_URL } from '@/firebase';
 
 type CodingProblem = { _id: string; title: string; difficulty: string; tags?: string[]; description?: string; examples?: any[]; constraints?: string[]; starterCode?: Record<string, string> };
-type CodeSubmission = { _id: string; status: string; submittedAt: string; language: string; testCasesPassed?: number; totalTestCases?: number; executionTime?: number; memoryUsed?: number };
+type CodeSubmission = { _id: string; status?: string; verdict?: string; submittedAt: string; language: string; testCasesPassed?: number; totalTestCases?: number; executionTime?: number; memoryUsed?: number; firstFailure?: { input: string; expectedOutput: string; stdout?: string } };
 type StudentProgress = { totalProblemsSolved: number; currentStreak: number; maxStreak: number; easyCount: number; mediumCount: number; hardCount: number };
-import { API_URL } from '@/firebase';
 
 const listProblems = async (token: string) => {
   const res = await fetch(`${API_URL}/api/coding/problems`, { headers: { Authorization: `Bearer ${token}` } });
@@ -27,6 +27,14 @@ const submitCode = async (data: any, token: string) => {
     body: JSON.stringify(data)
   });
   return res.json().then(d => d.data || d);
+};
+const runCode = async (data: any, token: string) => {
+  const res = await fetch(`${API_URL}/api/coding/run`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return res.json();
 };
 const getSubmissions = async (token: string) => {
   const res = await fetch(`${API_URL}/api/coding/submissions`, { headers: { Authorization: `Bearer ${token}` } });
@@ -45,7 +53,6 @@ const toggleDifficulty = async (id: string, showDifficulty: boolean, token: stri
   return res.json();
 };
 
-const { width: SCREEN_W } = Dimensions.get('window');
 
 // ── Difficulty helpers ──
 const getDifficultyLabel = (level: string) => {
@@ -66,7 +73,8 @@ const getDifficultyColor = (level: string) => {
   }
 };
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: string | undefined) => {
+  if (!status) return '#6b7280';
   switch (status) {
     case 'accepted': return '#22c55e';
     case 'wrong_answer': return '#ef4444';
@@ -80,7 +88,8 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const getStatusIcon = (status: string) => {
+const getStatusIcon = (status: string | undefined) => {
+  if (!status) return 'help-circle';
   switch (status) {
     case 'accepted': return 'check-circle';
     case 'wrong_answer': return 'x-circle';
@@ -112,6 +121,8 @@ export default function CodingScreen() {
   const [selectedLanguage, setSelectedLanguage] = useState('cpp');
   const [submitting, setSubmitting] = useState(false);
   const [lastSubmission, setLastSubmission] = useState<CodeSubmission | null>(null);
+  const [running, setRunning] = useState(false);
+  const [runResults, setRunResults] = useState<any>(null);
 
   // ── Submissions Tab ──
   const [submissions, setSubmissions] = useState<CodeSubmission[]>([]);
@@ -202,11 +213,36 @@ export default function CodingScreen() {
     }
   };
 
+  // ── Handle Code Run (sample test cases) ──
+  const handleRunCode = async () => {
+    if (!user || !selectedProblem || !code.trim()) return;
+    setRunning(true);
+    setRunResults(null);
+    try {
+      const token = await user.getIdToken();
+      const response = await runCode({
+        problemId: selectedProblem._id,
+        language: selectedLanguage,
+        code: code.trim(),
+      }, token);
+      if (response.status === 429) {
+        setRunResults({ error: response.message });
+      } else {
+        setRunResults(response);
+      }
+    } catch (err: any) {
+      setRunResults({ error: err.message || 'Run failed.' });
+    } finally {
+      setRunning(false);
+    }
+  };
+
   // ── Handle Code Submission ──
   const handleSubmitCode = async () => {
     if (!user || !selectedProblem || !code.trim()) return;
 
     setSubmitting(true);
+    setRunResults(null);
     try {
       const token = await user.getIdToken();
       const response = await submitCode({
@@ -215,11 +251,15 @@ export default function CodingScreen() {
         language: selectedLanguage,
       }, token);
 
-      if (response.submission) {
+      // Backend returns { verdict: "AC"|"WA", firstFailure?, submission? }
+      if (response.verdict === 'AC') {
+        setLastSubmission({ ...response, status: 'accepted' });
+      } else if (response.verdict === 'WA') {
+        setLastSubmission({ ...response, status: 'wrong_answer' });
+      } else if (response.submission) {
         setLastSubmission(response.submission);
-        // Reload submissions to show the new one
-        loadSubmissions();
       }
+      loadSubmissions();
     } catch (err: any) {
       Alert.alert('Submission Failed', err.message || 'Failed to submit code');
     } finally {
@@ -432,9 +472,26 @@ export default function CodingScreen() {
                 textAlignVertical="top"
               />
 
+              {/* Run + Submit Buttons */}
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                <TouchableOpacity
+                  style={[s.submitBtn, { backgroundColor: running ? colors.border : colors.teal, flex: 1 }]}
+                  onPress={handleRunCode}
+                  disabled={!code.trim() || running || submitting}
+                >
+                  {running ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Feather name="play" size={16} color={code.trim() ? '#fff' : colors.textMuted} />
+                      <Text style={[s.submitBtnText, { color: code.trim() ? '#fff' : colors.textMuted }]}>Run</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
               {/* Submit Button */}
               <TouchableOpacity
-                style={[s.submitBtn, { backgroundColor: code.trim() ? colors.indigo : colors.border }]}
+                style={[s.submitBtn, { backgroundColor: code.trim() ? colors.indigo : colors.border, flex: 1 }]}
                 onPress={handleSubmitCode}
                 disabled={!code.trim() || submitting}
               >
@@ -442,13 +499,55 @@ export default function CodingScreen() {
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <>
-                    <Feather name="play" size={18} color={code.trim() ? '#fff' : colors.textMuted} />
+                    <Feather name="send" size={18} color={code.trim() ? '#fff' : colors.textMuted} />
                     <Text style={[s.submitBtnText, { color: code.trim() ? '#fff' : colors.textMuted }]}>
-                      Run Code
+                      Submit
                     </Text>
                   </>
                 )}
               </TouchableOpacity>
+              </View>
+
+              {/* Run Results */}
+              {runResults && (
+                <View style={[s.card, { backgroundColor: colors.card, marginTop: 12 }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Sample Test Results</Text>
+                    <TouchableOpacity onPress={() => setRunResults(null)}>
+                      <Feather name="x" size={18} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                  {runResults.error ? (
+                    <Text style={{ color: colors.red }}>⚠️ {runResults.error}</Text>
+                  ) : runResults.message ? (
+                    <Text style={{ color: colors.red }}>{runResults.message}</Text>
+                  ) : (
+                    (runResults.results || []).map((r: any, i: number) => (
+                      <View key={i} style={[s.exampleBox, { backgroundColor: r.passed ? '#22c55e10' : '#ef444410', borderRadius: 8, padding: 10, marginBottom: 8 }]}>
+                        <Text style={{ color: r.passed ? '#22c55e' : '#ef4444', fontWeight: '700', marginBottom: 6 }}>
+                          {r.passed ? '✅' : '❌'} Case {i + 1} — {r.passed ? 'Passed' : 'Failed'}
+                        </Text>
+                        <Text style={[s.exampleLabel, { color: colors.textMuted }]}>Input:</Text>
+                        <Text style={[s.exampleText, { color: colors.textPrimary }]}>{r.input}</Text>
+                        <Text style={[s.exampleLabel, { color: colors.textMuted }]}>Expected:</Text>
+                        <Text style={[s.exampleText, { color: colors.textPrimary }]}>{r.expectedOutput}</Text>
+                        {r.actualOutput != null && (
+                          <>
+                            <Text style={[s.exampleLabel, { color: colors.textMuted }]}>Your Output:</Text>
+                            <Text style={[s.exampleText, { color: r.passed ? '#22c55e' : '#ef4444' }]}>{r.actualOutput || '(empty)'}</Text>
+                          </>
+                        )}
+                        {r.stderr ? (
+                          <>
+                            <Text style={[s.exampleLabel, { color: colors.textMuted }]}>Stderr:</Text>
+                            <Text style={[s.exampleText, { color: '#ef4444' }]}>{r.stderr}</Text>
+                          </>
+                        ) : null}
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
             </View>
 
             {/* Last Submission Result */}
@@ -456,13 +555,29 @@ export default function CodingScreen() {
               <View style={[s.card, { backgroundColor: colors.card }]}>
                 <View style={s.submissionHeader}>
                   <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Last Submission</Text>
-                  <View style={[s.statusBadge, { backgroundColor: getStatusColor(lastSubmission.status) + '20' }]}>
-                    <Feather name={getStatusIcon(lastSubmission.status)} size={14} color={getStatusColor(lastSubmission.status)} />
-                    <Text style={[s.statusText, { color: getStatusColor(lastSubmission.status) }]}>
-                      {lastSubmission.status.replace('_', ' ').toUpperCase()}
+                  <View style={[s.statusBadge, { backgroundColor: getStatusColor(lastSubmission.status || (lastSubmission.verdict === 'AC' ? 'accepted' : 'wrong_answer')) + '20' }]}>
+                    <Feather name={getStatusIcon(lastSubmission.status || (lastSubmission.verdict === 'AC' ? 'accepted' : 'wrong_answer')) as any} size={14} color={getStatusColor(lastSubmission.status || (lastSubmission.verdict === 'AC' ? 'accepted' : 'wrong_answer'))} />
+                    <Text style={[s.statusText, { color: getStatusColor(lastSubmission.status || (lastSubmission.verdict === 'AC' ? 'accepted' : 'wrong_answer')) }]}>
+                      {lastSubmission.verdict === 'AC' ? 'ACCEPTED' : lastSubmission.verdict === 'WA' ? 'WRONG ANSWER' : (lastSubmission.status || '').replace(/_/g, ' ').toUpperCase()}
                     </Text>
                   </View>
                 </View>
+
+                {lastSubmission.verdict === 'WA' && lastSubmission.firstFailure && (
+                  <View style={[s.exampleBox, { backgroundColor: '#ef444410', borderRadius: 8, padding: 10, marginTop: 8 }]}>
+                    <Text style={{ color: '#ef4444', fontWeight: '700', marginBottom: 6 }}>First Failing Case</Text>
+                    <Text style={[s.exampleLabel, { color: colors.textMuted }]}>Input:</Text>
+                    <Text style={[s.exampleText, { color: colors.textPrimary }]}>{lastSubmission.firstFailure.input}</Text>
+                    <Text style={[s.exampleLabel, { color: colors.textMuted }]}>Expected:</Text>
+                    <Text style={[s.exampleText, { color: colors.textPrimary }]}>{lastSubmission.firstFailure.expectedOutput}</Text>
+                    {lastSubmission.firstFailure.stdout != null && (
+                      <>
+                        <Text style={[s.exampleLabel, { color: colors.textMuted }]}>Your Output:</Text>
+                        <Text style={[s.exampleText, { color: '#ef4444' }]}>{lastSubmission.firstFailure.stdout}</Text>
+                      </>
+                    )}
+                  </View>
+                )}
 
                 {lastSubmission.testCasesPassed !== undefined && lastSubmission.totalTestCases !== undefined && (
                   <Text style={[s.testResults, { color: colors.textSecondary }]}>
@@ -473,7 +588,7 @@ export default function CodingScreen() {
                 {lastSubmission.executionTime && (
                   <Text style={[s.executionInfo, { color: colors.textMuted }]}>
                     Time: {lastSubmission.executionTime}ms
-                    {lastSubmission.memoryUsed && ` · Memory: ${lastSubmission.memoryUsed}KB`}
+                    {lastSubmission.memoryUsed ? ` · Memory: ${lastSubmission.memoryUsed}KB` : ''}
                   </Text>
                 )}
               </View>
@@ -514,7 +629,7 @@ export default function CodingScreen() {
                     <View style={[s.statusBadge, { backgroundColor: getStatusColor(submission.status) + '20' }]}>
                       <Feather name={getStatusIcon(submission.status)} size={12} color={getStatusColor(submission.status)} />
                       <Text style={[s.statusText, { color: getStatusColor(submission.status) }]}>
-                        {submission.status.replace('_', ' ').toUpperCase()}
+                        {(submission.status || 'unknown').replace('_', ' ').toUpperCase()}
                       </Text>
                     </View>
                   </View>

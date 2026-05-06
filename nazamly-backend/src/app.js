@@ -5,6 +5,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 
 // 1. Route Imports
+const loggerMiddleware = require("./middlewares/logger.middleware");
 const authRoutes = require("./routes/auth.routes");
 const gpaRoutes = require("./routes/gpa.routes");
 const scheduleRoutes = require('./routes/schedule.routes');
@@ -19,6 +20,9 @@ const adminRoutes = require('./routes/admin.routes');
 const studentRoutes = require('./routes/student.routes');
 
 const app = express();
+
+// 🌟 Apply Logger Middleware Globally (before all other routes/middlewares)
+app.use(loggerMiddleware);
 
 // ════════════════════════════════════════════════
 //  2. Security Middlewares
@@ -130,9 +134,16 @@ app.use('/api/student', studentRoutes);
 //  7. Global Error Handler
 // ════════════════════════════════════════════════
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ 
-    message: 'Internal server error' 
+  const timestamp = new Date().toLocaleString();
+  console.error(`\n❌ [${timestamp}] ERROR DETECTED:`);
+  console.error(`   Message: ${err.message}`);
+  console.error(`   Stack:   ${err.stack}`);
+  console.error(`============================================\n`);
+
+  res.status(err.status || 500).json({ 
+    success: false,
+    message: err.message || 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 

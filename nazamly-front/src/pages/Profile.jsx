@@ -126,6 +126,12 @@ function Profile() {
             {user.createdAt ? new Date(user.createdAt).getFullYear() : "—"}
           </h3>
         </div>
+        {user.timeTableId && (
+          <div className="profile-stat-box" style={{ borderColor: 'var(--blue-500)' }}>
+            <p className="stat-label">Active Timetable</p>
+            <h3 style={{ fontSize: '0.8rem', opacity: 0.8 }}>{user.timeTableId}</h3>
+          </div>
+        )}
       </div>
 
       {user.cgpa != null && (

@@ -5,10 +5,32 @@ import {
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import { API_URL } from '@/firebase';
 
 type ExtractedCourse = { courseCode: string; courseName?: string; mark?: number; gradePoints?: number; creditHours?: number };
-const uploadTranscript = async (..._a: any[]) => ({ status: 'failed', extractedCourses: [] as ExtractedCourse[], termGPA: 0, totalCreditHours: 0, ocrConfidence: 0, transcriptId: '', errorMessage: 'Service unavailable' });
-const updateTranscript = async (..._a: any[]) => ({});
+
+const uploadTranscript = async (uri: string, mimeType: string, name: string, token: string) => {
+  const formData = new FormData();
+  formData.append('transcript', { uri, type: mimeType, name } as any);
+  const res = await fetch(`${API_URL}/api/gpa/upload-transcript`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  const json = await res.json();
+  if (!res.ok && !json.data) throw new Error(json.message || 'Upload failed');
+  return json.data || json;
+};
+
+const updateTranscript = async (id: string, courses: ExtractedCourse[], token: string) => {
+  const res = await fetch(`${API_URL}/api/gpa/transcripts/${id}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ extractedCourses: courses }),
+  });
+  return res.json();
+};
+
 import { Course, extractedToCourses } from './types';
 
 interface UploadFlowProps {

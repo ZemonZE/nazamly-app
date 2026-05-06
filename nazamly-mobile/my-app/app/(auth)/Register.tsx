@@ -79,7 +79,7 @@ export default function RegisterScreen() {
   const syncWithBackend = useCallback(async (user: any) => {
     try {
       console.log("[Register] Getting fresh token for sync...");
-      const token = await user.getIdToken(true);
+      const token = await user.getIdToken();
       
       console.log("[Register] Calling syncUser...");
       const response = await syncUser(token);
@@ -155,7 +155,7 @@ export default function RegisterScreen() {
       console.log("[Register] Firebase profile updated with name:", name);
       
       await result.user.reload();
-      await result.user.getIdToken(true);
+      await result.user.getIdToken();
       console.log("[Register] Token refreshed with updated profile");
       
       console.log("[Register] Syncing with backend...");

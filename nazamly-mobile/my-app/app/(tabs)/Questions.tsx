@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
-  ActivityIndicator, Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
@@ -24,9 +24,9 @@ const getSubFolderFiles = async (courseCode: string, subFolderType: string, toke
 };
 
 const getQuizHistory = async (token: string) => {
-  const res = await fetch(`${API_URL}/api/questions/archive`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`${API_URL}/api/student/quizzes/history`, { headers: { Authorization: `Bearer ${token}` } });
   const json = await res.json();
-  return { history: json.data || [] };
+  return { history: json.history || json.data || [] };
 };
 
 const generateExamStream = async (opts: any, token: string, onStatus: (s: string) => void) => {
@@ -59,16 +59,15 @@ const generateExamStream = async (opts: any, token: string, onStatus: (s: string
 };
 
 const submitQuiz = async (data: any, token: string) => {
-  const res = await fetch(`${API_URL}/api/questions/submit`, {
+  const res = await fetch(`${API_URL}/api/student/quizzes/submit`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
   const json = await res.json();
-  return json.data || { success: true };
+  return json.data || json;
 };
 
-const { width: SCREEN_W } = Dimensions.get('window');
 
 // ── Exam config (matches frontend) ──
 const EXAM_CONFIG: Record<string, { total: number; mcq: number; tf: number }> = {
@@ -290,7 +289,7 @@ export default function QuestionsScreen() {
         token
       );
 
-      if (response.success && response.attempt?.questionsSnapshot) {
+      if (response.attempt?.questionsSnapshot) {
         setAiQuestions(response.attempt.questionsSnapshot);
       }
       setAiSubmitted(true);

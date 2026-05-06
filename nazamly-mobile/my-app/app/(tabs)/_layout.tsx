@@ -75,19 +75,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="Generator"
-        options={{
-          title: "Generator",
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons
-              name="lightning-bolt"
-              size={22}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="Questions"
         options={{
           title: "Library",

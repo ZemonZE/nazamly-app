@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useOutletContext } from "react-router-dom";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { IconTrash } from "../Icons/DashboardIcons";
@@ -143,6 +144,8 @@ function buildFriendlyAiError(rawError) {
    MAIN COMPONENT
 ═══════════════════════════════════ */
 function Generator() {
+  const { user } = useOutletContext();
+
   const [tab, setTab] = useState("smart"); // "smart" | "manual"
 
 
@@ -172,6 +175,73 @@ function Generator() {
   const [exporting, setExporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState("");
+  const [fetchingCloud, setFetchingCloud] = useState(false);
+
+  /* ───────────────────────────────────────────────────────────────
+     CLOUD SYNC: Fetch Profile & Timetable on mount
+  ─────────────────────────────────────────────────────────────── */
+  useEffect(() => {
+    const initCloudSync = async () => {
+      try {
+        const firebaseUser = auth.currentUser;
+        if (!firebaseUser) return;
+        const token = await firebaseUser.getIdToken(true);
+
+        setFetchingCloud(true);
+        // 1. Fetch latest profile to check for timeTableId
+        const profileRes = await fetch(`${API_URL}/api/auth/get-profile`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const profileData = await profileRes.json();
+        
+        if (profileData?.success && profileData.data?.timeTableId) {
+          // 2. Fetch the actual timetable entries
+          const ttRes = await fetch(`${API_URL}/api/schedule/my-timetable`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const ttData = await ttRes.json();
+
+          if (ttData?.success && ttData.data?.entries) {
+            // Map backend entries (24h) back to manual schedule format (12h)
+            const mapped = ttData.data.entries.map(e => {
+              const from24to12 = (time24) => {
+                if (!time24) return "";
+                let [h, m] = time24.split(":").map(Number);
+                const ampm = h >= 12 ? "PM" : "AM";
+                h = h % 12 || 12;
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+              };
+
+              const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][e.dayOfWeek];
+              
+              return {
+                id: e._id || Math.random().toString(36),
+                subject: e.courseName || e.courseCode,
+                type: e.sessionType === "Lecture" ? "ن" : e.sessionType === "Lab" ? "ع" : "ت",
+                day: dayName,
+                slot: {
+                  start: from24to12(e.startTime),
+                  end: from24to12(e.endTime)
+                },
+                group: e.groupNumber,
+                place: e.location
+              };
+            });
+
+            if (mapped.length > 0) {
+              setSchedules(mapped);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Cloud sync init failed:", err);
+      } finally {
+        setFetchingCloud(false);
+      }
+    };
+
+    initCloudSync();
+  }, []);
 
   /* ───────────────────────────────
      PDF EXPORT — Professional A4 Schedule
@@ -749,48 +819,75 @@ function Generator() {
   };
 
   /* ───────────────────────────────
-     SAVE AI SCHEDULE TO MOBILE TIMETABLE
+     UNIFIED SAVE LOGIC (WEB TO MOBILE SYNC)
   ─────────────────────────────── */
-  const handleSaveToMobile = async () => {
-    const chosen = aiResults?.generatedSchedules?.[aiSelected]?.schedule || [];
-    if (chosen.length === 0) return;
-
+  const handleSaveToBackend = async (dataToSave, title = "My Schedule") => {
     setSaving(true);
     setSaveSuccess("");
 
     try {
       const user = auth.currentUser;
-      if (!user) {
-        throw new Error("You must login first to save the schedule");
-      }
+      if (!user) throw new Error("You must login first to save the schedule");
       const token = await user.getIdToken(true);
 
-      const res = await fetch(`${API_URL}/api/schedule/save-ai`, {
+      // Map sessions to backend format (24h time)
+      const entries = dataToSave.map(s => {
+        // Convert "09:00 AM" -> "09:00" and "02:30 PM" -> "14:30"
+        const to24h = (time12h) => {
+          if (!time12h) return "00:00";
+          const [time, modifier] = time12h.split(" ");
+          let [hours, minutes] = time.split(":").map(Number);
+          if (hours === 12) hours = 0;
+          if (modifier === "PM") hours += 12;
+          return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        };
+
+        return {
+          courseName: s.subject || s.courseName || s.courseCode,
+          courseCode: s.courseCode || "",
+          dayOfWeek: DAYS_EN_MAP_REVERSE[s.day] !== undefined ? DAYS_EN_MAP_REVERSE[s.day] : s.dayOfWeek,
+          startTime: s.slot?.start ? to24h(s.slot.start) : s.startTime,
+          endTime: s.slot?.end ? to24h(s.slot.end) : s.endTime,
+          sessionType: s.type === "ن" || s.type?.toLowerCase() === "lecture" ? "Lecture" :
+                       s.type === "ع" || s.type?.toLowerCase() === "lab" ? "Lab" : "Section",
+          groupNumber: s.group || s.groupNumber || "",
+          location: s.place || s.location || ""
+        };
+      });
+
+      const res = await fetch(`${API_URL}/api/schedule/save-timetable`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          schedule: chosen,
-          title: `Smart Schedule #${aiSelected + 1}`,
-        }),
+        body: JSON.stringify({ entries, title }),
       });
 
-      const data = await res.json();
+      const result = await res.json();
+      if (!res.ok || !result.success) throw new Error(result.message || "Failed to save");
 
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to save the schedule");
-      }
-
-      setSaveSuccess(
-        "✅ Schedule saved successfully! Open the Nazamly app on your mobile",
-      );
+      setSaveSuccess("✅ Schedule synced successfully! Check your mobile app.");
     } catch (err) {
       setSaveSuccess(`❌ ${err.message}`);
     } finally {
       setSaving(false);
     }
+  };
+
+  const DAYS_EN_MAP_REVERSE = {
+    "Saturday": 6, "Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3, "Thursday": 4, "Friday": 5
+  };
+
+  const handleSaveToMobile = () => {
+    const chosen = aiResults?.generatedSchedules?.[aiSelected]?.schedule || [];
+    if (chosen.length === 0) return;
+    handleSaveToBackend(chosen, `Smart Schedule #${aiSelected + 1}`);
+  };
+
+  const handleSaveManualToMobile = () => {
+    if (schedules.length === 0) return;
+    handleSaveToBackend(schedules, "Manual Web Schedule");
   };
 
   /* ═══════════════════════════════
@@ -799,6 +896,15 @@ function Generator() {
   return (
     <div className="dash-home">
       {/* ── Tab Switcher ── */}
+      {user?.timeTableId && (
+        <div className="active-sync-banner">
+          <span className="sync-icon">📡</span>
+          <p>
+            Linked to Cloud Timetable: <code>{user.timeTableId}</code>
+          </p>
+          <span className="sync-status">Active</span>
+        </div>
+      )}
       <div className="gen-tabs">
         <button
           className={`gen-tab-btn ${tab === "smart" ? "active" : ""}`}
@@ -965,14 +1071,30 @@ function Generator() {
 
           {/* ── Schedule ── */}
           <div className="gen-schedule" ref={manualScheduleRef}>
+            {fetchingCloud && (
+              <div className="cloud-fetching-overlay">
+                <span className="spinner">🔄</span>
+                <p>Syncing with cloud...</p>
+              </div>
+            )}
             {schedules.length > 0 && (
-              <button
-                className="btn-primary pdf-export-btn"
-                onClick={() => exportPDF("My-Schedule.pdf", "manual")}
-                disabled={exporting}
-              >
-                {exporting ? "Exporting..." : "📥 Export PDF"}
-              </button>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+                <button
+                  className="btn-primary pdf-export-btn"
+                  onClick={() => exportPDF("My-Schedule.pdf", "manual")}
+                  disabled={exporting}
+                >
+                  {exporting ? "Exporting..." : "📥 Export PDF"}
+                </button>
+                <button
+                  className="btn-primary pdf-export-btn"
+                  style={{ background: "#4f46e5" }}
+                  onClick={handleSaveManualToMobile}
+                  disabled={saving}
+                >
+                  {saving ? "Saving..." : "📱 Save to Mobile"}
+                </button>
+              </div>
             )}
             {schedules.length === 0 ? (
               <div className="gpa-card">

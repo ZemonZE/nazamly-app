@@ -319,6 +319,7 @@ const getAllTranscripts = async (req, res) => {
 
         // Map to a cleaner response (exclude heavy extractedCourses in list view)
         const data = transcripts.map(t => ({
+            _id: t._id,
             id: t._id.toString(),
             fileName: t.fileName,
             fileType: t.fileType,
