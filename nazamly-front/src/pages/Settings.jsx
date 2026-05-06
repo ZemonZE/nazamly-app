@@ -7,7 +7,7 @@ function Settings() {
   const rawName = user?.fullName || user?.displayName || user?.name || "—";
   const name = rawName.trim() || "—";
   const email = user?.email || "—";
-  const status = user?.accessStatus || "Active";
+  const status = user?.accessStatus || "Unknown";
   const role = user?.role || "Student";
 
   const [notifications, setNotifications] = useState(true);
@@ -55,9 +55,9 @@ function Settings() {
               <div className="settings-info-item">
                 <span className="settings-info-label">Account Status</span>
                 <span
-                  className={`settings-status ${status === "Active" ? "active" : "inactive"}`}
+                  className={`settings-status ${status === "active" ? "active" : "inactive"}`}
                 >
-                  {status === "Active" ? "✅" : "⛔"} {status}
+                  {status === "active" ? "✅" : "⛔"} {status}
                 </span>
               </div>
               <div className="settings-info-item">

@@ -21,26 +21,6 @@ const classifyGpa = (v) => {
   return { label: "", color: "", css: "" };
 };
 
-const mockCodingHistory = [
-  {
-    problemName: "Two Sum",
-    language: "C++",
-    difficulty: "Easy",
-    timeAgo: "2 hours ago",
-  },
-  {
-    problemName: "Longest Substring",
-    language: "JavaScript",
-    difficulty: "Medium",
-    timeAgo: "1 day ago",
-  },
-  {
-    problemName: "Merge Intervals",
-    language: "Java",
-    difficulty: "Medium",
-    timeAgo: "3 days ago",
-  },
-];
 
 function Profile() {
   const { user } = useOutletContext();
@@ -48,8 +28,8 @@ function Profile() {
   const [quizHistory, setQuizHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
 
-  // Goal Tracker Mock Calculations
-  const targetGpa = 3.8; // Set mock constant, ready to be linked to API later
+  // Goal Tracker
+  const targetGpa = 3.8;
   const currentGpa = user?.cgpa || 0;
   const remainingGpa = Math.max(targetGpa - currentGpa, 0).toFixed(2);
   const goalPercent =
@@ -92,7 +72,7 @@ function Profile() {
           <h2>{user.displayName || user.fullName || "Student"}</h2>
           <p className="profile-email">{user.email}</p>
           <span className="profile-badge status-badge">
-            {user.accessStatus || "Active"}
+            {user.accessStatus || "Unknown"}
           </span>
         </div>
       </div>
@@ -319,26 +299,7 @@ function Profile() {
           <h3 style={{ margin: 0 }}>Recent Coding Practice</h3>
         </div>
 
-        <div className="profile-quizzes-grid">
-          {mockCodingHistory.map((item, idx) => (
-            <div key={idx} className="profile-quiz-card">
-              <div className="quiz-card-header">
-                <h4>{item.problemName}</h4>
-                <span className="quiz-date">{item.timeAgo}</span>
-              </div>
-              <div className="quiz-card-body">
-                <div className="quiz-score-badge">
-                  <span>{item.language}</span>
-                </div>
-                <span
-                  className={`quiz-percent ${item.difficulty === "Easy" ? "good" : item.difficulty === "Medium" ? "average" : "poor"}`}
-                >
-                  {item.difficulty}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+        <p className="profile-empty-text">No coding activity recorded yet.</p>
         <div className="profile-quiz-footer">
           <button
             className="view-all-history-btn"

@@ -258,7 +258,7 @@ export default function ProblemSolver() {
     <div className="ps-fullpage">
       {/* ══ TOP BAR ══ */}
       <div className="ps-topbar">
-        <button className="ps-back-btn" onClick={() => navigate(-1)}>← Back</button>
+        <button className="ps-back-btn" onClick={() => navigate(-1)}>← Back to Problems</button>
         <span className="ps-topbar-title">{problem.title}</span>
         <div className="ps-topbar-meta">
           <span className="ps-badge ps-topic">{problem.topic}</span>
@@ -329,19 +329,20 @@ export default function ProblemSolver() {
                 <option key={l} value={l}>{l.toUpperCase()}</option>
               ))}
             </select>
+            <div className="ps-toolbar-spacer" />
             <button
               className={`ps-run-btn ${running ? "running" : ""}`}
               onClick={handleRun}
               disabled={running || submitting}
             >
-              {running ? "⏳ Running…" : "▷ Run"}
+              {running ? "Running…" : "▷ Run Code"}
             </button>
             <button
               className={`ps-submit-btn ${submitting ? "running" : ""}`}
               onClick={handleSubmit}
               disabled={submitting || running}
             >
-              {submitting ? "⏳ Running…" : "▶ Submit"}
+              {submitting ? "Judging…" : "▶ Submit"}
             </button>
           </div>
 
