@@ -56,6 +56,9 @@ node server.js
 
 Student-facing web app with login/signup, Firebase Auth (email + Google), glassmorphism dark-green UI.
 
+Detailed architecture and refactor documentation:
+- [nazamly-front/FRONTEND_SYSTEM_DOCS.md](nazamly-front/FRONTEND_SYSTEM_DOCS.md)
+
 ```bash
 cd nazamly-front
 npm install

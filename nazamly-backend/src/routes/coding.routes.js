@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { rateLimit } = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const authMiddleware = require('../middlewares/auth.middleware');
 const submissionRateLimiter = require('../middlewares/submissionRateLimiter');
 const { listProblems, getProblem } = require('../controllers/CodingProblem.controller');
@@ -10,7 +10,7 @@ const { getProgress, toggleDifficulty } = require('../controllers/StudentProgres
 const runRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
-  keyGenerator: (req) => req.user?.uid || req.ip,
+  keyGenerator: (req) => req.user?.uid || ipKeyGenerator(req),
   message: { success: false, message: 'Too many run requests. Please wait a moment.' },
 });
 

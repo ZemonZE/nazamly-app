@@ -42,11 +42,20 @@ connectDB()
       const ocrDir = path.join(__dirname, 'ocr-service');
       const isWindows = os.platform() === 'win32';
 
-      // Use the venv in nazamly-backend/venv
-      const venvPython = path.join(__dirname, 'venv', isWindows ? 'Scripts\\python.exe' : 'bin/python');
-      const pythonExe = fs.existsSync(venvPython) ? venvPython : (isWindows ? 'py' : 'python3');
+      const pythonBinary = isWindows ? 'Scripts\\python.exe' : 'bin/python';
 
-      console.log(`🤖 Starting OCR Service using: ${fs.existsSync(venvPython) ? 'venv' : 'system python'}`);
+      const pythonCandidates = [
+        process.env.OCR_PYTHON_PATH,
+        path.join(__dirname, 'venv', pythonBinary),
+        path.join(__dirname, '.venv', pythonBinary),
+        path.join(__dirname, 'ocr-service', '.venv', pythonBinary),
+        path.join(__dirname, '..', '.venv', pythonBinary),
+      ].filter(Boolean);
+
+      const resolvedVenvPython = pythonCandidates.find((candidate) => fs.existsSync(candidate));
+      const pythonExe = resolvedVenvPython || (isWindows ? 'py' : 'python3');
+
+      console.log(`🤖 Starting OCR Service using: ${resolvedVenvPython ? `venv (${pythonExe})` : `system python (${pythonExe})`}`);
 
       const pythonProcess = spawn(pythonExe, ['app.py'], {
         cwd: ocrDir,

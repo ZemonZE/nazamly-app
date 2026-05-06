@@ -23,6 +23,10 @@ node_modules/
 #images-upload
 uploads/
 
+# Python cache
+__pycache__/
+*.pyc
+
 # Root package-lock (not a real project root)
 /package-lock.json
 firebase-adminsdk.json
