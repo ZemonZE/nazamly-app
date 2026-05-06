@@ -7,6 +7,7 @@ const { parse, ParseError } = require('../services/TestCaseParser');
  * Creates a new coding problem from multipart form data.
  */
 const createProblem = async (req, res) => {
+  console.log("[CodingProblem.controller] createProblem called");
   try {
     const { title, topic, courseId, estimatedMinutes, difficulty } = req.body;
 
@@ -55,6 +56,7 @@ const createProblem = async (req, res) => {
  * Updates a problem and resets all solved statuses for that problem.
  */
 const updateProblem = async (req, res) => {
+  console.log("[CodingProblem.controller] updateProblem called");
   try {
     const problemId = req.params.id;
     const updated = await codingProblemRepo.update(problemId, req.body);
@@ -71,6 +73,7 @@ const updateProblem = async (req, res) => {
  * Soft-deletes a problem and all its submissions.
  */
 const deleteProblem = async (req, res) => {
+  console.log("[CodingProblem.controller] deleteProblem called");
   try {
     const problemId = req.params.id;
     await codingProblemRepo.softDeleteWithSubmissions(problemId);
@@ -86,6 +89,7 @@ const deleteProblem = async (req, res) => {
  * Lists problems for a course with solved status attached per student.
  */
 const listProblems = async (req, res) => {
+  console.log("[CodingProblem.controller] listProblems called");
   try {
     const { courseId, sort, dir } = req.query;
 
@@ -134,6 +138,7 @@ const listProblems = async (req, res) => {
  * Returns problem detail. Filters test cases to visible only (unless admin).
  */
 const getProblem = async (req, res) => {
+  console.log("[CodingProblem.controller] getProblem called");
   try {
     const problemId = req.params.id;
 
@@ -173,6 +178,7 @@ const getProblem = async (req, res) => {
  * Admin version — returns all fields including difficulty, no student progress logic.
  */
 const listProblemsAdmin = async (req, res) => {
+  console.log("[CodingProblem.controller] listProblemsAdmin called");
   try {
     const { courseId, sort, dir } = req.query;
     if (!courseId) {

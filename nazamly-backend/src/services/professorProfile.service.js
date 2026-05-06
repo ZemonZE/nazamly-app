@@ -54,7 +54,7 @@ async function generateAndSaveProfile(courseId) {
     const profile = await ProfessorProfile.findOneAndUpdate(
       { courseId },
       { $set: profileData },
-      { new: true, upsert: true }
+      { returnDocument: 'after', upsert: true }
     );
 
     console.log(`[ProfessorProfile] Style profile saved successfully for courseId=${courseId}.`);

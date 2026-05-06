@@ -55,7 +55,7 @@ class CodingProblem_Repo extends Base_Repo {
     return await this.model.findByIdAndUpdate(
       problemId,
       { $inc: { acCount: 1 } },
-      { new: true }
+      { returnDocument: 'after' }
     );
   }
 }

@@ -2,6 +2,21 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, API_URL } from "@/firebase";
 
+const syncUser = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/auth/sync`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};
+
+const getProfile = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/auth/get-profile`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};
+
 interface AuthContextType {
   user: User | null;
   backendUser: any | null;
@@ -28,39 +43,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // 🌟 دالة لجلب بيانات المستخدم من الباك إند
+  // 🌟 Sync-first flow: syncUser → getProfile — يمنع الـ race condition
   const fetchUserProfile = async (firebaseUser: User) => {
     try {
+      setError(null);
       const token = await firebaseUser.getIdToken();
-      console.log("[AuthContext] Fetching profile with token:", token ? "✓" : "✗");
-      
-      const res = await fetch(`${API_URL}/api/auth/get-profile`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      console.log("[AuthContext] Profile response status:", res.status);
-      
-      // Check if response is JSON
-      const contentType = res.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        console.error("[AuthContext] Non-JSON response from:", `${API_URL}/api/auth/get-profile`, "status:", res.status);
-        return;
+
+      // 1. Sync أولاً — ده بينشئ الـ user لو مش موجود
+      try {
+        await syncUser(token);
+      } catch (syncErr) {
+        console.warn("[AuthContext] syncUser warning (non-blocking):", syncErr);
+        // non-blocking — getProfile backend يقدر ينشئ الـ user لوحده
       }
-      
-      const body = await res.json();
-      
-      if (res.ok && body.success) {
-        console.log("[AuthContext] Profile fetched successfully");
-        setBackendUser(body.data);
+
+      // 2. بعدين نجيب البروفايل
+      const response = await getProfile(token);
+      if (response.success && response.data) {
+        setBackendUser(response.data);
       } else {
-        console.error("[AuthContext] Failed to fetch profile:", body);
+        console.warn("[AuthContext] Profile response missing data:", response);
       }
-    } catch (error) {
-      console.error("[AuthContext] Error fetching profile:", error);
+    } catch (err: any) {
+      console.error("[AuthContext] Error fetching profile:", err);
+      setError(err instanceof Error ? err : new Error(String(err)));
     }
   };
 
@@ -76,11 +82,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       next: async (firebaseUser) => {
         setUser(firebaseUser);
         
-        // 🌟 إذا كان المستخدم مسجل دخول، جلب بياناته من الباك إند
         if (firebaseUser) {
           await fetchUserProfile(firebaseUser);
         } else {
           setBackendUser(null);
+          setError(null);
         }
         
         setIsLoading(false);

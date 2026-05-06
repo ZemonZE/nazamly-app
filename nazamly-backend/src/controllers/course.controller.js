@@ -1,6 +1,7 @@
 const courseRepo = require("../Repos/Course_Repo");
 
 const getAllCourses = async (req, res) => {
+  console.log("[course.controller] getAllCourses called");
   try {
     const result = await courseRepo.findAll({ limit: 100, sort: { courseCode: 1 } });
     return res.status(200).json({

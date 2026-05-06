@@ -60,7 +60,9 @@ const timeTableEntrySchema = new Schema(
       // Custom validator to ensure end time is after start time
       validate: {
         validator: function (value) {
+          if (!this.startTime) return true; // skip if startTime not set yet
           const toMinutes = (time) => {
+            if (!time || !time.includes(':')) return 0;
             const [h, m] = time.split(":").map(Number);
             return h * 60 + m;
           };

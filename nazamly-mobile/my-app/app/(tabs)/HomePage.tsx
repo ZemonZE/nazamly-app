@@ -9,10 +9,35 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/context/AuthContext';
-import { API_URL } from '@/firebase';
 import { useAppTheme } from '@/constants/theme';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { API_URL } from '@/firebase';
 
-import { useRouter } from 'expo-router';
+const getStudentCard = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/auth/student-card`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};
+
+const uploadStudentCard = async (uri: string, token: string, mimeType: string, fileName: string) => {
+  const formData = new FormData();
+  formData.append('photo', {
+    uri,
+    type: mimeType,
+    name: fileName,
+  } as any);
+
+  const res = await fetch(`${API_URL}/api/auth/upload-student-card`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+  return res.json();
+};
+
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -36,7 +61,7 @@ interface ScheduleItemProps {
 
 // Matches the AsyncStorage model from TimeTable.tsx (web-parity format)
 interface LocalEntry {
-  id: number;
+  id: number | string;
   subject: string;
   type: string; // 'Lec' | 'Sec' | 'Lab'
   day: string;  // English day name
@@ -54,7 +79,7 @@ const DB_DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 
 const HomeScreen = () => {
   const { colors } = useAppTheme();
-  const { user, backendUser, setBackendUser } = useAuth();
+  const { user, backendUser, setBackendUser, refreshProfile } = useAuth();
   const router = useRouter();
 
 
@@ -79,13 +104,46 @@ const HomeScreen = () => {
 
 
 
-  // Load today's schedule from AsyncStorage (web-parity format)
+  // Load today's schedule from DB & fallback to AsyncStorage
   const fetchSchedule = useCallback(async () => {
     try {
       setLoading(true);
-      const saved = await AsyncStorage.getItem(SCHEDULE_STORAGE_KEY);
-      if (saved) {
-        const all: LocalEntry[] = JSON.parse(saved);
+      let all: LocalEntry[] = [];
+      let loadedFromDB = false;
+
+      if (user) {
+        try {
+          const token = await user.getIdToken();
+          const res = await fetch(`${API_URL}/api/schedule/my-timetable`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const json = await res.json();
+          if (json.success && json.data?.entries) {
+            all = json.data.entries.map((e: any) => ({
+              id: e._id || Date.now() + Math.random(),
+              subject: e.courseCode || e.courseName || '',
+              type: e.sessionType === 'Lecture' ? 'Lec' : e.sessionType === 'Section' ? 'Sec' : 'Lab',
+              day: e.dayOfWeek,
+              slot: { start: e.startTime, end: e.endTime },
+              group: e.groupNumber || '',
+              place: e.location || '',
+            }));
+            loadedFromDB = true;
+            await AsyncStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(all));
+          }
+        } catch (dbErr) {
+          console.error('[HomePage] DB Load error:', dbErr);
+        }
+      }
+
+      if (!loadedFromDB) {
+        const saved = await AsyncStorage.getItem(SCHEDULE_STORAGE_KEY);
+        if (saved) {
+          all = JSON.parse(saved);
+        }
+      }
+
+      if (all.length > 0) {
         // We match by DB_DAY_NAMES or fallback to index.
         const todayDayNameEN = DB_DAY_NAMES[currentDayIndex];
         // In case old data is saved in Arabic.
@@ -102,19 +160,26 @@ const HomeScreen = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentDayIndex]);
+  }, [currentDayIndex, user]);
 
   const fetchStudentCard = useCallback(async () => {
     if (!user) return;
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${API_URL}/api/auth/student-card`, { headers: { Authorization: `Bearer ${token}` } });
-      const body = await res.json();
-      if (res.ok && body.success && body.studentCardPhotoURL) setStudentCardUrl(body.studentCardPhotoURL);
-    } catch (err) { console.error('[HomePage] fetch student card error:', err); }
+      const response = await getStudentCard(token);
+      if (response.success && response.studentCardPhotoURL) {
+        setStudentCardUrl(response.studentCardPhotoURL);
+      }
+    } catch (err) {
+      console.error('[HomePage] fetch student card error:', err);
+    }
   }, [user]);
 
-  useEffect(() => { fetchSchedule(); }, [fetchSchedule]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchSchedule();
+    }, [fetchSchedule])
+  );
   useEffect(() => { fetchStudentCard(); }, [fetchStudentCard]);
 
   const getGreeting = () => {
@@ -139,29 +204,43 @@ const HomeScreen = () => {
       if (!permission.granted) return Alert.alert('Permission Required', 'Camera roll permissions are required to upload a card.');
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', allowsEditing: true, aspect: [16, 10], quality: 0.7 });
       if (result.canceled) return;
-      const imageUri = result.assets[0].uri;
+      const manipResult = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 800 } }],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      const imageUri = manipResult.uri;
       setLocalCardUri(imageUri); setIsUploadingCard(true); setCardUploadProgress(10);
-      const ctx = ImageManipulator.ImageManipulator.manipulate(imageUri);
-      ctx.resize({ width: 1200 });
-      const rendered = await ctx.renderAsync();
-      const saved = await rendered.saveAsync({ compress: 0.6, format: ImageManipulator.SaveFormat.JPEG });
       setCardUploadProgress(30);
       const token = await user?.getIdToken();
-      const formData = new FormData();
-      if (Platform.OS === 'web') { const response = await fetch(saved.uri); const blob = await response.blob(); formData.append('photo', blob, 'card.jpg'); }
-      else { formData.append('photo', { uri: saved.uri, name: 'card.jpg', type: 'image/jpeg' } as any); }
-      const res = await fetch(`${API_URL}/api/auth/upload-student-card`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+      if (!token) { Alert.alert('Session Expired', 'Please sign in again.'); return; }
       setCardUploadProgress(90);
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || 'فشل الرفع');
+
+      // Extract filename and mime type dynamically
+      const fileName = imageUri.split('/').pop() || 'card.jpg';
+      const match = /\.(\w+)$/.exec(fileName);
+      const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
+
+      const response = await uploadStudentCard(imageUri, token, mimeType, fileName);
       setCardUploadProgress(100);
-      if (data.data?.studentCardPhotoURL) setStudentCardUrl(data.data.studentCardPhotoURL);
-      if (backendUser) setBackendUser({ ...backendUser, studentCardPhotoURL: data.data?.studentCardPhotoURL });
+      if (response.success && (response.studentCardPhotoURL || response.data?.studentCardPhotoURL)) {
+        const url = response.studentCardPhotoURL || response.data.studentCardPhotoURL;
+        setStudentCardUrl(url);
+        if (backendUser) setBackendUser({ ...backendUser, studentCardPhotoURL: url });
+        if (refreshProfile) await refreshProfile();
+      } else {
+        throw new Error(response.message || 'Failed to upload card to server');
+      }
       setLocalCardUri(null);
       if (Platform.OS === 'android') { ToastAndroid.showWithGravity('Updated!', ToastAndroid.SHORT, ToastAndroid.BOTTOM); }
       else { Alert.alert('Saved', 'Saved'); }
-    } catch (err: any) { setLocalCardUri(null); Alert.alert('Error', err.message); }
-    finally { setIsUploadingCard(false); setCardUploadProgress(0); }
+    } catch (err: any) {
+      setLocalCardUri(null);
+      Alert.alert('Error', err.message || 'Upload failed');
+    } finally {
+      setIsUploadingCard(false);
+      setCardUploadProgress(0);
+    }
   };
 
   const navigateToGpa = () => router.push('/(tabs)/GpaPlanner' as any);

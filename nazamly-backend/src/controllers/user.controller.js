@@ -1,5 +1,5 @@
 const userRepo = require("../Repos/User_Repo");
-const { User, Course } = require("../models");
+const courseRepo = require("../Repos/Course_Repo");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -28,14 +28,15 @@ const imageUpload = multer({
 // ── Auth / Profile controllers ────────────────────────────────────────────────
 
 const syncUser = async (req, res) => {
+  console.log("[user.controller] syncUser called");
   try {
     const { uid, email, name, picture } = req.user;
     const isCollege = email?.endsWith("@std.sci.cu.edu.eg");
 
-    // Fetch up to 6 courses to automatically embed for new users
-    const defaultCourses = await Course.find({}).limit(6);
+    // Fetch up to 6 courses via courseRepo to automatically embed for new users
+    const courseResult = await courseRepo.findAll({ limit: 6 });
     // Filter out any courses with missing required fields to prevent subdocument validation errors
-    const mappedCourses = defaultCourses
+    const mappedCourses = (courseResult.data || [])
       .filter(c => c.courseName && c.courseCode && c.creditHours)
       .map(c => ({
         name: c.courseName,
@@ -43,32 +44,24 @@ const syncUser = async (req, res) => {
         creditHours: c.creditHours
       }));
 
-    // Prepare update parameters
-    const query = { email: email };
-    
-    // We don't set email in setOnInsert because it's part of the query and MongoDB will automatically insert it.
-    const updateQuery = {
-      $set: {
+    // Upsert by Email via userRepo — if user not found, create new user with data
+    const user = await userRepo.findOrCreateByEmail(
+      email,
+      // $set — always updated on every sync
+      {
         firebaseUid: uid,
         displayName: name || "",
-        photoURL: picture || ""
+        photoURL: picture || "",
       },
-      $setOnInsert: {
+      // $setOnInsert — only applied when creating a new user
+      {
         accessStatus: isCollege ? "active" : "pending",
         role: "student",
         cgpa: 0,
         completedHours: 0,
-        termCourses: mappedCourses
+        termCourses: mappedCourses,
       }
-    };
-
-    // Upsert by Email avoiding Firebase duplicate index issues
-    const user = await User.findOneAndUpdate(query, updateQuery, { 
-      upsert: true, 
-      new: true, 
-      setDefaultsOnInsert: true,
-      runValidators: true
-    });
+    );
 
     return res.status(200).json({ success: true, message: "User synced successfully", user });
   } catch (error) {
@@ -77,6 +70,7 @@ const syncUser = async (req, res) => {
   }
 };
 const setupProfile = async (req, res) => {
+  console.log("[user.controller] setupProfile called");
   try {
     const firebaseUid = req.user.uid;
     const dbUser = await userRepo.findByFirebaseUid(firebaseUid);
@@ -109,9 +103,29 @@ const setupProfile = async (req, res) => {
 };
 
 const getProfile = async (req, res) => {
+  console.log("[user.controller] getProfile called");
   try {
-    const user = await userRepo.findByFirebaseUid(req.user.uid);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    let user = await userRepo.findByFirebaseUid(req.user.uid);
+
+    // Auto-create: لو الـ user لسه مش موجود في MongoDB (أول login)
+    // بننشئه تلقائياً من بيانات الـ Firebase token بدل ما نرجع 404
+    if (!user) {
+      const { uid, email, name, picture } = req.user;
+      const isCollege = email?.endsWith("@std.sci.cu.edu.eg");
+
+      user = await userRepo.findOrCreateByEmail(
+        email,
+        { firebaseUid: uid, displayName: name || "", photoURL: picture || "" },
+        {
+          accessStatus: isCollege ? "active" : "pending",
+          role: "student",
+          cgpa: 0,
+          completedHours: 0,
+          termCourses: [],
+        }
+      );
+    }
+
     return res.status(200).json({ success: true, message: "Profile retrieved successfully", data: user });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Error retrieving profile", error: error.message });
@@ -119,6 +133,7 @@ const getProfile = async (req, res) => {
 };
 
 const getStudentCard = async (req, res) => {
+  console.log("[user.controller] getStudentCard called");
   try {
     const user = await userRepo.findByFirebaseUid(req.user.uid);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
@@ -133,6 +148,7 @@ const getStudentCard = async (req, res) => {
 };
 
 const updatePhoto = async (req, res) => {
+  console.log("[user.controller] updatePhoto called");
   try {
     const firebaseUid = req.user.uid;
     const { photoURL } = req.body;
@@ -152,6 +168,7 @@ const updatePhoto = async (req, res) => {
 };
 
 const updateStudentCard = async (req, res) => {
+  console.log("[user.controller] updateStudentCard called");
   try {
     const firebaseUid = req.user.uid;
     const { studentCardPhotoURL } = req.body;
@@ -179,6 +196,7 @@ const updateStudentCard = async (req, res) => {
 const uploadPhotoFile = [
   imageUpload.single("photo"),
   async (req, res) => {
+    console.log("[user.controller] uploadPhotoFile called");
     try {
       if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
       const user = await userRepo.findByFirebaseUid(req.user.uid);
@@ -201,6 +219,7 @@ const uploadPhotoFile = [
 const uploadStudentCardFile = [
   imageUpload.single("photo"),
   async (req, res) => {
+    console.log("[user.controller] uploadStudentCardFile called");
     try {
       if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
       const user = await userRepo.findByFirebaseUid(req.user.uid);
@@ -216,6 +235,7 @@ const uploadStudentCardFile = [
   },
 ];
 const verifyAdmin = async (req, res) => {
+  console.log("[user.controller] verifyAdmin called");
   try {
     // req.user comes from authMiddleware (decoded Firebase token with custom claims)
     

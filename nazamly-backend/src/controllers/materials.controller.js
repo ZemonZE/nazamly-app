@@ -17,6 +17,7 @@ const examProcessor = require('../services/examProcessor.service');
  * Body: { courseInstanceId, title }
  */
 exports.createFolder = async (req, res) => {
+  console.log("[materials.controller] createFolder called");
   try {
     const { courseInstanceId, title } = req.body;
 
@@ -50,6 +51,7 @@ exports.createFolder = async (req, res) => {
  * Get all folders for a specific course instance.
  */
 exports.getFolders = async (req, res) => {
+  console.log("[materials.controller] getFolders called");
   try {
     const { courseInstanceId } = req.params;
     const folders = await MaterialsFolder.find({ courseInstanceId }).sort({ createdAt: 1 });
@@ -65,6 +67,7 @@ exports.getFolders = async (req, res) => {
  * Delete a folder and all its files from DB + Google Drive.
  */
 exports.deleteFolder = async (req, res) => {
+  console.log("[materials.controller] deleteFolder called");
   try {
     const { folderId } = req.params;
     const folder = await MaterialsFolder.findById(folderId);
@@ -110,6 +113,7 @@ exports.deleteFolder = async (req, res) => {
  * Body (multipart/form-data): folderId, title, fileType + file
  */
 exports.uploadFile = async (req, res) => {
+  console.log("[materials.controller] uploadFile called");
   try {
     const { folderId, title, fileType, courseId } = req.body;
     const file = req.file;
@@ -181,6 +185,7 @@ exports.uploadFile = async (req, res) => {
  * Query: ?fileType=pdf
  */
 exports.getFiles = async (req, res) => {
+  console.log("[materials.controller] getFiles called");
   try {
     const { folderId } = req.params;
     const { fileType } = req.query;
@@ -201,6 +206,7 @@ exports.getFiles = async (req, res) => {
  * Delete a single file from DB + Google Drive.
  */
 exports.deleteFile = async (req, res) => {
+  console.log("[materials.controller] deleteFile called");
   try {
     const { fileId } = req.params;
     const file = await MaterialFile.findById(fileId);
@@ -233,6 +239,7 @@ exports.deleteFile = async (req, res) => {
  * Body: { courseInstanceId, materialFileId, title }
  */
 exports.createChapter = async (req, res) => {
+  console.log("[materials.controller] createChapter called");
   try {
     const { courseInstanceId, materialFileId, title } = req.body;
 
@@ -253,6 +260,7 @@ exports.createChapter = async (req, res) => {
  * Get all chapters for a course instance, populated with material file info.
  */
 exports.getChapters = async (req, res) => {
+  console.log("[materials.controller] getChapters called");
   try {
     const { courseInstanceId } = req.params;
     const chapters = await Chapter.find({ courseInstanceId })
@@ -270,6 +278,7 @@ exports.getChapters = async (req, res) => {
  * Delete a chapter.
  */
 exports.deleteChapter = async (req, res) => {
+  console.log("[materials.controller] deleteChapter called");
   try {
     const { chapterId } = req.params;
     const chapter = await Chapter.findByIdAndDelete(chapterId);

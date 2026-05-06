@@ -6,6 +6,7 @@ const codingProblemRepo = require('../Repos/CodingProblem_Repo');
  * GET /api/coding/progress?courseId=
  */
 const getProgress = async (req, res) => {
+  console.log("[StudentProgress.controller] getProgress called");
   try {
     const { courseId } = req.query;
 
@@ -43,6 +44,7 @@ const getProgress = async (req, res) => {
  * PATCH /api/coding/problems/:id/difficulty-preference
  */
 const toggleDifficulty = async (req, res) => {
+  console.log("[StudentProgress.controller] toggleDifficulty called");
   try {
     const problemId = req.params.id;
     const { showDifficulty } = req.body;

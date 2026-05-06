@@ -8,6 +8,7 @@ const { groupCourses, generateValidSchedules } = require('../utils/scheduleGener
 const userRepo = require('../Repos/User_Repo');
 
 const generateScheduleFromFiles = async (req, res) => {
+  console.log("[ai.controller] generateScheduleFromFiles called");
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ success: false, message: 'No files uploaded.' });

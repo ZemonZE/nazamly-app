@@ -6,6 +6,8 @@ const User = require('../models/user/user.model');
 const SystemSetting = require('../models/settings/SystemSetting.model');
 const admin = require('../config/firebase');
 const aiService = require('../services/ai.service');
+const userRepo = require('../Repos/User_Repo');
+const courseRepo = require('../Repos/Course_Repo');
 
 // ═══════════════════════════════════════════
 //  COURSES
@@ -13,9 +15,10 @@ const aiService = require('../services/ai.service');
 
 /** GET /api/admin/courses */
 exports.getCourses = async (req, res) => {
+  console.log("[admin.controller] getCourses called");
   try {
-    const courses = await Course.find().sort({ courseCode: 1 });
-    res.json(courses);
+    const result = await courseRepo.findAll({ limit: 100, sort: { courseCode: 1 } });
+    res.json(result.data);
   } catch (error) {
     console.error('Error fetching courses:', error.message);
     res.status(500).json({ error: 'Failed to fetch courses' });
@@ -24,12 +27,13 @@ exports.getCourses = async (req, res) => {
 
 /** POST /api/admin/courses */
 exports.createCourse = async (req, res) => {
+  console.log("[admin.controller] createCourse called");
   try {
     const { courseCode, courseName, level, creditHours, difficulty, department } = req.body;
     if (!courseCode || !courseName || !level || creditHours == null) {
       return res.status(400).json({ error: 'courseCode, courseName, level, and creditHours are required' });
     }
-    const course = await Course.create({ courseCode, courseName, level, creditHours, difficulty, department });
+    const course = await courseRepo.create({ courseCode, courseName, level, creditHours, difficulty, department });
     res.status(201).json(course);
   } catch (error) {
     console.error('Error creating course:', error.message);
@@ -40,13 +44,10 @@ exports.createCourse = async (req, res) => {
 
 /** PUT /api/admin/courses/:id */
 exports.updateCourse = async (req, res) => {
+  console.log("[admin.controller] updateCourse called");
   try {
-    const { courseCode, courseName, level, creditHours, difficulty, department } = req.body;
-    const course = await Course.findByIdAndUpdate(
-      req.params.id,
-      { courseCode, courseName, level, creditHours, difficulty, department },
-      { returnDocument: 'after', runValidators: true }
-    );
+    const { courseName, level, creditHours } = req.body;
+    const course = await courseRepo.update(req.params.id, { courseName, level, creditHours });
     if (!course) return res.status(404).json({ error: 'Course not found' });
     res.json(course);
   } catch (error) {
@@ -57,13 +58,14 @@ exports.updateCourse = async (req, res) => {
 
 /** DELETE /api/admin/courses/:id */
 exports.deleteCourse = async (req, res) => {
+  console.log("[admin.controller] deleteCourse called");
   try {
     // Check if any course instances reference this course
     const instances = await CourseInstance.countDocuments({ courseId: req.params.id });
     if (instances > 0) {
       return res.status(400).json({ error: `Cannot delete: ${instances} course instance(s) reference this course` });
     }
-    const course = await Course.findByIdAndDelete(req.params.id);
+    const course = await courseRepo.delete(req.params.id);
     if (!course) return res.status(404).json({ error: 'Course not found' });
     res.json({ message: 'Course deleted successfully' });
   } catch (error) {
@@ -78,6 +80,7 @@ exports.deleteCourse = async (req, res) => {
 
 /** GET /api/admin/doctors */
 exports.getDoctors = async (req, res) => {
+  console.log("[admin.controller] getDoctors called");
   try {
     const doctors = await Doctor.find().sort({ name: 1 });
     res.json(doctors);
@@ -89,6 +92,7 @@ exports.getDoctors = async (req, res) => {
 
 /** POST /api/admin/doctors */
 exports.createDoctor = async (req, res) => {
+  console.log("[admin.controller] createDoctor called");
   try {
     const { name, email } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
@@ -102,6 +106,7 @@ exports.createDoctor = async (req, res) => {
 
 /** DELETE /api/admin/doctors/:id */
 exports.deleteDoctor = async (req, res) => {
+  console.log("[admin.controller] deleteDoctor called");
   try {
     const instances = await CourseInstance.countDocuments({ doctorId: req.params.id });
     if (instances > 0) {
@@ -122,6 +127,7 @@ exports.deleteDoctor = async (req, res) => {
 
 /** GET /api/admin/course-instances */
 exports.getCourseInstances = async (req, res) => {
+  console.log("[admin.controller] getCourseInstances called");
   try {
     const instances = await CourseInstance.find()
       .populate('courseId', 'courseName courseCode creditHours')
@@ -137,6 +143,7 @@ exports.getCourseInstances = async (req, res) => {
 
 /** POST /api/admin/course-instances */
 exports.createCourseInstance = async (req, res) => {
+  console.log("[admin.controller] createCourseInstance called");
   try {
     const { courseId, doctorId, academicYear, semester } = req.body;
     if (!courseId || !doctorId || !academicYear || !semester) {
@@ -156,6 +163,7 @@ exports.createCourseInstance = async (req, res) => {
 
 /** PUT /api/admin/course-instances/:id */
 exports.updateCourseInstance = async (req, res) => {
+  console.log("[admin.controller] updateCourseInstance called");
   try {
     const { courseId, doctorId, academicYear, semester } = req.body;
     const instance = await CourseInstance.findByIdAndUpdate(
@@ -176,6 +184,7 @@ exports.updateCourseInstance = async (req, res) => {
 
 /** DELETE /api/admin/course-instances/:id */
 exports.deleteCourseInstance = async (req, res) => {
+  console.log("[admin.controller] deleteCourseInstance called");
   try {
     const instance = await CourseInstance.findByIdAndDelete(req.params.id);
     if (!instance) return res.status(404).json({ error: 'Course instance not found' });
@@ -192,6 +201,7 @@ exports.deleteCourseInstance = async (req, res) => {
 
 /** GET /api/admin/users */
 exports.getUsers = async (req, res) => {
+  console.log("[admin.controller] getUsers called");
   try {
     const { search, role, status } = req.query;
 
@@ -245,6 +255,7 @@ exports.getUsers = async (req, res) => {
 
 /** PUT /api/admin/users/:id */
 exports.updateUser = async (req, res) => {
+  console.log("[admin.controller] updateUser called");
   try {
     const { email, displayName, role, accessStatus } = req.body;
 
@@ -259,24 +270,26 @@ exports.updateUser = async (req, res) => {
     }
 
     // req.params.id may be a MongoDB _id or a firebaseUid (for users not yet in MongoDB)
-    let user = await User.findById(req.params.id).catch(() => null);
-    if (!user) user = await User.findOne({ firebaseUid: req.params.id });
+    let user = await userRepo.findById(req.params.id).catch(() => null);
+    if (!user) user = await userRepo.findByFirebaseUid(req.params.id);
 
     // Resolve the firebaseUid we'll use to update Firebase Auth
     const firebaseUid = user ? user.firebaseUid : req.params.id;
 
     if (user) {
-      const conflict = await User.findOne({ email, _id: { $ne: user._id } });
-      if (conflict) return res.status(409).json({ error: 'Email already in use' });
-      user = await User.findByIdAndUpdate(
-        user._id,
-        { email, displayName, role, accessStatus },
-        { returnDocument: 'after', runValidators: true }
-      );
+      const existingByEmail = await userRepo.findByEmail(email);
+      if (existingByEmail && existingByEmail._id.toString() !== user._id.toString()) {
+        return res.status(409).json({ error: 'Email already in use' });
+      }
+      user = await userRepo.update(user._id, { displayName, role, accessStatus });
     } else {
-      const conflict = await User.findOne({ email });
-      if (conflict) return res.status(409).json({ error: 'Email already in use' });
-      user = await User.create({ firebaseUid, email, displayName, role, accessStatus });
+      const existingByEmail = await userRepo.findByEmail(email);
+      if (existingByEmail) return res.status(409).json({ error: 'Email already in use' });
+      user = await userRepo.findOrCreateByEmail(
+        email,
+        { firebaseUid, displayName, role, accessStatus },
+        {}
+      );
     }
 
     // Sync to Firebase Auth: email, displayName, disabled flag, and admin custom claim
@@ -296,6 +309,7 @@ exports.updateUser = async (req, res) => {
 
 /** PATCH /api/admin/users/:id/status */
 exports.updateUserStatus = async (req, res) => {
+  console.log("[admin.controller] updateUserStatus called");
   try {
     const { accessStatus } = req.body;
 
@@ -305,18 +319,10 @@ exports.updateUserStatus = async (req, res) => {
     }
 
     // Try by MongoDB _id first, then by firebaseUid
-    let user = await User.findByIdAndUpdate(
-      req.params.id,
-      { accessStatus },
-      { returnDocument: 'after', runValidators: true }
-    ).catch(() => null);
+    let user = await userRepo.update(req.params.id, { accessStatus }).catch(() => null);
 
     if (!user) {
-      user = await User.findOneAndUpdate(
-        { firebaseUid: req.params.id },
-        { accessStatus },
-        { returnDocument: 'after', runValidators: true }
-      );
+      user = await userRepo.updateByFirebaseUid(req.params.id, { accessStatus });
     }
 
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -339,6 +345,7 @@ exports.updateUserStatus = async (req, res) => {
 
 /** POST /api/admin/upload-past-exam */
 exports.uploadPastExam = async (req, res) => {
+  console.log("[admin.controller] uploadPastExam called");
   try {
     const { courseId, examType, year } = req.body;
     let { lectureIds } = req.body;
@@ -444,6 +451,7 @@ exports.uploadPastExam = async (req, res) => {
  * professor-style analysis pipeline never fires.
  */
 exports.linkDoctorToCourse = async (req, res) => {
+  console.log("[admin.controller] linkDoctorToCourse called");
   try {
     const { courseId, doctorId, academicYear, semester } = req.body;
 
@@ -484,6 +492,7 @@ exports.linkDoctorToCourse = async (req, res) => {
  * Resolves: CourseInstance → doctorId → ArchivedQuestion → analyzeProfessorStyle → DoctorInsight
  */
 exports.triggerProfiling = async (req, res) => {
+  console.log("[admin.controller] triggerProfiling called");
   try {
     const { courseId } = req.params;
     const mongoose = require('mongoose');
@@ -559,6 +568,7 @@ exports.triggerProfiling = async (req, res) => {
 
 /** GET /api/admin/ai/settings */
 exports.getAiSettings = async (req, res) => {
+  console.log("[admin.controller] getAiSettings called");
   try {
     let setting = await SystemSetting.findOne({ key: 'ACTIVE_GEMINI_MODEL' });
     
@@ -591,6 +601,7 @@ exports.getAiSettings = async (req, res) => {
 
 /** POST /api/admin/ai/settings */
 exports.updateAiSettings = async (req, res) => {
+  console.log("[admin.controller] updateAiSettings called");
   try {
     const { activeModel } = req.body;
     if (!activeModel) return res.status(400).json({ error: 'activeModel is required' });

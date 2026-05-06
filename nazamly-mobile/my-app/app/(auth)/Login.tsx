@@ -26,6 +26,13 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth, API_URL, GOOGLE_WEB_CLIENT_ID,Google_Android_Id } from "@/firebase";
+
+const getProfile = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/auth/get-profile`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
@@ -45,7 +52,6 @@ export default function LoginScreen() {
   // 🌟 إعداد OAuth للموبايل (Expo Go / React Native)
   const redirectUri = makeRedirectUri({
     scheme: "nazamly",
-    path: "redirect",
   });
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
@@ -60,46 +66,18 @@ export default function LoginScreen() {
     }
   }, [request, redirectUri]);
 
-  const syncWithBackend = useCallback(async (user: any) => {
-    const token = await user.getIdToken();
-    const res = await fetch(`${API_URL}/api/auth/sync`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const body = await res.json();
-    if (!res.ok) {
-      if (res.status === 401) {
-        Alert.alert('Cancel', 'Cancel');
-        router.replace("/(auth)/Login");
-        return;
-      }
-      console.error("[Login] /api/auth/sync failed:", res.status, body);
-    }
-    return body;
-  }, [router]);
-
   // 🌟 جلب بيانات المستخدم من الباك إند
   const fetchUserProfile = useCallback(async (user: any) => {
     try {
       const token = await user.getIdToken();
-      const res = await fetch(`${API_URL}/api/auth/get-profile`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const body = await res.json();
-      
-      if (res.ok && body.success) {
-        console.log("[Login] Profile fetched successfully:", body.data);
-        setBackendUser(body.data);
-        return body.data;
+      const response = await getProfile(token);
+
+      if (response.success && response.data) {
+        console.log("[Login] Profile fetched successfully:", response.data);
+        setBackendUser(response.data);
+        return response.data;
       } else {
-        console.error("[Login] Failed to fetch profile:", body);
+        console.error("[Login] Failed to fetch profile:", response);
       }
     } catch (error) {
       console.error("[Login] Error fetching profile:", error);
@@ -115,7 +93,7 @@ export default function LoginScreen() {
       setLoading(true);
       signInWithCredential(auth, credential)
         .then(async (result) => {
-          await syncWithBackend(result.user);
+
           await fetchUserProfile(result.user);
           Alert.alert("Success", "Logged in"); // Can omit translations for alerts or add to dict
           router.replace("/(tabs)/HomePage");
@@ -126,13 +104,13 @@ export default function LoginScreen() {
         })
         .finally(() => setLoading(false));
     }
-  }, [response, router, syncWithBackend, fetchUserProfile]);
+  }, [response, router, fetchUserProfile]);
 
   const handleLogin = async () => {
     setLoading(true);
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
-      await syncWithBackend(result.user);
+
       await fetchUserProfile(result.user);
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
@@ -155,7 +133,7 @@ export default function LoginScreen() {
 
       // الدالة دي هتفتح شاشة منبثقة (Popup) وتمنع الشاشة البيضاء اللي بتعلق
       const result = await signInWithPopup(auth, provider);
-      await syncWithBackend(result.user);
+
       await fetchUserProfile(result.user);
 
       router.replace("/(tabs)/HomePage");

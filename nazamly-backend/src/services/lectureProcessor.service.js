@@ -104,7 +104,7 @@ async function processLectureBackground(materialFileId, driveFileId, courseId) {
               generatedAt: new Date(),
             },
           },
-          { upsert: true, new: true }
+          { upsert: true, returnDocument: 'after' }
         );
         console.log(`[LectureProcessor] Step 6 DONE: DoctorInsight saved for doctorId=${doctorId}.`);
       } else {

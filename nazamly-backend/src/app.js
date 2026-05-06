@@ -14,40 +14,82 @@ const courseRoutes = require('./routes/course.routes');
 const questionsRoutes = require('./routes/questions.routes');
 const codingRoutes = require('./routes/coding.routes');
 const adminCodingRoutes = require('./routes/admin-coding.routes');
-// ── OLD BRANCH ROUTES (restored) ──
 const courseMaterialsRoutes = require('./routes/courseMaterials.routes');
 const adminRoutes = require('./routes/admin.routes');
-// ── END OLD BRANCH ROUTES ─────────────────────────────────────────────────────
 const studentRoutes = require('./routes/student.routes');
 
 const app = express();
 
-// 2. Security Middlewares
+// ════════════════════════════════════════════════
+//  2. Security Middlewares
+// ════════════════════════════════════════════════
 app.use(helmet());
 
-// CORS Configuration
+// CORS Configuration — production uses CORS_ORIGIN env var, dev allows all
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',') 
-  : true; // Allow all origins in development
+  : null; // null = allow all origins in development
 
 app.use(cors({
-  origin: allowedOrigins,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: function (origin, callback) {
+    // Allow if: no origin (mobile/curl), or dev mode (no CORS_ORIGIN set), or matches whitelist
+    if (!origin || !allowedOrigins || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS policy: origin not allowed'), false);
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true
 }));
 
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
+// ════════════════════════════════════════════════
+//  Input Sanitization (NoSQL Injection Protection)
+// ════════════════════════════════════════════════
+function sanitize(obj) {
+  if (obj === null || typeof obj !== 'object') return obj;
+  for (const key of Object.keys(obj)) {
+    if (key.startsWith('$')) {
+      delete obj[key];
+    } else if (typeof obj[key] === 'object') {
+      sanitize(obj[key]);
+    }
+  }
+  return obj;
+}
+
+app.use((req, res, next) => {
+  if (req.body) sanitize(req.body);
+  if (req.query) sanitize(req.query);
+  if (req.params) sanitize(req.params);
+  next();
+});
+
 // 3. Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
-// 4. Rate Limiting
-// Global Rate Limiting: 100 requests per 15 minutes
+// ════════════════════════════════════════════════
+//  4. Health Check (no auth required)
+// ════════════════════════════════════════════════
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ════════════════════════════════════════════════
+//  5. Rate Limiting
+// ════════════════════════════════════════════════
+// Global Rate Limiting: 500 requests per 15 minutes
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 500,
   message: { message: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false
@@ -68,11 +110,10 @@ const aiLimiter = rateLimit({
   message: { message: 'Too many AI requests, please try again later.' }
 });
 
-// 5. Mount Routes
+// ════════════════════════════════════════════════
+//  6. Mount Routes
+// ════════════════════════════════════════════════
 app.use("/api/auth", authLimiter, authRoutes);
-// ── OLD BRANCH: auth was mounted without rate limiter ───────────────────────
-// app.use("/api/auth", authRoutes);
-// ── END OLD BRANCH ──────────────────────────────────────────────────────────
 app.use("/api/gpa", gpaRoutes);
 app.use('/api/schedule', scheduleRoutes);
 app.use('/api/ai', aiLimiter, aiRoutes);
@@ -81,14 +122,13 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/questions', aiLimiter, questionsRoutes);
 app.use('/api/coding', codingRoutes);
 app.use('/api/admin/coding', adminCodingRoutes);
-// ── OLD BRANCH ROUTE MOUNTS (restored) ──
 app.use('/api/course-materials', courseMaterialsRoutes);
 app.use('/api/admin', adminRoutes);
-// ── END OLD BRANCH ROUTE MOUNTS ─────────────────────────────────────────────
-
 app.use('/api/student', studentRoutes);
 
-// 6. Global Error Handler
+// ════════════════════════════════════════════════
+//  7. Global Error Handler
+// ════════════════════════════════════════════════
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
   res.status(500).json({ 

@@ -6,6 +6,8 @@ load_dotenv()
 
 from extractors.pdf_extractor import extract_from_pdf
 from extractors.image_extractor import extract_from_image
+from extractors.schedule_extractor import extract_schedule_from_image
+from extractors.schedule_pdf_extractor import extract_schedule_from_pdf
 
 app = Flask(__name__)
 
@@ -64,6 +66,36 @@ def extract():
         return jsonify({'error': str(e), 'courses': [], 'confidence': 0}), 503
     except Exception as e:
         return jsonify({'error': str(e), 'courses': [], 'confidence': 0}), 500
+
+
+@app.route('/extract-schedule', methods=['POST'])
+def extract_schedule():
+    """Extract class schedule from an image or PDF → structured JSON."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file field in request'}), 400
+
+    file = request.files['file']
+    ext  = get_extension(file)
+
+    if not ext:
+        return jsonify({'error': 'Unsupported file type'}), 400
+
+    file_bytes = file.read()
+    if not file_bytes:
+        return jsonify({'error': 'Empty file received'}), 400
+
+    try:
+        if ext == 'pdf':
+            result = extract_schedule_from_pdf(file_bytes)
+        else:
+            result = extract_schedule_from_image(file_bytes, ext)
+
+        return jsonify(result), 200
+
+    except ValueError as e:
+        return jsonify({'error': str(e), 'classes': [], 'confidence': 0}), 503
+    except Exception as e:
+        return jsonify({'error': str(e), 'classes': [], 'confidence': 0}), 500
 
 
 if __name__ == '__main__':

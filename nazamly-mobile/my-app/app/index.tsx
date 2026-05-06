@@ -8,8 +8,15 @@ import {
   Platform,
 } from "react-native";
 import { useEffect, useState } from "react";
+
 import { API_URL } from "@/firebase";
 
+const getProfile = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/auth/get-profile`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.json();
+};
 export default function Index() {
   const { user, setBackendUser, isLoading, error } = useAuth();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -30,25 +37,16 @@ export default function Index() {
         setIsSyncing(true);
         try {
           const token = await user.getIdToken();
-          const res = await fetch(`${API_URL}/api/auth/sync`, {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-          const data = await res.json();
-          if(data.message==="unauthorized"){
-            router.replace("/(auth)/Login");
+          const response = await getProfile(token);
+          if (response.success && response.data) {
+            setBackendUser(response.data);
+          } else {
+            console.log("Failed to get profile:", response);
           }
-          if (res.ok) {
-            setBackendUser(data.user);
-          }
-          console.log("User synced successfully:", data);
         } catch (err) {
-          console.error("Sync error:", err);
+          console.error("Profile fetch error:", err);
           if (Platform.OS === 'android') {
-            ToastAndroid.showWithGravity("Failed to sync user data", ToastAndroid.SHORT, ToastAndroid.BOTTOM);
+            ToastAndroid.showWithGravity("Failed to load user data", ToastAndroid.SHORT, ToastAndroid.BOTTOM);
           }
         } finally {
           setIsSyncing(false);

@@ -7,7 +7,28 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useAppTheme } from '@/constants/theme';
-import { getTranscriptHistory, deleteTranscript, TranscriptHistoryItem } from '@/services/transcriptService';
+
+import { API_URL } from '@/firebase';
+
+type TranscriptHistoryItem = { _id: string; fileName: string; status: string; createdAt: string; termGPA?: number; totalCreditHours?: number };
+
+const getTranscriptHistory = async (token: string) => {
+  const res = await fetch(`${API_URL}/api/gpa/transcripts`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch history');
+  const json = await res.json();
+  return json.data || [];
+};
+
+const deleteTranscript = async (id: string, token: string) => {
+  const res = await fetch(`${API_URL}/api/gpa/transcripts/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to delete transcript');
+  return res.json();
+};
 
 export default function TranscriptHistoryScreen() {
   const { colors } = useAppTheme();
@@ -41,13 +62,13 @@ export default function TranscriptHistoryScreen() {
 
   const confirmDelete = async () => {
     if (!confirmItem) return;
-    const id = String(confirmItem.id);
+    const id = String(confirmItem._id);
     setConfirmItem(null);
     try {
       setDeletingId(id);
       const token = await user!.getIdToken();
       await deleteTranscript(id, token);
-      setHistory(prev => prev.filter(h => String(h.id) !== id));
+      setHistory(prev => prev.filter(h => String(h._id) !== id));
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Delete failed');
     } finally {
@@ -78,7 +99,7 @@ export default function TranscriptHistoryScreen() {
             </View>
             <Text style={[s.modalTitle, { color: colors.textPrimary }]}>Delete Transcript</Text>
             <Text style={[s.modalMsg, { color: colors.textMuted }]}>
-              Delete "{confirmItem?.fileName}"?{'\n'}This cannot be undone.
+              Delete &quot;{confirmItem?.fileName}&quot;?{'\n'}This cannot be undone.
             </Text>
             <View style={s.modalBtns}>
               <TouchableOpacity
@@ -166,7 +187,7 @@ export default function TranscriptHistoryScreen() {
           </View>
         ) : (
           history.map(item => (
-            <View key={item.id} style={[s.card, { backgroundColor: colors.card }]}>
+            <View key={item._id} style={[s.card, { backgroundColor: colors.card }]}>
               <View style={s.cardLeft}>
                 <View style={[s.fileIcon, { backgroundColor: colors.indigoPale }]}>
                   <Feather name="file-text" size={20} color={colors.indigo} />
@@ -192,12 +213,12 @@ export default function TranscriptHistoryScreen() {
               </View>
               <TouchableOpacity
                 onPress={() => handleDelete(item)}
-                disabled={deletingId === String(item.id)}
+                disabled={deletingId === String(item._id)}
                 style={s.deleteBtn}
                 hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
                 activeOpacity={0.6}
               >
-                {deletingId === String(item.id)
+                {deletingId === String(item._id)
                   ? <ActivityIndicator size="small" color={colors.red} />
                   : <Feather name="trash-2" size={20} color={colors.red} />
                 }

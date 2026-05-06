@@ -21,6 +21,7 @@ const DEFAULT_SUBFOLDERS = [
  * Idempotent — returns existing if already initialized.
  */
 exports.initCourseFolders = async (req, res) => {
+  console.log("[courseMaterials.controller] initCourseFolders called");
   try {
     const { courseCode, courseName } = req.body;
     if (!courseCode || !courseName) {
@@ -76,6 +77,7 @@ exports.initCourseFolders = async (req, res) => {
  * Never creates folders.
  */
 exports.getMyCoursesMaterials = async (req, res) => {
+  console.log("[courseMaterials.controller] getMyCoursesMaterials called");
   try {
     const allCourses = await Course.find().sort({ courseCode: 1 });
     if (allCourses.length === 0) return res.json({ courses: [] });
@@ -114,6 +116,7 @@ exports.getMyCoursesMaterials = async (req, res) => {
  * for any courses that don't have them yet.
  */
 exports.getCourseMaterialsAdmin = async (req, res) => {
+  console.log("[courseMaterials.controller] getCourseMaterialsAdmin called");
   try {
     const allCourses = await Course.find().sort({ courseCode: 1 });
     if (allCourses.length === 0) return res.json({ courses: [] });
@@ -186,6 +189,7 @@ exports.getCourseMaterialsAdmin = async (req, res) => {
  * List all files in a specific sub-folder of a course from Google Drive.
  */
 exports.getSubFolderFiles = async (req, res) => {
+  console.log("[courseMaterials.controller] getSubFolderFiles called");
   try {
     const { courseCode, subFolderType } = req.params;
     const cm = await CourseMaterial.findOne({ courseCode: courseCode.toUpperCase().trim() });
@@ -233,6 +237,7 @@ exports.getSubFolderFiles = async (req, res) => {
  * Body (multipart/form-data): file + optional title
  */
 exports.uploadToSubFolder = async (req, res) => {
+  console.log("[courseMaterials.controller] uploadToSubFolder called");
   try {
     const { courseCode, subFolderType } = req.params;
     console.log("[DEBUG] subFolderType received:", subFolderType);
@@ -379,6 +384,7 @@ exports.uploadToSubFolder = async (req, res) => {
  * List all initialized courses (for admin or browsing).
  */
 exports.getAllCourses = async (req, res) => {
+  console.log("[courseMaterials.controller] getAllCourses called");
   try {
     const courses = await CourseMaterial.find().sort({ courseName: 1 });
     res.json({ courses });
@@ -393,6 +399,7 @@ exports.getAllCourses = async (req, res) => {
  * Delete a file from a sub-folder on Google Drive.
  */
 exports.deleteFileFromSubFolder = async (req, res) => {
+  console.log("[courseMaterials.controller] deleteFileFromSubFolder called");
   try {
     const { courseCode, subFolderType, fileId } = req.params;
     const cm = await CourseMaterial.findOne({ courseCode: courseCode.toUpperCase().trim() });
@@ -415,6 +422,7 @@ exports.deleteFileFromSubFolder = async (req, res) => {
  * Course/CourseMaterial database entries for any existing folders.
  */
 exports.syncDriveToDatabase = async (req, res) => {
+  console.log("[courseMaterials.controller] syncDriveToDatabase called");
   try {
     const rootFolderId = process.env.DRIVE_ROOT_FOLDER_ID;
     if (!rootFolderId) {
@@ -522,6 +530,7 @@ exports.syncDriveToDatabase = async (req, res) => {
  * Manually re-trigger AI processing for a failed file without re-uploading to Drive.
  */
 exports.reprocessFile = async (req, res) => {
+  console.log("[courseMaterials.controller] reprocessFile called");
   try {
     const { courseCode, subFolderType, fileId } = req.params;
     console.log(`[Reprocess] Triggered for fileId=${fileId} in course=${courseCode}`);
