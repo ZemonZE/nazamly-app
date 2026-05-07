@@ -30,8 +30,6 @@ const getQuizHistory = async (token: string) => {
 };
 
 const generateExamStream = async (opts: any, token: string, onStatus: (s: string) => void) => {
-  // Fallback to basic fetch since React Native fetch doesn't fully support SSE out-of-the-box
-  // The backend uses GET /api/questions/generate-stream?courseId=...
   const query = new URLSearchParams({
     courseId: opts.courseId,
     materialFileIds: opts.materialFileIds?.join(',') || '',
@@ -39,33 +37,47 @@ const generateExamStream = async (opts: any, token: string, onStatus: (s: string
     questionCount: String(opts.questionCount || 10)
   }).toString();
   
-  onStatus('Generating exam...');
+  onStatus('Connecting to AI engine...');
   const res = await fetch(`${API_URL}/api/questions/generate-stream?${query}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   
   if (!res.ok) throw new Error('Failed to generate exam');
   
-  // Try to parse the SSE stream into a JSON array of questions if the backend falls back to returning JSON, 
-  // or return an empty array if parsing fails.
-  try {
-    const text = await res.text();
-    // Assuming the backend sends a final event or JSON response
-    const json = JSON.parse(text);
-    return json.data || json.questions || [];
-  } catch (e) {
-    return [];
+  // The backend returns SSE format: "data: {...}\n\n"
+  // Parse each SSE event to extract the JSON payloads
+  const text = await res.text();
+  const events = text.split('\n\n').filter(Boolean);
+  
+  for (const event of events) {
+    const dataLine = event.replace(/^data:\s*/m, '').trim();
+    if (!dataLine) continue;
+    try {
+      const parsed = JSON.parse(dataLine);
+      if (parsed.status === 'generating') {
+        onStatus(parsed.message || 'Generating questions...');
+      } else if (parsed.status === 'ready' && parsed.questions) {
+        return parsed.questions;
+      } else if (parsed.success === false) {
+        throw new Error(parsed.message || 'Generation failed');
+      }
+    } catch (e: any) {
+      if (e.message && e.message !== 'Generation failed' && !e.message.includes('JSON')) {
+        throw e;
+      }
+    }
   }
+  return [];
 };
 
 const submitQuiz = async (data: any, token: string) => {
-  const res = await fetch(`${API_URL}/api/questions/submit`, {
+  const res = await fetch(`${API_URL}/api/student/quizzes/submit`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
   const json = await res.json();
-  return json.data || { success: true };
+  return json.data || json || { success: true };
 };
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -115,7 +127,7 @@ interface QuizHistoryItem {
 
 export default function QuestionsScreen() {
   const { colors } = useAppTheme();
-  const { user } = useAuth();
+  const { user, backendUser } = useAuth();
 
   // ── Tab State ──
   const [activeTab, setActiveTab] = useState<'generate' | 'history'>('generate');
@@ -159,16 +171,27 @@ export default function QuestionsScreen() {
       setCoursesLoading(true);
       setCoursesError(null);
       try {
-        const token = await user.getIdToken();
-        const data = await getMyCoursesMaterials(token);
-        setCourses(data || []);
+        // Prefer user's registered courses (like web does)
+        if (backendUser?.termCourses && backendUser.termCourses.length > 0) {
+          const mapped = backendUser.termCourses.map((c: any) => ({
+            courseId: c._id || c.courseCode,
+            courseCode: c.courseCode,
+            courseName: c.name || c.courseName,
+          }));
+          setCourses(mapped);
+        } else {
+          // Fallback: fetch from materials service
+          const token = await user.getIdToken();
+          const data = await getMyCoursesMaterials(token);
+          setCourses(data || []);
+        }
       } catch (err: any) {
         setCoursesError(err.message || 'Failed to load courses');
       } finally {
         setCoursesLoading(false);
       }
     })();
-  }, [user]);
+  }, [user, backendUser]);
 
   // ── Load History when tab switches ──
   useEffect(() => {

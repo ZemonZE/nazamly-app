@@ -15,11 +15,14 @@ import {
 } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "@/context/AuthContext";
 import { auth, API_URL } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAppTheme } from "@/constants/theme";
+
+const AVATAR_LOCAL_KEY = '@nazamly_avatar_local';
 
 const getProfile = async (token: string) => {
   const res = await fetch(`${API_URL}/api/auth/get-profile`, {
@@ -89,6 +92,8 @@ const ProfileScreen = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [localPhotoUri, setLocalPhotoUri] = useState<string | null>(null);
+  const [quizHistory, setQuizHistory] = useState<any[]>([]);
+  const [quizLoading, setQuizLoading] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(true);
 
   const fetchProfile = useCallback(async () => {
@@ -115,8 +120,32 @@ const ProfileScreen = () => {
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
+      loadLocalAvatar();
+      loadQuizHistory();
     }, [fetchProfile]),
   );
+
+  const loadLocalAvatar = async () => {
+    const saved = await AsyncStorage.getItem(AVATAR_LOCAL_KEY);
+    if (saved) setLocalPhotoUri(saved);
+  };
+
+  const loadQuizHistory = async () => {
+    if (!user) return;
+    setQuizLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${API_URL}/api/student/quizzes/history`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.history) setQuizHistory(data.history.slice(0, 4));
+    } catch (err) {
+      console.error('[Profile] quiz history error:', err);
+    } finally {
+      setQuizLoading(false);
+    }
+  };
   useEffect(() => {
     if (backendUser) setProfileLoading(false);
   }, [backendUser]);
@@ -181,6 +210,7 @@ const ProfileScreen = () => {
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const uri = result.assets[0].uri;
         setLocalPhotoUri(uri);
+        await AsyncStorage.setItem(AVATAR_LOCAL_KEY, uri);
         setIsUploadingPhoto(true);
 
         const token = await user.getIdToken();
@@ -348,13 +378,13 @@ const ProfileScreen = () => {
                 {
                   icon: "layers",
                   label: "Department",
-                  value: "CS",
+                  value: backendUser?.department || "—",
                   color: colors.amber,
                 },
                 {
                   icon: "calendar",
                   label: "Year",
-                  value: "Year 3",
+                  value: backendUser?.academicYear || "—",
                   color: colors.green,
                 },
               ].map((item) => (
@@ -404,6 +434,73 @@ const ProfileScreen = () => {
                 value={(user?.uid.substring(0, 12) || "") + "..."}
                 colors={colors}
               />
+              <View style={[s.divider, { backgroundColor: colors.divider }]} />
+              <ProfileDetail
+                icon="shield"
+                label="Role"
+                value={(backendUser?.role || "student").charAt(0).toUpperCase() + (backendUser?.role || "student").slice(1)}
+                colors={colors}
+              />
+              <View style={[s.divider, { backgroundColor: colors.divider }]} />
+              <ProfileDetail
+                icon="calendar"
+                label="Member Since"
+                value={backendUser?.createdAt ? new Date(backendUser.createdAt).getFullYear().toString() : "—"}
+                colors={colors}
+              />
+            </View>
+
+            {/* Registered Courses */}
+            <View style={[s.detailsCard, { backgroundColor: colors.card }]}>
+              <Text style={[s.detailsCardTitle, { color: colors.textMuted }]}>
+                Registered Courses
+              </Text>
+              {backendUser?.termCourses && backendUser.termCourses.length > 0 ? (
+                backendUser.termCourses.map((course: any, idx: number) => (
+                  <View key={idx} style={s.courseRow}>
+                    <View style={[s.courseIcon, { backgroundColor: colors.indigoPale }]}>
+                      <Feather name="book" size={14} color={colors.indigo} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.courseTitle, { color: colors.textPrimary }]}>{course.name}</Text>
+                      <Text style={[s.courseMeta, { color: colors.textMuted }]}>{course.courseCode} · {course.creditHours} Credits</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={{ color: colors.textMuted, fontSize: 13 }}>No courses registered for this term.</Text>
+              )}
+            </View>
+
+            {/* Latest Quiz Results */}
+            <View style={[s.detailsCard, { backgroundColor: colors.card }]}>
+              <Text style={[s.detailsCardTitle, { color: colors.textMuted }]}>
+                Latest Quiz Results
+              </Text>
+              {quizLoading ? (
+                <ActivityIndicator size="small" color={colors.indigo} style={{ marginVertical: 16 }} />
+              ) : quizHistory.length > 0 ? (
+                quizHistory.map((quiz: any, idx: number) => {
+                  const percent = quiz.totalQuestions > 0 ? Math.round((quiz.score / quiz.totalQuestions) * 100) : 0;
+                  return (
+                    <View key={idx} style={s.quizRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.courseTitle, { color: colors.textPrimary }]}>{quiz.courseId?.courseName || 'Unknown'}</Text>
+                        <Text style={[s.courseMeta, { color: colors.textMuted }]}>
+                          {new Date(quiz.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </Text>
+                      </View>
+                      <View style={[s.quizScoreBadge, { backgroundColor: percent >= 80 ? '#22c55e20' : percent >= 50 ? '#f59e0b20' : '#ef444420' }]}>
+                        <Text style={[s.quizScoreText, { color: percent >= 80 ? '#22c55e' : percent >= 50 ? '#f59e0b' : '#ef4444' }]}>
+                          {quiz.score}/{quiz.totalQuestions}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={{ color: colors.textMuted, fontSize: 13 }}>No quiz activities recorded yet.</Text>
+              )}
             </View>
 
             {/* Preferences */}
@@ -840,6 +937,37 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   dropdownText: { fontSize: 16, fontWeight: "700" },
+  courseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.04)",
+  },
+  courseIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  courseTitle: { fontSize: 14, fontWeight: "600" },
+  courseMeta: { fontSize: 12, marginTop: 2 },
+  quizRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.04)",
+  },
+  quizScoreBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  quizScoreText: { fontSize: 13, fontWeight: "800" },
 });
 
 export default ProfileScreen;

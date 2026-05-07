@@ -83,8 +83,8 @@ const registerStudent = async (req, res) => {
       }));
     }
 
-    // Update displayName if fullName was provided and current displayName is empty
-    if (value.fullName && !currentUser.displayName) {
+    // Update displayName when fullName is provided (override email-derived names)
+    if (value.fullName && value.fullName !== currentUser.displayName) {
       updateData.displayName = value.fullName;
     }
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { updateProfile } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { auth, API_URL } from "../firebase";
 import mainLogo from "../assets/logo.jpg";
@@ -21,7 +22,6 @@ function StudentOnboarding({ user, setUser }) {
     if (user?.displayName) return user.displayName;
     if (user?.fullName) return user.fullName;
     if (user?.name) return user.name;
-    if (user?.email) return user.email.split("@")[0].replace(/[._]/g, " ");
     return "";
   };
 
@@ -163,6 +163,14 @@ function StudentOnboarding({ user, setUser }) {
 
       if (res.status === 201) {
         setSuccess(true);
+        const trimmedName = fullName.trim();
+        if (trimmedName && auth.currentUser) {
+          try {
+            await updateProfile(auth.currentUser, { displayName: trimmedName });
+          } catch {
+            // Best-effort Firebase profile update; don't block onboarding.
+          }
+        }
         // Deep-merge the full backend user object so Dashboard sees real data instantly
         setUser(prev => ({ ...prev, ...data.data, isProfileComplete: true }));
         setTimeout(() => navigate("/dashboard"), 1500);

@@ -1,42 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  ActivityIndicator, Image, Alert, ToastAndroid, Platform,
+  ActivityIndicator, Image, Modal,
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
   Animated, Dimensions,
 } from 'react-native';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import * as ImageManipulator from 'expo-image-manipulator';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/context/AuthContext';
 import { useAppTheme } from '@/constants/theme';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { API_URL } from '@/firebase';
-
-const getStudentCard = async (token: string) => {
-  const res = await fetch(`${API_URL}/api/auth/student-card`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return res.json();
-};
-
-const uploadStudentCard = async (uri: string, token: string, mimeType: string, fileName: string) => {
-  const formData = new FormData();
-  formData.append('photo', {
-    uri,
-    type: mimeType,
-    name: fileName,
-  } as any);
-
-  const res = await fetch(`${API_URL}/api/auth/upload-student-card`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
-  return res.json();
-};
 
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -71,6 +44,8 @@ interface LocalEntry {
 }
 
 const SCHEDULE_STORAGE_KEY = '@nazamly_schedules';
+const STUDENT_CARD_FRONT_KEY = '@nazamly_student_card_front';
+const STUDENT_CARD_BACK_KEY = '@nazamly_student_card_back';
 
 const DB_DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -85,17 +60,16 @@ const HomeScreen = () => {
 
   const [todayClasses, setTodayClasses] = useState<LocalEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isUploadingCard, setIsUploadingCard] = useState(false);
-  const [cardUploadProgress, setCardUploadProgress] = useState(0);
-  const [localCardUri, setLocalCardUri] = useState<string | null>(null);
-  const [studentCardUrl, setStudentCardUrl] = useState<string | null>(backendUser?.studentCardPhotoURL || null);
+  const [localCardFront, setLocalCardFront] = useState<string | null>(null);
+  const [localCardBack, setLocalCardBack] = useState<string | null>(null);
+  const [viewingCard, setViewingCard] = useState<'front' | 'back' | null>(null);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const today = new Date();
   const currentDayIndex = today.getDay();
   const firstName = user?.displayName?.split(' ')[0] || 'Student';
-  const currentGpa = backendUser?.currentCGPA ?? 3.84;
+  const currentGpa = backendUser?.cgpa ?? backendUser?.currentCGPA ?? 0;
   const targetGpa = 4.0;
-  const gpaProgress = Math.min(currentGpa / targetGpa, 1);
+  const gpaProgress = targetGpa > 0 ? Math.min(currentGpa / targetGpa, 1) : 0;
   const todayStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   useEffect(() => {
@@ -119,15 +93,22 @@ const HomeScreen = () => {
           });
           const json = await res.json();
           if (json.success && json.data?.entries) {
-            all = json.data.entries.map((e: any) => ({
-              id: e._id || Date.now() + Math.random(),
-              subject: e.courseCode || e.courseName || '',
-              type: e.sessionType === 'Lecture' ? 'Lec' : e.sessionType === 'Section' ? 'Sec' : 'Lab',
-              day: e.dayOfWeek,
-              slot: { start: e.startTime, end: e.endTime },
-              group: e.groupNumber || '',
-              place: e.location || '',
-            }));
+            all = json.data.entries.map((e: any) => {
+              // Normalize dayOfWeek: numeric → day name
+              let dayName = e.dayOfWeek;
+              if (typeof dayName === 'number') {
+                dayName = DB_DAY_NAMES[dayName] || 'Sunday';
+              }
+              return {
+                id: e._id || Date.now() + Math.random(),
+                subject: e.courseCode || e.courseName || '',
+                type: e.sessionType === 'Lecture' ? 'Lec' : e.sessionType === 'Section' ? 'Sec' : 'Lab',
+                day: dayName,
+                slot: { start: e.startTime, end: e.endTime },
+                group: e.groupNumber || '',
+                place: e.location || '',
+              };
+            });
             loadedFromDB = true;
             await AsyncStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(all));
           }
@@ -162,25 +143,15 @@ const HomeScreen = () => {
     }
   }, [currentDayIndex, user]);
 
-  const fetchStudentCard = useCallback(async () => {
-    if (!user) return;
-    try {
-      const token = await user.getIdToken();
-      const response = await getStudentCard(token);
-      if (response.success && response.studentCardPhotoURL) {
-        setStudentCardUrl(response.studentCardPhotoURL);
-      }
-    } catch (err) {
-      console.error('[HomePage] fetch student card error:', err);
-    }
-  }, [user]);
 
   useFocusEffect(
     useCallback(() => {
       fetchSchedule();
+      // Load local student card images
+      AsyncStorage.getItem(STUDENT_CARD_FRONT_KEY).then(v => setLocalCardFront(v));
+      AsyncStorage.getItem(STUDENT_CARD_BACK_KEY).then(v => setLocalCardBack(v));
     }, [fetchSchedule])
   );
-  useEffect(() => { fetchStudentCard(); }, [fetchStudentCard]);
 
   const getGreeting = () => {
     const h = today.getHours();
@@ -198,50 +169,7 @@ const HomeScreen = () => {
 
   const navigateToTimetable = () => router.push('/(tabs)/TimeTable' as any);
 
-  const handleStudentCardUpload = async () => {
-    try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) return Alert.alert('Permission Required', 'Camera roll permissions are required to upload a card.');
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', allowsEditing: true, aspect: [16, 10], quality: 0.7 });
-      if (result.canceled) return;
-      const manipResult = await ImageManipulator.manipulateAsync(
-        result.assets[0].uri,
-        [{ resize: { width: 800 } }],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-      );
-      const imageUri = manipResult.uri;
-      setLocalCardUri(imageUri); setIsUploadingCard(true); setCardUploadProgress(10);
-      setCardUploadProgress(30);
-      const token = await user?.getIdToken();
-      if (!token) { Alert.alert('Session Expired', 'Please sign in again.'); return; }
-      setCardUploadProgress(90);
-
-      // Extract filename and mime type dynamically
-      const fileName = imageUri.split('/').pop() || 'card.jpg';
-      const match = /\.(\w+)$/.exec(fileName);
-      const mimeType = match ? `image/${match[1]}` : 'image/jpeg';
-
-      const response = await uploadStudentCard(imageUri, token, mimeType, fileName);
-      setCardUploadProgress(100);
-      if (response.success && (response.studentCardPhotoURL || response.data?.studentCardPhotoURL)) {
-        const url = response.studentCardPhotoURL || response.data.studentCardPhotoURL;
-        setStudentCardUrl(url);
-        if (backendUser) setBackendUser({ ...backendUser, studentCardPhotoURL: url });
-        if (refreshProfile) await refreshProfile();
-      } else {
-        throw new Error(response.message || 'Failed to upload card to server');
-      }
-      setLocalCardUri(null);
-      if (Platform.OS === 'android') { ToastAndroid.showWithGravity('Updated!', ToastAndroid.SHORT, ToastAndroid.BOTTOM); }
-      else { Alert.alert('Saved', 'Saved'); }
-    } catch (err: any) {
-      setLocalCardUri(null);
-      Alert.alert('Error', err.message || 'Upload failed');
-    } finally {
-      setIsUploadingCard(false);
-      setCardUploadProgress(0);
-    }
-  };
+  const navigateToStudentCard = () => router.push('/(tabs)/StudentCard' as any);
 
   const navigateToGpa = () => router.push('/(tabs)/GpaPlanner' as any);
   const typeAccent: Record<string, string> = { Lec: colors.indigo, Sec: colors.teal, Lab: colors.amber };
@@ -332,8 +260,8 @@ const HomeScreen = () => {
           {[
             { icon: 'calendar', label: 'Schedule', color: colors.indigo, onPress: navigateToTimetable },
             { icon: 'pie-chart', label: 'Planner', color: colors.teal, onPress: navigateToGpa },
-            { icon: 'check-square', label: 'Generator', color: colors.green, onPress: () => router.push('/(tabs)/Generator' as any) },
-            { icon: 'book', label: 'Library', color: colors.amber, onPress: () => router.push('/(tabs)/Questions' as any) },
+            { icon: 'book', label: 'Quizzes', color: colors.amber, onPress: () => router.push('/(tabs)/Questions' as any) },
+            { icon: 'code', label: 'Coding', color: colors.green, onPress: () => router.push('/(tabs)/Coding' as any) },
           ].map(({ icon, label, color, onPress }) => (
             <TouchableOpacity key={label} style={[s.quickCard, { backgroundColor: color }]} activeOpacity={0.85} onPress={onPress}>
               <Feather name={icon as any} size={22} color="#fff" />
@@ -345,27 +273,62 @@ const HomeScreen = () => {
         {/* Student Card */}
         <Text style={[s.sectionTitle, { marginTop: 24, marginBottom: 14, color: colors.textPrimary }]}>Student Card</Text>
         <View style={s.studentCardContainer}>
-          {(localCardUri || studentCardUrl) ? (
+          {(localCardFront || localCardBack) ? (
             <View style={[s.studentCardWithPhoto, { backgroundColor: colors.card }]}>
-              <Image source={{ uri: localCardUri || studentCardUrl! }} style={s.studentCardImage} />
-              <TouchableOpacity style={[s.updateCardButton, { backgroundColor: colors.indigo, flexDirection: 'row' }]} onPress={handleStudentCardUpload} disabled={isUploadingCard}>
-                {isUploadingCard ? <><ActivityIndicator size="small" color="#fff" /><Text style={s.updateCardButtonText}>{cardUploadProgress}%</Text></> : <><Feather name="upload" size={16} color="#fff" /><Text style={s.updateCardButtonText}>Save</Text></>}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <Ionicons name="shield-checkmark" size={18} color={colors.teal} />
+                <Text style={{ fontSize: 12, color: colors.teal, marginLeft: 6, fontWeight: '600' }}>Saved on your device only</Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {localCardFront && (
+                  <TouchableOpacity style={[s.cardShowBtn, { backgroundColor: colors.indigo, flex: 1 }]} onPress={() => setViewingCard('front')}>
+                    <Feather name="credit-card" size={16} color="#fff" />
+                    <Text style={s.cardShowBtnText}>Show Front</Text>
+                  </TouchableOpacity>
+                )}
+                {localCardBack && (
+                  <TouchableOpacity style={[s.cardShowBtn, { backgroundColor: colors.teal, flex: 1 }]} onPress={() => setViewingCard('back')}>
+                    <Feather name="credit-card" size={16} color="#fff" />
+                    <Text style={s.cardShowBtnText}>Show Back</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <TouchableOpacity style={[s.updateCardButton, { backgroundColor: colors.indigoPale, flexDirection: 'row', marginTop: 10 }]} onPress={navigateToStudentCard}>
+                <Feather name="edit-2" size={14} color={colors.indigo} />
+                <Text style={[s.updateCardButtonText, { color: colors.indigo }]}>Update Card</Text>
               </TouchableOpacity>
-              {isUploadingCard && <View style={[s.progressBarOuter, { backgroundColor: colors.border }]}><View style={[s.progressBarInner, { backgroundColor: colors.indigo, width: `${cardUploadProgress}%` as any }]} /></View>}
             </View>
           ) : (
-            <TouchableOpacity style={[s.studentCard, { backgroundColor: colors.card, flexDirection: 'row' }]} onPress={handleStudentCardUpload} disabled={isUploadingCard}>
+            <TouchableOpacity style={[s.studentCard, { backgroundColor: colors.card, flexDirection: 'row' }]} onPress={navigateToStudentCard}>
               <View style={[s.cardIconContainer, { backgroundColor: colors.indigoPale }]}>
-                {isUploadingCard ? <ActivityIndicator size={24} color={colors.indigo} /> : <Ionicons name="card-outline" size={24} color={colors.indigo} />}
+                <Ionicons name="card-outline" size={24} color={colors.indigo} />
               </View>
               <View style={{ alignItems: 'flex-start', flex: 1 }}>
                 <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Student Card</Text>
-                <Text style={[s.cardSubtitle, { color: colors.textMuted }]}>{isUploadingCard ? '...' : ''}</Text>
+                <Text style={[s.cardSubtitle, { color: colors.textMuted }]}>Save your ID card for quick access</Text>
               </View>
               <Feather name="chevron-right" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Card Viewer Modal */}
+        <Modal visible={viewingCard !== null} transparent animationType="fade">
+          <TouchableOpacity style={s.cardViewerOverlay} activeOpacity={1} onPress={() => setViewingCard(null)}>
+            <View style={s.cardViewerContent}>
+              <Text style={s.cardViewerTitle}>{viewingCard === 'front' ? 'Front Side' : 'Back Side'}</Text>
+              {viewingCard === 'front' && localCardFront && (
+                <Image source={{ uri: localCardFront }} style={s.cardViewerImage} resizeMode="contain" />
+              )}
+              {viewingCard === 'back' && localCardBack && (
+                <Image source={{ uri: localCardBack }} style={s.cardViewerImage} resizeMode="contain" />
+              )}
+              <TouchableOpacity style={s.cardViewerCloseBtn} onPress={() => setViewingCard(null)}>
+                <Text style={s.cardViewerCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </ScrollView>
 
     </SafeAreaView>
@@ -450,9 +413,15 @@ const s = StyleSheet.create({
   studentCardWithPhoto: { borderRadius: 16, padding: 15, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
   studentCardImage: { width: '100%', height: 180, borderRadius: 10, resizeMode: 'cover', marginBottom: 12 },
   updateCardButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, gap: 8 },
-  updateCardButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  progressBarOuter: { height: 4, borderRadius: 2, marginTop: 8, overflow: 'hidden' },
-  progressBarInner: { height: '100%', borderRadius: 2 },
+  updateCardButtonText: { fontSize: 14, fontWeight: '600' },
+  cardShowBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, gap: 8 },
+  cardShowBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  cardViewerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  cardViewerContent: { width: '100%', alignItems: 'center' },
+  cardViewerTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 16 },
+  cardViewerImage: { width: '100%', height: 280, borderRadius: 16 },
+  cardViewerCloseBtn: { marginTop: 20, paddingVertical: 12, paddingHorizontal: 32, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 14 },
+  cardViewerCloseText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   cardIconContainer: { padding: 12, borderRadius: 10 },
   cardTitle: { fontSize: 15, fontWeight: '700' },
   cardSubtitle: { fontSize: 12, marginTop: 2 },

@@ -28,20 +28,21 @@ export default function TabLayout() {
         tabBarButton: HapticTab,
         tabBarStyle: {
           position: "absolute",
-          bottom: 20,
-          left: 20,
-          right: 20,
+          bottom: 0,
+          left: 0,
+          right: 0,
           backgroundColor: colors.card,
-          borderRadius: 24,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
           height: 68,
           paddingTop: 8,
           paddingBottom: 8,
           borderTopWidth: 0,
           elevation: 10,
           shadowColor: "#000",
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.1,
-          shadowRadius: 20,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
         },
         tabBarShowLabel: true,
         tabBarItemStyle: {},
@@ -77,20 +78,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="Generator"
         options={{
+          href: null,
           title: "Generator",
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons
-              name="lightning-bolt"
-              size={22}
-              color={color}
-            />
-          ),
         }}
       />
       <Tabs.Screen
         name="Questions"
         options={{
-          title: "Library",
+          title: "Quizzes",
           tabBarIcon: ({ color }) => (
             <Feather name="book-open" size={22} color={color} />
           ),
@@ -114,6 +109,7 @@ export default function TabLayout() {
       />
       <Tabs.Screen name="TranscriptHistory" options={{ href: null }} />
       <Tabs.Screen name="TranscriptUpload" options={{ href: null }} />
+      <Tabs.Screen name="StudentCard" options={{ href: null }} />
       <Tabs.Screen
         name="Profile"
         options={{

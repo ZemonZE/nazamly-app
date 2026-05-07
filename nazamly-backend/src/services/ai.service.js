@@ -269,6 +269,68 @@ const analyzeProfessorStyle = async (questionsArray) => {
 };
 
 /**
+ * Extracts timetable entries from a schedule image using Gemini.
+ * Returns a JSON array of entries with normalized fields (raw output only).
+ */
+const extractScheduleTableFromImages = async (files) => {
+    const prompt = `
+    Analyze this Arabic university timetable image and extract ALL rows.
+    The table is RTL (right-to-left). Columns (from FAR RIGHT) are:
+    1) "الترم" (Term) -> IGNORE
+    2) "اليوم" (Day) -> return as English day name (Saturday..Thursday)
+    3) "من" (Start Time)
+    4) "الى" (End Time)
+    5) "المكان" (Location)
+    6) "كود المقرر" (Course Code)
+    7) "نوع المقرر" (Type) -> Lecture | Section | Lab
+    8) "المجموعة" (Group)
+
+    RULES:
+    - Extract EVERY visible row. Do not summarize.
+    - Return ONLY valid JSON (no markdown).
+    - Times must be 24h HH:MM.
+    - If course name is missing, leave it empty.
+
+    Schema:
+    [{"courseCode":"","courseName":"","sessionType":"Lecture","dayOfWeek":"Saturday","startTime":"08:00","endTime":"10:00","groupNumber":"1","location":""}]
+    `;
+
+    try {
+        console.log('[AI Service] Dispatching timetable extraction request...');
+        const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        const geminiModel = genAI.getGenerativeModel({ model: modelName });
+
+        const fs = require('fs');
+        const geminiImageParts = await Promise.all(files.map(async file => {
+            const buffer = file.buffer || await fs.promises.readFile(file.path);
+            return {
+                inlineData: { data: buffer.toString('base64'), mimeType: file.mimetype }
+            };
+        }));
+
+        const result = await geminiModel.generateContent([prompt, ...geminiImageParts]);
+        const responseText = result.response.text();
+
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) {
+            throw new Error('Model did not return a valid JSON array structure.');
+        }
+
+        const cleanedText = jsonMatch[0].trim();
+        return {
+            extractedData: JSON.parse(cleanedText),
+            usedModel: modelName,
+        };
+    } catch (error) {
+        console.error(`[AI Service] Timetable extraction failed: ${error.message}`);
+        if (error.message.includes('429') || error.message.includes('503')) {
+            throw new Error('AI Service is currently overloaded. Please try again later.');
+        }
+        throw new Error(`AI Timetable Extraction Failed: ${error.message}`);
+    }
+};
+
+/**
  * Generates a custom exam using RAG (Retrieval-Augmented Generation).
  * Combines aggregated lecture concepts with a professor's style profile
  * to produce questions that match the professor's testing patterns.
@@ -280,7 +342,7 @@ const analyzeProfessorStyle = async (questionsArray) => {
  * @returns {Array<{ questionText: string, options: string[], correctAnswer: string, difficulty: number, aiConfidenceScore: number, derivedFromConcept: string }>}
  */
 const generateCustomExamWithRAG = async (aggregatedConcepts, professorProfile, examType, questionCount) => {
-    const prompt = `You are an expert exam creator. Generate a "${examType}" exam with exactly ${questionCount} questions. Distribute the questions comprehensively across these aggregated course concepts: ${JSON.stringify(aggregatedConcepts)}. CRITICAL: You must strictly emulate this professor's testing style and exam structure: ${JSON.stringify(professorProfile)}. Ensure the ratio of question types (MCQ, True/False, etc.) and difficulties matches the profile. Return ONLY a valid JSON array of objects. Each object MUST strictly match: { "questionText": "...", "options": ["..."], "correctAnswer": "...", "difficulty": (1-5), "aiConfidenceScore": (0-100), "derivedFromConcept": "brief concept reference" }. Do not include markdown formatting.`;
+    const prompt = 'You are an expert exam creator. Generate a "' + examType + '" exam with exactly ' + questionCount + ' questions. Distribute the questions comprehensively across these aggregated course concepts: ' + JSON.stringify(aggregatedConcepts) + '. CRITICAL: You must strictly emulate this professor\'s testing style and exam structure: ' + JSON.stringify(professorProfile) + '. Ensure the ratio of question types (MCQ, True/False, etc.) and difficulties matches the profile. Return ONLY a valid JSON array of objects. Each object MUST strictly match: { "questionText": "...", "options": ["..."], "correctAnswer": "...", "difficulty": (1-5), "aiConfidenceScore": (0-100), "derivedFromConcept": "brief concept reference" }. Do not include markdown formatting.';
 
     try {
         console.log(`[AI Service] Generating ${examType} exam with ${questionCount} questions using RAG...`);
@@ -392,7 +454,8 @@ const fetchAvailableGeminiModels = async () => {
 };
 
 module.exports = { 
-    extractScheduleFromImages, 
+    extractScheduleFromImages,
+    extractScheduleTableFromImages,
     extractLectureConcepts, 
     parseExamAndLinkToLectures, 
     analyzeProfessorStyle, 
