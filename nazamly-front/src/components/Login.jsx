@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import "../styles/Login.css";
 import FormInput from "./FormInput";
 import { IconEmail, IconLock, GoogleLogo } from "../Icons/Icons";
@@ -93,7 +93,7 @@ function Login({ onLogin, switchToSignup }) {
           onToggle={() => setShowPwd((p) => !p)}
         />
 
-        <span className="forgot-link">Forgot password?</span>
+        <Link to="/forgot-password" className="forgot-link">Forgot password?</Link>
 
         {authError && (
           <div className="auth-error-banner">
