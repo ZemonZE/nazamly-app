@@ -17,8 +17,8 @@ import {
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 
-import { Feather } from '@expo/vector-icons';
-import { useAppTheme } from '@/constants/theme';
+import { Feather } from "@expo/vector-icons";
+import { useAppTheme } from "@/constants/theme";
 import {
   createUserWithEmailAndPassword,
   updateProfile,
@@ -26,19 +26,24 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
 } from "firebase/auth";
-import { auth, API_URL, GOOGLE_WEB_CLIENT_ID,Google_Android_Id } from "@/firebase";
+import {
+  auth,
+  API_URL,
+  GOOGLE_WEB_CLIENT_ID,
+  Google_Android_Id,
+} from "@/firebase";
 
 const syncUser = async (token: string) => {
   const res = await fetch(`${API_URL}/api/auth/sync`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` }
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();
 };
 
 const getProfile = async (token: string) => {
   const res = await fetch(`${API_URL}/api/auth/get-profile`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();
 };
@@ -59,14 +64,13 @@ export default function RegisterScreen() {
   const { setBackendUser } = useAuth();
   const { colors } = useAppTheme();
 
-
   const redirectUri = makeRedirectUri({
     scheme: "nazamly",
   });
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId:Google_Android_Id,
+    androidClientId: Google_Android_Id,
     redirectUri,
   });
 
@@ -76,47 +80,59 @@ export default function RegisterScreen() {
     }
   }, [request, redirectUri]);
 
-  const syncWithBackend = useCallback(async (user: any) => {
-    try {
-      console.log("[Register] Getting fresh token for sync...");
-      const token = await user.getIdToken();
-      
-      console.log("[Register] Calling syncUser...");
-      const response = await syncUser(token);
-      console.log("[Register] Sync response:", response);
-      
-      if (response.message === "unauthorized") {
-        Alert.alert('Cancel', 'Cancel');
-        router.replace("/(auth)/Login");
-        return null;
+  const syncWithBackend = useCallback(
+    async (user: any) => {
+      try {
+        console.log("[Register] Getting fresh token for sync...");
+        const token = await user.getIdToken();
+
+        console.log("[Register] Calling syncUser...");
+        const response = await syncUser(token);
+        console.log("[Register] Sync response:", response);
+
+        if (response.message === "unauthorized") {
+          Alert.alert("Cancel", "Cancel");
+          router.replace("/(auth)/Login");
+          return null;
+        }
+
+        return response;
+      } catch (error: any) {
+        console.error("[Register] Sync error:", error);
+        throw error;
       }
+    },
+    [router],
+  );
 
-      return response;
-    } catch (error: any) {
-      console.error("[Register] Sync error:", error);
-      throw error;
-    }
-  }, [router]);
+  const fetchUserProfile = useCallback(
+    async (user: any) => {
+      try {
+        const token = await user.getIdToken();
+        const response = await getProfile(token);
 
-  const fetchUserProfile = useCallback(async (user: any) => {
-    try {
-      const token = await user.getIdToken();
-      const response = await getProfile(token);
-
-      if (response.success && response.data) {
-        console.log("[Register] Profile fetched successfully:", response.data);
-        setBackendUser(response.data);
-        return response.data;
-      } else {
-        console.error("[Register] Failed to fetch profile:", response);
+        if (response.success && response.data) {
+          console.log(
+            "[Register] Profile fetched successfully:",
+            response.data,
+          );
+          setBackendUser(response.data);
+          return response.data;
+        } else {
+          console.error("[Register] Failed to fetch profile:", response);
+        }
+      } catch (error) {
+        console.error("[Register] Error fetching profile:", error);
       }
-    } catch (error) {
-      console.error("[Register] Error fetching profile:", error);
-    }
-  }, [setBackendUser]);
+    },
+    [setBackendUser],
+  );
 
   useEffect(() => {
-    console.log("[Register] AuthSession response:", JSON.stringify(response, null, 2));
+    console.log(
+      "[Register] AuthSession response:",
+      JSON.stringify(response, null, 2),
+    );
     if (response?.type === "success") {
       const { id_token } = response.params;
       console.log("[Register] id_token received:", id_token ? "yes" : "no");
@@ -130,7 +146,11 @@ export default function RegisterScreen() {
           router.replace("/(tabs)/HomePage");
         })
         .catch((error: any) => {
-          console.error("[Register] Firebase signIn error:", error.code, error.message);
+          console.error(
+            "[Register] Firebase signIn error:",
+            error.code,
+            error.message,
+          );
           Alert.alert("Error", error.message);
         })
         .finally(() => setLoading(false));
@@ -144,32 +164,39 @@ export default function RegisterScreen() {
       ]);
       return;
     }
-    
+
     setLoading(true);
     try {
       console.log("[Register] Creating user with email:", email);
-      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const result = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
       console.log("[Register] Firebase user created:", result.user.uid);
-      
+
       await updateProfile(result.user, { displayName: name });
       console.log("[Register] Firebase profile updated with name:", name);
-      
+
       await result.user.reload();
       await result.user.getIdToken();
       console.log("[Register] Token refreshed with updated profile");
-      
+
       console.log("[Register] Syncing with backend...");
       const syncResult = await syncWithBackend(result.user);
       console.log("[Register] Sync result:", syncResult);
-      
+
       console.log("[Register] Fetching profile from backend...");
       await fetchUserProfile(result.user);
-      
+
       Alert.alert("Success", "Account created successfully");
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
       console.error("[Register] Error:", error);
-      Alert.alert("Error", error.message || "Failed to create account. Please try again.");
+      Alert.alert(
+        "Error",
+        error.message || "Failed to create account. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -197,9 +224,8 @@ export default function RegisterScreen() {
     promptAsync();
   };
 
-  const handleGoogleSignIn = Platform.OS === 'web' 
-    ? handleGoogleWebSignIn 
-    : handleGoogleMobileSignIn;
+  const handleGoogleSignIn =
+    Platform.OS === "web" ? handleGoogleWebSignIn : handleGoogleMobileSignIn;
 
   const goToLogin = () => {
     router.push("/(auth)/Login");
@@ -207,7 +233,7 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
-      {Platform.OS === 'web' && (
+      {Platform.OS === "web" && (
         <style type="text/css">{`
           input:-webkit-autofill,
           input:-webkit-autofill:hover, 
@@ -219,32 +245,55 @@ export default function RegisterScreen() {
           }
         `}</style>
       )}
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <ScrollView 
-          contentContainerStyle={s.scrollContent} 
+        <ScrollView
+          contentContainerStyle={s.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          
           <View style={s.heroSection}>
-            <Image 
-              source={require('@/assets/images/Logo design for a mo.png')} 
-              style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 24 }} 
-              resizeMode="contain" 
+            <Image
+              source={require("@/assets/images/Logo design for a mo.png")}
+              style={{
+                width: 100,
+                height: 100,
+                borderRadius: 24,
+                marginBottom: 24,
+              }}
+              resizeMode="contain"
             />
-            <Text style={[s.welcomeText, { color: colors.textPrimary }]}>Create Account</Text>
-            <Text style={[s.subtitleText, { color: colors.textMuted }]}>Join Nazamly and take control of your study schedule</Text>
+            <Text style={[s.welcomeText, { color: colors.textPrimary }]}>
+              Create Account
+            </Text>
+            <Text style={[s.subtitleText, { color: colors.textMuted }]}>
+              Join Nazamly and take control of your study schedule
+            </Text>
           </View>
 
           <View style={[s.formCard, { backgroundColor: colors.card }]}>
-            
             <View style={s.inputGroup}>
-              <Text style={[s.label, { color: colors.textSecondary }]}>Full Name</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
-                <Feather name="user" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
+              <Text style={[s.label, { color: colors.textSecondary }]}>
+                Full Name
+              </Text>
+              <View
+                style={[
+                  s.inputContainer,
+                  {
+                    backgroundColor: colors.bg,
+                    borderColor: colors.border,
+                    flexDirection: "row",
+                  },
+                ]}
+              >
+                <Feather
+                  name="user"
+                  size={20}
+                  color={colors.textMuted}
+                  style={{ marginRight: 12 }}
+                />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
                   placeholder="Full Name"
@@ -257,9 +306,25 @@ export default function RegisterScreen() {
             </View>
 
             <View style={s.inputGroup}>
-              <Text style={[s.label, { color: colors.textSecondary }]}>Email</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
-                <Feather name="mail" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
+              <Text style={[s.label, { color: colors.textSecondary }]}>
+                Email
+              </Text>
+              <View
+                style={[
+                  s.inputContainer,
+                  {
+                    backgroundColor: colors.bg,
+                    borderColor: colors.border,
+                    flexDirection: "row",
+                  },
+                ]}
+              >
+                <Feather
+                  name="mail"
+                  size={20}
+                  color={colors.textMuted}
+                  style={{ marginRight: 12 }}
+                />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
                   placeholder="Email"
@@ -274,9 +339,25 @@ export default function RegisterScreen() {
             </View>
 
             <View style={s.inputGroup}>
-              <Text style={[s.label, { color: colors.textSecondary }]}>Password</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
-                <Feather name="lock" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
+              <Text style={[s.label, { color: colors.textSecondary }]}>
+                Password
+              </Text>
+              <View
+                style={[
+                  s.inputContainer,
+                  {
+                    backgroundColor: colors.bg,
+                    borderColor: colors.border,
+                    flexDirection: "row",
+                  },
+                ]}
+              >
+                <Feather
+                  name="lock"
+                  size={20}
+                  color={colors.textMuted}
+                  style={{ marginRight: 12 }}
+                />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
                   placeholder="Password"
@@ -286,23 +367,39 @@ export default function RegisterScreen() {
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={s.eyeIcon}
                 >
-                  <Feather 
-                    name={showPassword ? "eye" : "eye-off"} 
-                    size={20} 
-                    color={colors.textMuted} 
+                  <Feather
+                    name={showPassword ? "eye" : "eye-off"}
+                    size={20}
+                    color={colors.textMuted}
                   />
                 </TouchableOpacity>
               </View>
             </View>
 
             <View style={s.inputGroup}>
-              <Text style={[s.label, { color: colors.textSecondary }]}>Confirm Password</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
-                <Feather name="lock" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
+              <Text style={[s.label, { color: colors.textSecondary }]}>
+                Confirm Password
+              </Text>
+              <View
+                style={[
+                  s.inputContainer,
+                  {
+                    backgroundColor: colors.bg,
+                    borderColor: colors.border,
+                    flexDirection: "row",
+                  },
+                ]}
+              >
+                <Feather
+                  name="lock"
+                  size={20}
+                  color={colors.textMuted}
+                  style={{ marginRight: 12 }}
+                />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
                   placeholder="Confirm Password"
@@ -328,37 +425,43 @@ export default function RegisterScreen() {
               )}
             </TouchableOpacity>
 
-            <View style={[s.dividerContainer, { flexDirection: 'row' }]}>
-              <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[s.dividerText, { color: colors.textMuted }]}>Or</Text>
-              <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
+            <View style={[s.dividerContainer, { flexDirection: "row" }]}>
+              <View
+                style={[s.dividerLine, { backgroundColor: colors.border }]}
+              />
+              <Text style={[s.dividerText, { color: colors.textMuted }]}>
+                Or
+              </Text>
+              <View
+                style={[s.dividerLine, { backgroundColor: colors.border }]}
+              />
             </View>
 
             <TouchableOpacity
-              style={[s.googleButton, { flexDirection: 'row' }]}
+              style={[s.googleButton, { flexDirection: "row" }]}
               onPress={handleGoogleSignIn}
               disabled={loading}
               activeOpacity={0.8}
             >
-              <Image 
-                source={require('@/assets/images/google.png')} 
+              <Image
+                source={require("@/assets/images/google.png")}
                 style={s.googleLogo}
                 resizeMode="contain"
               />
               <Text style={s.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
-
           </View>
 
-          <View style={[s.footer, { flexDirection: 'row' }]}>
+          <View style={[s.footer, { flexDirection: "row" }]}>
             <Text style={[s.footerText, { color: colors.textMuted }]}>
-              Already have an account? 
+              Already have an account?
             </Text>
             <Pressable onPress={goToLogin}>
-              <Text style={[s.footerLink, { color: colors.teal }]}>Log in now</Text>
+              <Text style={[s.footerLink, { color: colors.teal }]}>
+                Log in now
+              </Text>
             </Pressable>
           </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -376,7 +479,7 @@ const s = StyleSheet.create({
     paddingBottom: 40,
   },
   heroSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 30,
     marginBottom: 36,
   },
@@ -384,10 +487,10 @@ const s = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
@@ -395,19 +498,19 @@ const s = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: "800",
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitleText: {
     fontSize: 16,
-    fontWeight: '400',
-    textAlign: 'center',
+    fontWeight: "400",
+    textAlign: "center",
   },
   formCard: {
     borderRadius: 20,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -418,11 +521,11 @@ const s = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
   },
   inputContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1.5,
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -434,7 +537,7 @@ const s = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '400',
+    fontWeight: "400",
   },
   eyeIcon: {
     padding: 4,
@@ -442,23 +545,23 @@ const s = StyleSheet.create({
   registerButton: {
     height: 56,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
-    shadowColor: '#26A69A',
+    shadowColor: "#26A69A",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   registerButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
   dividerContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginVertical: 24,
   },
   dividerLine: {
@@ -467,17 +570,17 @@ const s = StyleSheet.create({
   },
   dividerText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     marginHorizontal: 16,
   },
   googleButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     height: 56,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
     borderRadius: 12,
     gap: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
@@ -488,21 +591,21 @@ const s = StyleSheet.create({
     height: 24,
   },
   googleButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   footer: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 32,
   },
   footerText: {
     fontSize: 15,
-    fontWeight: '400',
+    fontWeight: "400",
   },
   footerLink: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });

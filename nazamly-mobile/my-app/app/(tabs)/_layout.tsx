@@ -1,6 +1,6 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Feather, Ionicons, MaterialCommunityIcons} from '@expo/vector-icons';
+import { Tabs } from "expo-router";
+import React from "react";
+import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { useAppTheme } from "@/constants/theme";
@@ -88,7 +88,11 @@ export default function TabLayout() {
         options={{
           title: "Coding",
           tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="code-braces" size={22} color={color} />
+            <MaterialCommunityIcons
+              name="code-braces"
+              size={22}
+              color={color}
+            />
           ),
         }}
       />
@@ -104,11 +108,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="Profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+          title: "Profile",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" size={size} color={color} />
+          ),
         }}
       />
-
     </Tabs>
   );
 }

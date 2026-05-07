@@ -72,7 +72,7 @@ export default function Index() {
   }
 
   return user ? (
-    <Redirect href="/(tabs)/HomePage" />
+      <Redirect href="/(tabs)/HomePage" />
   ) : (
     <Redirect href="/(auth)/Login" />
   );

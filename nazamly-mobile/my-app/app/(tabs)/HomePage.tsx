@@ -26,7 +26,9 @@ import { API_URL } from "@/firebase";
 const safeJsonParse = async (response: Response) => {
   const text = await response.text();
   if (text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html")) {
-    console.error(`🚨 [API Error] HTML received from: ${response.url} (Status: ${response.status})`);
+    console.error(
+      `🚨 [API Error] HTML received from: ${response.url} (Status: ${response.status})`,
+    );
     throw new Error(
       "تلقينا صفحة ويب بدلاً من البيانات المطلوبة. تأكد من تشغيل الخادم ورابط الـ API.",
     );
@@ -37,7 +39,9 @@ const safeJsonParse = async (response: Response) => {
       throw new Error(jsonData.message || "حدث خطأ في جلب البيانات");
     return jsonData;
   } catch (parseError) {
-    console.error(`🚨 [API Error] Failed to parse JSON from: ${response.url} (Status: ${response.status})`);
+    console.error(
+      `🚨 [API Error] Failed to parse JSON from: ${response.url} (Status: ${response.status})`,
+    );
     console.error("🚨 Raw response text:", text.substring(0, 200));
     throw new Error("بيانات الخادم غير صالحة للقراءة.");
   }
