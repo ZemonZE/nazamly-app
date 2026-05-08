@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const authMiddleware = require('../middlewares/auth.middleware');
+const requireActiveUser = require('../middlewares/requireActiveUser.middleware');
 const submissionRateLimiter = require('../middlewares/submissionRateLimiter');
 const { listProblems, getProblem } = require('../controllers/CodingProblem.controller');
 const { submitCode, runCode, getSubmissions, getHistory } = require('../controllers/CodeSubmission.controller');
@@ -15,6 +16,7 @@ const runRateLimiter = rateLimit({
 });
 
 router.use(authMiddleware);
+router.use(requireActiveUser);
 
 router.get('/problems', listProblems);
 router.get('/problems/:id', getProblem);

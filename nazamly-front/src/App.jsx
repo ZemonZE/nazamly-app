@@ -24,6 +24,7 @@ import { auth, API_URL } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
 import ForgotPassword from "./components/ForgotPassword";
+import VerifiedOnly from "./components/VerifiedOnly";
 import mainLogo from "./assets/logo.jpg";
 
 /* ── Auth layout — declared outside App for stable React identity ── */
@@ -196,7 +197,9 @@ function App() {
             ) : user.isProfileComplete !== true ? (
               <Navigate to="/onboarding" replace />
             ) : (
-              <ProblemSolver />
+              <VerifiedOnly user={user}>
+                <ProblemSolver />
+              </VerifiedOnly>
             )
           }
         />
@@ -221,10 +224,24 @@ function App() {
           <Route path="gpa-calculator" element={<GpaCalculator />} />
           <Route path="gpa-planner" element={<GpaPlanner />} />
           <Route path="materials" element={<Materials />} />
-          <Route path="questions" element={<Questions />} />
+          <Route
+            path="questions"
+            element={
+              <VerifiedOnly user={user}>
+                <Questions />
+              </VerifiedOnly>
+            }
+          />
           <Route path="generator" element={<Generator />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="coding" element={<CodingProblems />} />
+          <Route
+            path="coding"
+            element={
+              <VerifiedOnly user={user}>
+                <CodingProblems />
+              </VerifiedOnly>
+            }
+          />
           <Route path="profile" element={<Profile />} />
         </Route>
 
