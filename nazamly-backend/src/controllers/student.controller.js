@@ -1,12 +1,15 @@
 // src/controllers/student.controller.js
-const StudentProfile = require('../models/studentProfile.model');
+const userRepo = require('../Repos/User_Repo');
+const User = require('../models/user/user.model');
+const Course = require('../models/academic/course.model');
 const { registerStudentSchema } = require('../middlewares/student.validator');
 
 /**
  * POST /api/students/register
- * Register a new student profile for the Schedule Generator.
+ * Complete the authenticated user's student profile.
  * Validates the body, checks for duplicate studentCode,
- * enforces department defaults, saves, and populates registeredCourses.
+ * enforces department defaults, updates the User document,
+ * and sets isProfileComplete = true.
  */
 const registerStudent = async (req, res) => {
   console.log("[student.controller] registerStudent called");
@@ -21,8 +24,29 @@ const registerStudent = async (req, res) => {
       });
     }
 
-    // 2. Check for duplicate studentCode
-    const existing = await StudentProfile.findOne({ studentCode: value.studentCode });
+    // 2. Find the authenticated user
+    const currentUser = await userRepo.findByFirebaseUid(req.user.uid);
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Authenticated user not found in database.'
+      });
+    }
+
+    // 3. If user already completed onboarding, return 409
+    if (currentUser.isProfileComplete) {
+      return res.status(409).json({
+        success: false,
+        message: 'Student profile has already been completed.'
+      });
+    }
+
+    // 4. Check for duplicate studentCode (across all users)
+    const existing = await User.findOne({
+      studentCode: value.studentCode,
+      _id: { $ne: currentUser._id },
+      isDeleted: { $ne: true }
+    });
     if (existing) {
       return res.status(409).json({
         success: false,
@@ -30,22 +54,46 @@ const registerStudent = async (req, res) => {
       });
     }
 
-    // 3. Apply department default: if academicYear is 1, force "General"
+    // 5. Apply department default: if academicYear is 1, force "General"
     if (value.academicYear === 1) {
       value.department = 'General';
     }
 
-    // 4. Save the student profile
-    const studentProfile = await StudentProfile.create(value);
+    // 6. Update the user's profile on the User document
+    const updateData = {
+      studentCode: value.studentCode,
+      academicYear: value.academicYear,
+      department: value.department || 'General',
+      cgpa: value.cgpa,
+      completedHours: value.completedHours,
+      isProfileComplete: true,
+    };
 
-    // 5. Populate registeredCourses for immediate use by the Schedule Generator
-    const populated = await StudentProfile.findById(studentProfile._id)
-      .populate('registeredCourses');
+    // Map incoming registeredCourses (string ID array) → termCourses embedded objects
+    if (value.registeredCourses && value.registeredCourses.length > 0) {
+      const courses = await Course.find({
+        _id: { $in: value.registeredCourses },
+        isDeleted: { $ne: true },
+      }).lean();
+
+      updateData.termCourses = courses.map(c => ({
+        name: c.courseName,
+        courseCode: c.courseCode,
+        creditHours: c.creditHours,
+      }));
+    }
+
+    // Update displayName when fullName is provided (override email-derived names)
+    if (value.fullName && value.fullName !== currentUser.displayName) {
+      updateData.displayName = value.fullName;
+    }
+
+    const updatedUser = await userRepo.update(currentUser._id, updateData);
 
     return res.status(201).json({
       success: true,
       message: 'Student registered successfully.',
-      data: populated
+      data: updatedUser
     });
 
   } catch (error) {

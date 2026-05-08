@@ -1,10 +1,5 @@
 /**
  * Arabic → Latin course code prefix mapping.
- *
- * IMPORTANT: This map MUST be kept identical to the one in
- * ocr-service/parsers/transcript_parser.py — if they diverge,
- * DB credit-hour lookups will fail silently and everything
- * falls back to the 3-hour default.
  */
 const ARABIC_PREFIX_MAP = {
   'س': 'CS',   // Computer Science — علوم الحاسب

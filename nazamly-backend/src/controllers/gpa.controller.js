@@ -9,7 +9,7 @@ const {
 } = require('../utils/gpaCalculator');
 
 const { enrichCourses, calculateTermGPA, calculateGPA, needsReview } = require('../utils/courseMapper');
-const { extractTranscript } = require('../services/ocr.service');
+const { extractTranscriptFromFile } = require('../services/ai.service');
 
 // Importing Repositories (Repository Pattern — never access Models directly)
 const Course_Repo = require('../Repos/Course_Repo');
@@ -177,7 +177,7 @@ const removeTermCourse = async (req, res) => {
  * Flow:
  * 1. Receive file via multer (diskStorage — saved to uploads/transcripts/)
  * 2. Create a "processing" record in MongoDB
- * 3. Send file to Python OCR microservice via HTTP
+ * 3. Send file to Gemini AI for extraction
  * 4. Enrich courses with credit hours from Course DB
  * 5. Calculate GPA
  * 6. Update record with results
@@ -209,8 +209,8 @@ const uploadTranscript = async (req, res) => {
             status: 'processing'
         });
 
-        // 2. Send file path to the Python OCR microservice
-        const ocrResult = await extractTranscript(filePath);
+        // 2. Send file to Gemini AI for transcript extraction
+        const ocrResult = await extractTranscriptFromFile(filePath);
 
         // 3. Check if extraction succeeded
         if (!ocrResult.courses || ocrResult.courses.length === 0) {

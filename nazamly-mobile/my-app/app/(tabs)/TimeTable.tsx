@@ -69,6 +69,16 @@ const scheduleAPI = {
     });
     return safeJsonParse(res);
   },
+  parseFromImage: async (uri: string, mimeType: string, name: string, token: string) => {
+    const formData = new FormData();
+    formData.append('file', { uri, type: mimeType, name } as any);
+    const res = await fetch(`${API_URL}/api/schedule/parse-from-image`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    return safeJsonParse(res);
+  },
   saveFullTimetable: async (entries: any[], token: string) => {
     const res = await fetch(`${API_URL}/api/schedule/save-timetable`, {
       method: "POST",
@@ -80,6 +90,27 @@ const scheduleAPI = {
     });
     return safeJsonParse(res);
   },
+  replaceWithEntries: async (entries: OCREntry[], token: string) => {
+    const schedulePayload = entries.map(entry => ({
+      courseCode: entry.courseCode || entry.courseName,
+      courseName: entry.courseName,
+      type: entry.sessionType,
+      dayOfWeek: entry.dayOfWeek,
+      startTime: entry.startTime,
+      endTime: entry.endTime,
+      group: entry.groupNumber,
+      location: entry.location,
+    }));
+    const res = await fetch(`${API_URL}/api/schedule/save-ai`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ schedule: schedulePayload }),
+    });
+    return safeJsonParse(res);
+  }
 };
 
 // ── Safe JSON parser to handle HTML error pages gracefully ──
@@ -121,6 +152,7 @@ const DAYS = [
   "Tuesday",
   "Wednesday",
   "Thursday",
+  "Friday",
 ];
 
 function normalizeDayName(dayOfWeek: number | string): string {
@@ -159,6 +191,32 @@ const TYPE_COLORS: Record<string, string> = {
   Sec: "#14b8a6",
   Lab: "#f59e0b",
 };
+const EDIT_TYPE_OPTIONS: Array<"Lecture" | "Section" | "Lab"> = [
+  "Lecture",
+  "Section",
+  "Lab",
+];
+
+const DAY_NUMBER_TO_NAME: Record<number, string> = {
+  6: "Saturday",
+  0: "Sunday",
+  1: "Monday",
+  2: "Tuesday",
+  3: "Wednesday",
+  4: "Thursday",
+  5: "Friday",
+};
+};
+
+const DAY_NAME_TO_NUMBER: Record<string, number> = {
+  Saturday: 6,
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+};
 
 // Map sessionType back to short code for display
 const TYPE_TO_SHORT: Record<string, string> = {
@@ -178,17 +236,21 @@ function to12h(time24: string): string {
   return `${h}:${mStr} ${suffix}`;
 }
 
-// Convert 12h display back to 24h HH:mm
-function to24h(time12: string): string {
-  if (!time12) return "08:00";
-  const parts = time12.trim().split(" ");
-  const modifier = parts[1]?.toUpperCase() || "AM";
-  const [hoursStr, minutesStr] = (parts[0] || "8:00").split(":");
-  let h = parseInt(hoursStr, 10);
-  const m = (minutesStr || "00").padStart(2, "0");
-  if (modifier === "PM" && h !== 12) h += 12;
-  if (modifier === "AM" && h === 12) h = 0;
-  return `${String(h).padStart(2, "0")}:${m}`;
+// Convert 12h/24h input to 24h HH:mm
+function to24h(timeInput: string): string {
+  if (!timeInput) return "08:00";
+  const raw = timeInput.trim().toUpperCase();
+  const isPm = raw.includes("PM");
+  const isAm = raw.includes("AM");
+  const cleaned = raw.replace(/[^0-9:]/g, "");
+  const [hStr, mStr = "00"] = cleaned.split(":");
+  let h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (Number.isNaN(h)) return "08:00";
+  if (isPm && h < 12) h += 12;
+  if (isAm && h === 12) h = 0;
+  return `${String(h).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
+}
 }
 
 interface ScheduleEntry {
@@ -234,6 +296,17 @@ interface OCREntry {
   location: string;
 }
 
+interface EditFormState {
+  courseCode: string;
+  courseName: string;
+  sessionType: "Lecture" | "Section" | "Lab";
+  day: string;
+  startTime: string;
+  endTime: string;
+  groupNumber: string;
+  location: string;
+}
+
 const STORAGE_KEY = "@nazamly_schedules_v2";
 
 const initialForm: FormState = {
@@ -262,10 +335,25 @@ const TimetableScreen = () => {
 
   // ── OCR Import state ──
   const [scanLoading, setScanLoading] = useState(false);
+  const [scanMessage, setScanMessage] = useState('Analyzing your schedule with AI...');
   const [scanModalVisible, setScanModalVisible] = useState(false);
   const [ocrPreviewEntries, setOcrPreviewEntries] = useState<OCREntry[]>([]);
-  const [ocrConfidence, setOcrConfidence] = useState(0);
   const [sourcePickerVisible, setSourcePickerVisible] = useState(false);
+
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editContext, setEditContext] = useState<'schedule' | 'ocr' | null>(null);
+  const [editingId, setEditingId] = useState<string | number | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<EditFormState>({
+    courseCode: '',
+    courseName: '',
+    sessionType: 'Lecture',
+    day: DAYS[0],
+    startTime: '08:00',
+    endTime: '10:00',
+    groupNumber: '',
+    location: '',
+  });
 
   // Pulse animation for scanning
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -333,6 +421,7 @@ const TimetableScreen = () => {
               }));
               setRegisteredCourses(mappedCourses);
             }
+          }
           }
         } catch (dbErr) {
           console.error("[Timetable] DB Load error:", dbErr);
@@ -510,38 +599,49 @@ const TimetableScreen = () => {
     setSourcePickerVisible(true);
   };
 
+  const normalizeOcrEntry = (entry: any): OCREntry => {
+    const dayOfWeek =
+      typeof entry.dayOfWeek === "number"
+        ? entry.dayOfWeek
+        : DAY_NAME_TO_NUMBER[entry.dayOfWeek] ?? 0;
+    return {
+      courseCode: entry.courseCode || "",
+      courseName: entry.courseName || entry.courseCode || "",
+      dayOfWeek,
+      startTime: to24h(entry.startTime || ""),
+      endTime: to24h(entry.endTime || ""),
+      sessionType: entry.sessionType || "Lecture",
+      groupNumber: entry.groupNumber || "",
+      location: entry.location || "",
+    };
+  };
+
   const handleOcrUpload = async (
     uri: string,
     mimeType: string,
-    fileName: string,
+    name: string,
   ) => {
     if (!user) {
       Alert.alert("Not logged in", "Please sign in to use the scan feature.");
       return;
     }
-
-    setScanLoading(true);
-
     try {
+      setScanMessage("Processing your schedule image...");
+      setScanLoading(true);
       const token = await user.getIdToken();
-      const response = await scheduleAPI.importFromImage(
-        uri,
-        mimeType,
-        fileName,
-        token,
-      );
-
-      if (response.success && response.data) {
-        const entries = response.data.entries || [];
-        setOcrPreviewEntries(entries);
+      const res = await scheduleAPI.parseFromImage(uri, mimeType, name, token);
+      const parsedEntries = (res.entries || []).map(normalizeOcrEntry);
+      if (parsedEntries.length) {
+        setOcrPreviewEntries(parsedEntries);
         setScanModalVisible(true);
       } else {
         Alert.alert(
           "Extraction Failed",
-          response.message || "Could not extract classes from the image.",
+          res.message || "Could not extract classes from the image.",
         );
       }
     } catch (err: any) {
+      console.error("[TimeTable] OCR parse error:", err);
       Alert.alert("Error", err.message || "Upload failed");
     } finally {
       setScanLoading(false);
@@ -599,28 +699,15 @@ const TimetableScreen = () => {
     setScanLoading(true);
     try {
       const token = await user.getIdToken();
-      // Map OCR results to the format expected by save-timetable
-      const payload = ocrPreviewEntries.map((e) => ({
-        courseName: e.courseName || e.courseCode,
-        courseCode: e.courseCode || "",
-        dayOfWeek: e.dayOfWeek,
-        startTime: e.startTime,
-        endTime: e.endTime,
-        sessionType: e.sessionType,
-        location: e.location || "",
-        groupNumber: e.groupNumber || "",
-      }));
-
-      const json = await scheduleAPI.saveFullTimetable(payload, token);
-      if (json.success) {
-        setScanModalVisible(false);
-        setOcrPreviewEntries([]);
-        await loadSchedules();
-      } else {
-        Alert.alert("Sync Error", "Could not save scanned schedule to cloud.");
-      }
-    } catch (err) {
+      // Option 1: Replace schedule (from origin)
+      setScanMessage("Replacing your schedule...");
+      await scheduleAPI.replaceWithEntries(ocrPreviewEntries, token);
+      await loadSchedules();
+      setScanModalVisible(false);
+      setOcrPreviewEntries([]);
+    } catch (err: any) {
       console.error("[TimeTable] OCR Confirm Sync Error:", err);
+      Alert.alert("Error", err.message || "Import failed");
     } finally {
       setScanLoading(false);
     }
@@ -637,7 +724,7 @@ const TimetableScreen = () => {
       const token = await user.getIdToken();
       // Map local entries back to backend format
       const payload = schedules.map((s) => {
-        const to24h = (time12h: string) => {
+        const to24hInner = (time12h: string) => {
           if (!time12h) return "00:00";
           const [time, modifier] = time12h.split(" ");
           let [hours, minutes] = time.split(":").map(Number);
@@ -646,7 +733,7 @@ const TimetableScreen = () => {
           return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
         };
 
-        const dayToNum = (dayName: string) => {
+        const dayToNumInner = (dayName: string) => {
           const map: Record<string, number> = {
             Sunday: 0,
             Monday: 1,
@@ -661,9 +748,9 @@ const TimetableScreen = () => {
 
         return {
           courseName: s.subject,
-          dayOfWeek: dayToNum(s.day),
-          startTime: to24h(s.slot.start),
-          endTime: to24h(s.slot.end),
+          dayOfWeek: dayToNumInner(s.day),
+          startTime: to24hInner(s.slot.start),
+          endTime: to24hInner(s.slot.end),
           sessionType:
             s.type === "Lec" ? "Lecture" : s.type === "Sec" ? "Section" : "Lab",
           location: s.place || "",
@@ -681,6 +768,129 @@ const TimetableScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openEditForSchedule = (entry: ScheduleEntry) => {
+    setEditContext("schedule");
+    setEditingId(entry.id);
+    setEditingIndex(null);
+    setEditForm({
+      courseCode: "",
+      courseName: entry.subject,
+      sessionType:
+        (TYPE_LABELS[entry.type] as EditFormState["sessionType"]) || "Lecture",
+      day: entry.day,
+      startTime: to24h(entry.slot.start),
+      endTime: to24h(entry.slot.end),
+      groupNumber: entry.group,
+      location: entry.place,
+    });
+    setEditModalVisible(true);
+  };
+
+  const openEditForOcr = (entry: OCREntry, index: number) => {
+    setEditContext("ocr");
+    setEditingId(null);
+    setEditingIndex(index);
+    setEditForm({
+      courseCode: entry.courseCode,
+      courseName: entry.courseName || entry.courseCode,
+      sessionType:
+        (entry.sessionType as EditFormState["sessionType"]) || "Lecture",
+      day: DAY_NUMBER_TO_NAME[entry.dayOfWeek] || "Sunday",
+      startTime: entry.startTime,
+      endTime: entry.endTime,
+      groupNumber: entry.groupNumber,
+      location: entry.location,
+    });
+    setEditModalVisible(true);
+  };
+
+  const removeOcrPreviewEntry = (index: number) => {
+    setOcrPreviewEntries((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  const closeEditModal = () => {
+    setEditModalVisible(false);
+    setEditContext(null);
+    setEditingId(null);
+    setEditingIndex(null);
+  };
+
+  const handleEditSave = async () => {
+    const startTime = to24h(editForm.startTime);
+    const endTime = to24h(editForm.endTime);
+    if (!editForm.courseName && !editForm.courseCode) {
+      Alert.alert("Missing info", "Please enter a course name or code.");
+      return;
+    }
+    const subjectLabel =
+      editForm.courseName || editForm.courseCode || "Untitled";
+    if (!startTime || !endTime) {
+      Alert.alert("Missing time", "Please enter valid start and end times.");
+      return;
+    }
+
+    if (editContext === "ocr" && editingIndex != null) {
+      const nextEntry: OCREntry = {
+        courseCode: editForm.courseCode || editForm.courseName,
+        courseName: editForm.courseName || editForm.courseCode,
+        dayOfWeek: DAY_NAME_TO_NUMBER[editForm.day] ?? 0,
+        startTime,
+        endTime,
+        sessionType: editForm.sessionType,
+        groupNumber: editForm.groupNumber,
+        location: editForm.location,
+      };
+      setOcrPreviewEntries((prev) =>
+        prev.map((entry, idx) => (idx === editingIndex ? nextEntry : entry)),
+      );
+      closeEditModal();
+      return;
+    }
+
+    if (editContext === "schedule" && editingId != null) {
+      const updatedEntry: ScheduleEntry = {
+        id: editingId,
+        subject: subjectLabel,
+        type: TYPE_TO_SHORT[editForm.sessionType] || "Lec",
+        day: editForm.day,
+        slot: { start: to12h(startTime), end: to12h(endTime) },
+        group: editForm.groupNumber,
+        place: editForm.location,
+      };
+
+      setSchedules((prev) =>
+        prev.map((entry) => (entry.id === editingId ? updatedEntry : entry)),
+      );
+
+      try {
+        if (user && typeof editingId === "string") {
+          const token = await user.getIdToken();
+          await fetch(`${API_URL}/api/schedule/session/${editingId}`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              courseCode: editForm.courseCode,
+              courseName: editForm.courseName,
+              dayOfWeek: DAY_NAME_TO_NUMBER[editForm.day] ?? 0,
+              startTime,
+              endTime,
+              sessionType: editForm.sessionType,
+              groupNumber: editForm.groupNumber,
+              location: editForm.location,
+            }),
+          });
+        }
+      } catch (err) {
+        console.error("[TimeTable] Error updating session:", err);
+      }
+    }
+
+    closeEditModal();
   };
 
   // Group by day
@@ -767,7 +977,7 @@ const TimetableScreen = () => {
           </Text>
         </View>
         <View style={s.headerActions}>
-          {/* Sync/Save Button */}
+          {/* Save Button */}
           <TouchableOpacity
             style={[s.scanButton, { backgroundColor: colors.indigo + "20" }]}
             onPress={syncToCloud}
@@ -778,10 +988,29 @@ const TimetableScreen = () => {
             ) : (
               <>
                 <Feather name="refresh-cw" size={16} color={colors.indigo} />
-                <Text style={[s.scanButtonText, { color: colors.indigo }]}>Save</Text>
+                <Text style={[s.scanButtonText, { color: colors.indigo }]}>
+                  Save
+                </Text>
               </>
             )}
           </TouchableOpacity>
+
+          {/* Replace from Image Button */}
+          <TouchableOpacity
+            style={s.replaceButton}
+            onPress={handleScanPress}
+            disabled={scanLoading}
+          >
+            {scanLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Feather name="camera" size={16} color="#fff" />
+                <Text style={s.replaceButtonText}>Replace from Image</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
           {/* Add Class Button */}
           <TouchableOpacity
             style={s.addButton}
@@ -790,9 +1019,20 @@ const TimetableScreen = () => {
             <Feather name="plus" size={18} color="#fff" />
             <Text style={s.addButtonText}>Add</Text>
           </TouchableOpacity>
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color={colors.indigo} />
+            ) : (
+              <>
+      {/* ── Scanning overlay ── */}
+      {scanLoading && (
+        <View style={s.processingOverlay}>
+          <View style={s.processingCard}>
+            <ActivityIndicator size="large" color={colors.indigo} />
+            <Text style={s.processingText}>{scanMessage}</Text>
+          </View>
         </View>
-      </View>
-
+      )}
       {/* ── Schedule list grouped by day ── */}
       {loading ? (
         <View style={s.centered}>
@@ -805,7 +1045,7 @@ const TimetableScreen = () => {
           </View>
           <Text style={s.emptyTitle}>No Classes Yet</Text>
           <Text style={s.emptyText}>
-            Add classes manually or scan your schedule photo
+            Add classes manually or scan your schedule photo to replace the current schedule.
           </Text>
 
           {missingFromSchedule.length > 0 && (
@@ -838,14 +1078,13 @@ const TimetableScreen = () => {
               </ScrollView>
             </View>
           )}
-
           <View style={s.emptyActions}>
             <TouchableOpacity
               style={s.emptyActionBtn}
               onPress={handleScanPress}
             >
               <Feather name="camera" size={18} color={colors.indigo} />
-              <Text style={s.emptyActionText}>Scan Schedule</Text>
+              <Text style={s.emptyActionText}>Replace from Image</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[s.emptyActionBtn, s.emptyActionBtnFilled]}
@@ -914,12 +1153,24 @@ const TimetableScreen = () => {
                             </Text>
                           </View>
                         </View>
-                        <TouchableOpacity
-                          onPress={() => removeSchedule(item.id)}
-                          style={s.deleteBtn}
-                        >
-                          <Feather name="trash-2" size={15} color="#ef4444" />
-                        </TouchableOpacity>
+                        <View style={s.classActions}>
+                          <TouchableOpacity
+                            onPress={() => openEditForSchedule(item)}
+                            style={s.editBtn}
+                          >
+                            <Feather
+                              name="edit-2"
+                              size={15}
+                              color={colors.textMuted}
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => removeSchedule(item.id)}
+                            style={s.deleteBtn}
+                          >
+                            <Feather name="trash-2" size={15} color="#ef4444" />
+                          </TouchableOpacity>
+                        </View>
                       </View>
                       {/* Info row */}
                       <View style={s.classInfoRow}>
@@ -961,6 +1212,7 @@ const TimetableScreen = () => {
             );
           })}
 
+
           {missingFromSchedule.length > 0 && (
             <View style={s.suggestedSection}>
               <View style={s.sectionDivider} />
@@ -993,6 +1245,94 @@ const TimetableScreen = () => {
                           ]}
                         >
                           <Feather name="plus" size={14} color="#fff" />
+
+      {/* ── Source Picker Modal ── */}
+      <Modal visible={sourcePickerVisible} transparent animationType="fade">
+        <TouchableOpacity style={s.sourceOverlay} activeOpacity={1} onPress={() => setSourcePickerVisible(false)}>
+          <View style={s.sourceSheet}>
+            <View style={s.sourceHandle} />
+            <Text style={s.sourceTitle}>Replace Schedule</Text>
+            <Text style={s.sourceSubtitle}>Choose how to upload your schedule image</Text>
+
+            <TouchableOpacity style={s.sourceOption} onPress={pickFromCamera}>
+              <View style={[s.sourceIconCircle, { backgroundColor: '#6366f1' + '18' }]}>
+                <Feather name="camera" size={22} color="#6366f1" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.sourceOptionTitle}>Take Photo</Text>
+                <Text style={s.sourceOptionDesc}>Capture your schedule with camera</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={s.sourceOption} onPress={pickFromGallery}>
+              <View style={[s.sourceIconCircle, { backgroundColor: '#14b8a6' + '18' }]}>
+                <Feather name="image" size={22} color="#14b8a6" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.sourceOptionTitle}>From Gallery</Text>
+                <Text style={s.sourceOptionDesc}>Pick an existing photo</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={s.sourceCancelBtn} onPress={() => setSourcePickerVisible(false)}>
+              <Text style={s.sourceCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── OCR Preview Modal ── */}
+      <Modal visible={scanModalVisible} transparent animationType="slide">
+        <View style={s.modalOverlay}>
+          <View style={s.ocrModalContent}>
+            {/* Header */}
+            <View style={s.ocrModalHeader}>
+              <View>
+                <Text style={s.ocrModalTitle}>Extracted Classes</Text>
+                <Text style={s.ocrModalSubtitle}>
+                  {ocrPreviewEntries.length} classes found
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => { setScanModalVisible(false); setOcrPreviewEntries([]); }}>
+                <Feather name="x" size={24} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Preview list */}
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+              {ocrPreviewEntries.map((entry, idx) => {
+                const typeShort = TYPE_TO_SHORT[entry.sessionType] || 'Lec';
+                const dayName = DAY_NUMBER_TO_NAME[entry.dayOfWeek] || 'Sunday';
+                return (
+                  <View key={idx} style={s.ocrClassCard}>
+                    <View style={[s.ocrAccent, { backgroundColor: TYPE_COLORS[typeShort] || '#6366f1' }]} />
+                    <View style={s.ocrClassContent}>
+                      <View style={s.ocrClassTopRow}>
+                        <Text style={s.ocrClassName} numberOfLines={1}>
+                          {entry.courseName || entry.courseCode || 'Unknown'}
+                        </Text>
+                        <View style={s.ocrTopActions}>
+                          <View style={[s.typeBadge, { backgroundColor: (TYPE_COLORS[typeShort] || '#6366f1') + '18', borderColor: TYPE_COLORS[typeShort] || '#6366f1' }]}>
+                            <Text style={[s.typeBadgeText, { color: TYPE_COLORS[typeShort] || '#6366f1' }]}>{entry.sessionType}</Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => openEditForOcr(entry, idx)}
+                            style={s.ocrActionBtn}
+                          >
+                            <Feather
+                              name="edit-2"
+                              size={14}
+                              color={colors.textMuted}
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => removeOcrPreviewEntry(idx)}
+                            style={s.ocrActionBtn}
+                          >
+                            <Feather name="trash-2" size={14} color="#ef4444" />
+                          </TouchableOpacity>
                         </View>
                       </View>
                       <View style={s.classInfoRow}>
@@ -1008,13 +1348,148 @@ const TimetableScreen = () => {
                         </View>
                       </View>
                     </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
+
+
+
+
+
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            {/* Actions */}
+            <View style={s.ocrActions}>
+              <TouchableOpacity
+                style={s.ocrCancelBtn}
+                onPress={() => { setScanModalVisible(false); setOcrPreviewEntries([]); }}
+              >
+                <Text style={s.ocrCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.ocrConfirmBtn} onPress={confirmOCRImport}>
+                <Feather name="check" size={18} color="#fff" />
+                <Text style={s.ocrConfirmText}>Replace Schedule</Text>
+              </TouchableOpacity>
+
             </View>
           )}
         </ScrollView>
       )}
+
+      {/* ── Edit Entry Modal ── */}
+      <Modal visible={editModalVisible} transparent animationType="slide">
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>{editContext === 'ocr' ? 'Edit Extracted Class' : 'Edit Class'}</Text>
+              <TouchableOpacity onPress={closeEditModal}>
+                <Feather name="x" size={24} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+              <Text style={s.label}>Course Name</Text>
+              <TextInput
+                style={s.input}
+                placeholder="e.g. Operating Systems"
+                placeholderTextColor={colors.textMuted}
+                value={editForm.courseName}
+                onChangeText={t => setEditForm(prev => ({ ...prev, courseName: t }))}
+              />
+
+              <Text style={s.label}>Course Code</Text>
+              <TextInput
+                style={s.input}
+                placeholder="e.g. CS408"
+                placeholderTextColor={colors.textMuted}
+                value={editForm.courseCode}
+                onChangeText={t => setEditForm(prev => ({ ...prev, courseCode: t }))}
+              />
+
+              <Text style={s.label}>Class Type</Text>
+              <View style={s.typeRow}>
+                {EDIT_TYPE_OPTIONS.map(option => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      s.typeBtn,
+                      editForm.sessionType === option && {
+                        backgroundColor: colors.indigo,
+                        borderColor: colors.indigo,
+                      },
+                    ]}
+                    onPress={() => setEditForm(prev => ({ ...prev, sessionType: option }))}
+                  >
+                    <Text style={[s.typeBtnCode, editForm.sessionType === option && { color: '#fff' }]}>
+                      {option.slice(0, 3)}
+                    </Text>
+                    <Text style={[s.typeBtnLabel, editForm.sessionType === option && { color: '#fff' }]}>
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={s.label}>Day</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipRow}>
+                {DAYS.map(day => (
+                  <TouchableOpacity
+                    key={day}
+                    style={[s.chip, editForm.day === day && s.chipActive]}
+                    onPress={() => setEditForm(prev => ({ ...prev, day }))}
+                  >
+                    <Text style={[s.chipText, editForm.day === day && s.chipTextActive]}>
+                      {day.substring(0, 3)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <Text style={s.label}>Start Time (24h)</Text>
+              <TextInput
+                style={s.input}
+                placeholder="08:00"
+                placeholderTextColor={colors.textMuted}
+                value={editForm.startTime}
+                onChangeText={t => setEditForm(prev => ({ ...prev, startTime: t }))}
+              />
+
+              <Text style={s.label}>End Time (24h)</Text>
+              <TextInput
+                style={s.input}
+                placeholder="10:00"
+                placeholderTextColor={colors.textMuted}
+                value={editForm.endTime}
+                onChangeText={t => setEditForm(prev => ({ ...prev, endTime: t }))}
+              />
+
+              <Text style={s.label}>Group Number</Text>
+              <TextInput
+                style={s.input}
+                placeholder="e.g. G1"
+                placeholderTextColor={colors.textMuted}
+                value={editForm.groupNumber}
+                onChangeText={t => setEditForm(prev => ({ ...prev, groupNumber: t }))}
+              />
+
+              <Text style={s.label}>Location</Text>
+              <TextInput
+                style={s.input}
+                placeholder="e.g. Hall 101"
+                placeholderTextColor={colors.textMuted}
+                value={editForm.location}
+                onChangeText={t => setEditForm(prev => ({ ...prev, location: t }))}
+              />
+
+              <View style={{ height: 20 }} />
+            </ScrollView>
+
+            <TouchableOpacity style={s.submitBtn} onPress={handleEditSave}>
+              <Text style={s.submitBtnText}>Save Changes</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Add Class Modal ── */}
       <Modal visible={addModalVisible} transparent animationType="slide">
@@ -1304,6 +1779,70 @@ const styles = (colors: any) =>
     },
     subtitle: { fontSize: 14, color: colors.textMuted, marginTop: 2 },
     headerActions: { flexDirection: "row", gap: 8 },
+    replaceButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#14b8a6",
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      gap: 6,
+    },
+    replaceButtonText: { color: "#fff", fontWeight: "600", fontSize: 13 },
+
+    // Scanning banner
+    scanningBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginHorizontal: 16,
+      padding: 14,
+      backgroundColor: colors.indigo + "12",
+      borderRadius: 12,
+      marginBottom: 8,
+    },
+    scanningText: { fontSize: 13, color: colors.indigo, fontWeight: "500" },
+    processingOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    processingCard: {
+      width: "100%",
+      maxWidth: 320,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 20,
+      alignItems: "center",
+      gap: 12,
+    },
+    processingText: {
+      fontSize: 14,
+      color: colors.textPrimary,
+      textAlign: "center",
+    },
+
+    // Header
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 20,
+      paddingTop: 16,
+    },
+    screenTitle: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: colors.textPrimary,
+    },
+    subtitle: { fontSize: 14, color: colors.textMuted, marginTop: 2 },
+    headerActions: { flexDirection: "row", gap: 8 },
     scanButton: {
       flexDirection: "row",
       alignItems: "center",
@@ -1327,18 +1866,55 @@ const styles = (colors: any) =>
     },
     addButtonText: { color: "#fff", fontWeight: "600", fontSize: 13 },
 
-    // Scanning banner
-    scanningBanner: {
+    // Class card (new design)
+    classCard: {
       flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-      marginHorizontal: 16,
-      padding: 14,
-      backgroundColor: colors.indigo + "12",
-      borderRadius: 12,
+      backgroundColor: colors.card,
+      borderRadius: 14,
       marginBottom: 8,
+      overflow: "hidden",
+      elevation: 2,
+      shadowColor: "#000",
+      shadowOpacity: 0.05,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 2 },
     },
-    scanningText: { fontSize: 13, color: colors.indigo, fontWeight: "500" },
+    classAccent: { width: 4 },
+    classContent: { flex: 1, padding: 12, paddingLeft: 14 },
+    classTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    classActions: { flexDirection: "row", gap: 6 },
+    subjectText: {
+      fontSize: 15,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 4,
+    },
+    classInfoRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+      marginTop: 8,
+    },
+    infoItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+    infoText: { fontSize: 12, color: colors.textMuted },
+    editBtn: {
+      width: 32,
+      height: 32,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 8,
+    },
+    deleteBtn: {
+      width: 32,
+      height: 32,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 8,
+    },
 
     // Day card
     dayCard: { marginBottom: 16 },
@@ -1448,6 +2024,75 @@ const styles = (colors: any) =>
       borderRadius: 12,
     },
     conflictBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+
+    // OCR preview modal
+    ocrModalContent: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      height: "85%",
+      padding: 20,
+    },
+    ocrModalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 12,
+    },
+    ocrModalTitle: { fontSize: 20, fontWeight: "bold", color: colors.textPrimary },
+    ocrModalSubtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+    ocrClassCard: {
+      flexDirection: "row",
+      backgroundColor: colors.bg,
+      borderRadius: 12,
+      marginBottom: 8,
+      overflow: "hidden",
+    },
+    ocrAccent: { width: 4 },
+    ocrClassContent: { flex: 1, padding: 12 },
+    ocrClassTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    ocrTopActions: { flexDirection: "row", alignItems: "center", gap: 6 },
+    ocrActionBtn: {
+      width: 28,
+      height: 28,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 8,
+    },
+    ocrClassName: {
+      fontSize: 14,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      flex: 1,
+      marginRight: 8,
+    },
+    ocrClassInfoRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+    ocrActions: { flexDirection: "row", gap: 10, marginTop: 12 },
+    ocrCancelBtn: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: "center",
+    },
+    ocrCancelText: { fontSize: 15, fontWeight: "600", color: colors.textMuted },
+    ocrConfirmBtn: {
+      flex: 2,
+      flexDirection: "row",
+      gap: 6,
+      paddingVertical: 14,
+      borderRadius: 14,
+      backgroundColor: colors.indigo,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    ocrConfirmText: { fontSize: 15, fontWeight: "700", color: "#fff" },
 
     // Add class modal
     modalOverlay: {

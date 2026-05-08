@@ -2,18 +2,21 @@ const express = require("express");
 const router = express.Router();
 
 // FIXED: Renamed the variable to match the routes below
-const requireAuth = require("../middlewares/auth.middleware"); 
-const upload = require("../middlewares/upload.middleware");
+const requireAuth = require("../middlewares/auth.middleware");
+const imageUpload = require("../middlewares/imageUpload.middleware");
 
 const {
   saveTimetable,
   addOrUpdateSchedule,
   getMySchedule,
   deleteSession,
+  updateSession,
   saveAISchedule,
   getMyTimetable,
   addTimeTableEntry,
   getTimeTable,
+  parseScheduleFromImage,
+  replaceScheduleFromImage,
   importScheduleFromImage,
 } = require("../controllers/Schedule.controller");
 
@@ -64,6 +67,13 @@ router.get("/my-schedule", requireAuth, getMySchedule);
  */
 router.delete("/session/:sessionId", requireAuth, deleteSession);
 
+/**
+ * @route   PATCH /api/schedule/session/:sessionId
+ * @desc    Update a specific session
+ * @access  Private
+ */
+router.patch("/session/:sessionId", requireAuth, updateSession);
+
 // ── New Routes (Mobile + AI) ──
 
 /**
@@ -95,10 +105,39 @@ router.post("/add-entry", requireAuth, addTimeTableEntry);
 router.get("/timetable/:timeTableId", requireAuth, getTimeTable);
 
 /**
- * @route   POST /api/schedule/import-from-image
- * @desc    Upload schedule image/PDF → OCR extract → add classes to timetable
+ * @route   POST /api/schedule/parse-from-image
+ * @desc    Upload schedule image → AI extract → preview entries
  * @access  Private
  */
-router.post("/import-from-image", requireAuth, upload.single('file'), importScheduleFromImage);
+router.post(
+  "/parse-from-image",
+  requireAuth,
+  imageUpload.single("file"),
+  parseScheduleFromImage,
+);
+
+/**
+ * @route   POST /api/schedule/replace-from-image
+ * @desc    Upload schedule image → AI extract → replace timetable entries
+ * @access  Private
+ */
+router.post(
+  "/replace-from-image",
+  requireAuth,
+  imageUpload.single("file"),
+  replaceScheduleFromImage,
+);
+
+/**
+ * @route   POST /api/schedule/import-from-image
+ * @desc    Upload schedule image/PDF → AI extract → add classes to timetable
+ * @access  Private
+ */
+router.post(
+  "/import-from-image",
+  requireAuth,
+  imageUpload.single("file"),
+  importScheduleFromImage,
+);
 
 module.exports = router;

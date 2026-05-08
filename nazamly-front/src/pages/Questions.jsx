@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getMyCoursesMaterials, getSubFolderFiles } from "../services/materialsService";
 import { API_URL, auth } from "../firebase";
-import { useLocation } from "react-router-dom";
+import { useLocation, useOutletContext } from "react-router-dom";
 
 import {
   GenerateIcon, ArchiveIcon, BrainIcon, QuizIcon, MidtermIcon, FinalIcon,
@@ -114,6 +114,7 @@ function NseCustomSelect({ value, onChange, options, placeholder, disabled, icon
 // ══════════════════════════════════════════════
 function Questions() {
   const location = useLocation();
+  const { user } = useOutletContext();
   // ── Tab Navigation ──
   const [activeMainTab, setActiveMainTab] = useState("generate"); // "generate" | "archive"
 
@@ -171,10 +172,24 @@ function Questions() {
   const allAnswered = totalQuestions > 0 && answeredCount === totalQuestions;
   const progressPercent = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
 
-  // ── Initial Data Fetch ──
+  // ── Initial Data Fetch — prefer user.termCourses, fallback to materials service ──
   useEffect(() => {
     setCoursesLoading(true);
     setCoursesError(null);
+
+    // If the user has registered courses from onboarding, use them directly
+    if (user?.termCourses && user.termCourses.length > 0) {
+      const mapped = user.termCourses.map((c) => ({
+        courseId: c._id || c.courseCode,
+        courseCode: c.courseCode,
+        courseName: c.name || c.courseName,
+      }));
+      setCourses(mapped);
+      setCoursesLoading(false);
+      return;
+    }
+
+    // Fallback: fetch from materials service (covers legacy users)
     getMyCoursesMaterials()
       .then((data) => {
         setCourses(data || []);
@@ -186,7 +201,7 @@ function Questions() {
       .finally(() => {
         setCoursesLoading(false);
       });
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (activeMainTab === "history") {
@@ -575,7 +590,11 @@ function Questions() {
                     icon={<GraduationCapIcon size={16} />}
                   />
                   {!coursesLoading && courses.length === 0 && !coursesError && (
-                    <p style={{ color: 'var(--text-secondary)', padding: '10px', marginTop: '8px' }}>No courses available yet.</p>
+                    <div className="nse-empty-courses">
+                      <GraduationCapIcon size={32} />
+                      <p>You haven't registered for any courses yet.</p>
+                      <span>Complete your profile to access question banks for your enrolled courses.</span>
+                    </div>
                   )}
                   {coursesError && (
                     <p style={{ color: '#ff6b6b', padding: '10px', marginTop: '8px' }}>{coursesError}</p>

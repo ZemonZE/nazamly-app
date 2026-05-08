@@ -18,6 +18,7 @@ const adminCodingRoutes = require('./routes/admin-coding.routes');
 const courseMaterialsRoutes = require('./routes/courseMaterials.routes');
 const adminRoutes = require('./routes/admin.routes');
 const studentRoutes = require('./routes/student.routes');
+const studentRegistrationRoutes = require('./routes/studentRegistration.routes');
 
 const app = express();
 
@@ -129,6 +130,7 @@ app.use('/api/admin/coding', adminCodingRoutes);
 app.use('/api/course-materials', courseMaterialsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/students', studentRegistrationRoutes);
 
 // ════════════════════════════════════════════════
 //  7. Global Error Handler

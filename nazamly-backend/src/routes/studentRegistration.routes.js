@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
 
+const requireAuth = require('../middlewares/auth.middleware');
 const { registerStudent } = require('../controllers/student.controller');
 
 /**
  * @route   POST /api/students/register
- * @desc    Register a new student profile (used by Schedule Generator)
- * @access  Public
+ * @desc    Complete authenticated user's student profile (onboarding)
+ * @access  Private (requires Firebase Auth token)
  */
-router.post('/register', registerStudent);
+router.post('/register', requireAuth, registerStudent);
 
 module.exports = router;

@@ -56,7 +56,7 @@ const StudentRegistrationScreen = () => {
   };
 
   const updateField = (field: keyof StudentRegistrationData, value: any) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev: StudentRegistrationData) => ({ ...prev, [field]: value }));
   };
 
   return (

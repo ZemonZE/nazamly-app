@@ -269,6 +269,74 @@ const analyzeProfessorStyle = async (questionsArray) => {
 };
 
 /**
+ * Extracts timetable entries from a schedule image using Gemini.
+ * Returns a JSON array of entries with normalized fields (raw output only).
+ */
+const extractScheduleTableFromImages = async (files) => {
+    const prompt = `
+    Analyze this Arabic university timetable or registration list image and extract ALL rows.
+    The table is RTL (right-to-left). Column order can vary.
+    Match columns by HEADER LABELS, not by position.
+
+    Use these headers when present:
+    - "كود المقرر" (Course Code)
+    - "اسم المقرر" (Course Name) (optional)
+    - "نوع المقرر" or "ن الدراسة" (Type) -> Lecture | Section | Lab
+    - "المجموعة" (Group)
+    - "اليوم" (Day) -> return as English day name (Saturday..Thursday)
+    - "من" (Start Time)
+    - "الى" or "إلى" (End Time)
+    - "المكان" (Location)
+
+    Ignore columns like:
+    - "الترم", "عدد الساعات المعتمدة", "سعر الكتاب", "تاريخ التسجيل", "حذف"
+
+    RULES:
+    - Extract EVERY visible row. Do not summarize.
+    - Return ONLY valid JSON (no markdown).
+    - Times must be 24h HH:MM.
+    - If course name is missing, leave it empty.
+
+    Schema:
+    [{"courseCode":"","courseName":"","sessionType":"Lecture","dayOfWeek":"Saturday","startTime":"08:00","endTime":"10:00","groupNumber":"1","location":""}]
+    `;
+
+    try {
+        console.log('[AI Service] Dispatching timetable extraction request...');
+        const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        const geminiModel = genAI.getGenerativeModel({ model: modelName });
+
+        const fs = require('fs');
+        const geminiImageParts = await Promise.all(files.map(async file => {
+            const buffer = file.buffer || await fs.promises.readFile(file.path);
+            return {
+                inlineData: { data: buffer.toString('base64'), mimeType: file.mimetype }
+            };
+        }));
+
+        const result = await geminiModel.generateContent([prompt, ...geminiImageParts]);
+        const responseText = result.response.text();
+
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        if (!jsonMatch) {
+            throw new Error('Model did not return a valid JSON array structure.');
+        }
+
+        const cleanedText = jsonMatch[0].trim();
+        return {
+            extractedData: JSON.parse(cleanedText),
+            usedModel: modelName,
+        };
+    } catch (error) {
+        console.error(`[AI Service] Timetable extraction failed: ${error.message}`);
+        if (error.message.includes('429') || error.message.includes('503')) {
+            throw new Error('AI Service is currently overloaded. Please try again later.');
+        }
+        throw new Error(`AI Timetable Extraction Failed: ${error.message}`);
+    }
+};
+
+/**
  * Generates a custom exam using RAG (Retrieval-Augmented Generation).
  * Combines aggregated lecture concepts with a professor's style profile
  * to produce questions that match the professor's testing patterns.
@@ -280,7 +348,7 @@ const analyzeProfessorStyle = async (questionsArray) => {
  * @returns {Array<{ questionText: string, options: string[], correctAnswer: string, difficulty: number, aiConfidenceScore: number, derivedFromConcept: string }>}
  */
 const generateCustomExamWithRAG = async (aggregatedConcepts, professorProfile, examType, questionCount) => {
-    const prompt = `You are an expert exam creator. Generate a "${examType}" exam with exactly ${questionCount} questions. Distribute the questions comprehensively across these aggregated course concepts: ${JSON.stringify(aggregatedConcepts)}. CRITICAL: You must strictly emulate this professor's testing style and exam structure: ${JSON.stringify(professorProfile)}. Ensure the ratio of question types (MCQ, True/False, etc.) and difficulties matches the profile. Return ONLY a valid JSON array of objects. Each object MUST strictly match: { "questionText": "...", "options": ["..."], "correctAnswer": "...", "difficulty": (1-5), "aiConfidenceScore": (0-100), "derivedFromConcept": "brief concept reference" }. Do not include markdown formatting.`;
+    const prompt = 'You are an expert exam creator. Generate a "' + examType + '" exam with exactly ' + questionCount + ' questions. Distribute the questions comprehensively across these aggregated course concepts: ' + JSON.stringify(aggregatedConcepts) + '. CRITICAL: You must strictly emulate this professor\'s testing style and exam structure: ' + JSON.stringify(professorProfile) + '. Ensure the ratio of question types (MCQ, True/False, etc.) and difficulties matches the profile. Return ONLY a valid JSON array of objects. Each object MUST strictly match: { "questionText": "...", "options": ["..."], "correctAnswer": "...", "difficulty": (1-5), "aiConfidenceScore": (0-100), "derivedFromConcept": "brief concept reference" }. Do not include markdown formatting.';
 
     try {
         console.log(`[AI Service] Generating ${examType} exam with ${questionCount} questions using RAG...`);
@@ -391,13 +459,114 @@ const fetchAvailableGeminiModels = async () => {
     }
 };
 
+/**
+ * Extracts course data from a transcript image or PDF using Gemini vision.
+ * Replaces the old Python OCR microservice with a pure Node.js/Gemini approach.
+ *
+ * @param {string} filePath - Absolute path to the uploaded transcript file
+ * @returns {Promise<{ courses: Array, semester: string|null, student_id: string|null, confidence: number, source: string }>}
+ */
+const extractTranscriptFromFile = async (filePath) => {
+    const fs = require('fs');
+    const path = require('path');
+
+    const prompt = `Analyze this Arabic university transcript document (image or PDF).
+    Extract ALL courses visible in the transcript.
+
+    For each course, extract:
+    - courseCode: The course code (e.g., "CS411", "س411"). Normalize Arabic codes to Latin if possible.
+    - courseName: The full course name if visible.
+    - mark: The numeric grade/mark (e.g., 85, 92). Use null if not visible.
+    - gradePoints: The GPA grade points (e.g., 4.0, 3.67, 3.0). Use null if not visible.
+    - symbol: The letter grade symbol (e.g., "A+", "B", "C"). Use null if not visible.
+    - creditHours: The credit hours for the course. Use null if not visible.
+    - semester: The semester this course belongs to if visible. Use null if not visible.
+
+    Also extract:
+    - semester: The overall semester/term shown in the transcript (e.g., "الفصل الأول 2024-2025")
+    - student_id: The student ID number if visible
+
+    RULES:
+    - Extract EVERY course row. Do not summarize.
+    - Return ONLY valid JSON (no markdown formatting).
+    - Be as accurate as possible with numbers.
+
+    Return a JSON object matching this schema:
+    {
+      "courses": [{"courseCode": "", "courseName": "", "mark": null, "gradePoints": null, "symbol": "", "creditHours": null, "semester": ""}],
+      "semester": "",
+      "student_id": "",
+      "confidence": 0.95
+    }
+
+    Set confidence between 0.0 and 1.0 based on how clearly you could read the document.`;
+
+    try {
+        console.log('[AI Service] Sending transcript to Gemini for extraction...');
+        const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+        const geminiModel = genAI.getGenerativeModel({ model: modelName });
+
+        const fileBuffer = await fs.promises.readFile(filePath);
+        const ext = path.extname(filePath).toLowerCase();
+        const mimeType = ext === '.pdf' ? 'application/pdf'
+            : ext === '.png' ? 'image/png'
+            : ext === '.webp' ? 'image/webp'
+            : 'image/jpeg';
+
+        const filePart = {
+            inlineData: {
+                data: fileBuffer.toString('base64'),
+                mimeType,
+            },
+        };
+
+        const MAX_RETRIES = 3;
+        let result = null;
+
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                result = await geminiModel.generateContent([prompt, filePart]);
+                break;
+            } catch (err) {
+                if (attempt === MAX_RETRIES) throw err;
+                const delayMs = Math.pow(2, attempt) * 1000;
+                console.warn(`[AI Service] Transcript attempt ${attempt} failed: ${err.message}, retrying in ${delayMs / 1000}s...`);
+                await new Promise(res => setTimeout(res, delayMs));
+            }
+        }
+
+        const responseText = result.response.text();
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+
+        if (!jsonMatch) {
+            throw new Error('Gemini did not return a valid JSON object for transcript extraction.');
+        }
+
+        const parsed = JSON.parse(jsonMatch[0].trim());
+        parsed.source = modelName;
+        parsed.confidence = parsed.confidence || 0.85;
+
+        console.log(`[AI Service] Transcript extraction completed. Found ${(parsed.courses || []).length} courses.`);
+        return parsed;
+
+    } catch (error) {
+        console.error(`[AI Service] Transcript extraction failed: ${error.message}`);
+        if (error.message.includes('429') || error.message.includes('503')) {
+            throw new Error('AI Service is currently overloaded. Please try again later.');
+        }
+        throw new Error(`AI Transcript Extraction Failed: ${error.message}`);
+    }
+};
+
 module.exports = { 
-    extractScheduleFromImages, 
+    extractScheduleFromImages,
+    extractScheduleTableFromImages,
     extractLectureConcepts, 
     parseExamAndLinkToLectures, 
     analyzeProfessorStyle, 
     generateCustomExamWithRAG, 
     evaluateEssayAnswers, 
     updateActiveGeminiModel,
-    fetchAvailableGeminiModels 
+    fetchAvailableGeminiModels,
+    extractTranscriptFromFile
 };

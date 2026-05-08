@@ -21,35 +21,18 @@ const classifyGpa = (v) => {
   return { label: "", color: "", css: "" };
 };
 
-const mockCodingHistory = [
-  {
-    problemName: "Two Sum",
-    language: "C++",
-    difficulty: "Easy",
-    timeAgo: "2 hours ago",
-  },
-  {
-    problemName: "Longest Substring",
-    language: "JavaScript",
-    difficulty: "Medium",
-    timeAgo: "1 day ago",
-  },
-  {
-    problemName: "Merge Intervals",
-    language: "Java",
-    difficulty: "Medium",
-    timeAgo: "3 days ago",
-  },
-];
 
 function Profile() {
   const { user } = useOutletContext();
   const navigate = useNavigate();
   const [quizHistory, setQuizHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [codingHistory, setCodingHistory] = useState([]);
+  const [codingLoading, setCodingLoading] = useState(true);
+  const [codingError, setCodingError] = useState("");
 
-  // Goal Tracker Mock Calculations
-  const targetGpa = 3.8; // Set mock constant, ready to be linked to API later
+  // Goal Tracker
+  const targetGpa = 3.8;
   const currentGpa = user?.cgpa || 0;
   const remainingGpa = Math.max(targetGpa - currentGpa, 0).toFixed(2);
   const goalPercent =
@@ -77,6 +60,29 @@ function Profile() {
     fetchHistory();
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    const fetchCodingHistory = async () => {
+      try {
+        setCodingLoading(true);
+        setCodingError("");
+        const token = await auth.currentUser.getIdToken();
+        const res = await fetch(`${API_URL}/api/coding/history?limit=4`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok && Array.isArray(data.data)) {
+          setCodingHistory(data.data);
+        }
+      } catch (err) {
+        setCodingError(err.message || "Failed to load coding history.");
+      } finally {
+        setCodingLoading(false);
+      }
+    };
+    fetchCodingHistory();
+  }, [user]);
+
   if (!user) return null;
 
   const avatar = (user.displayName || user.fullName || "")
@@ -92,7 +98,7 @@ function Profile() {
           <h2>{user.displayName || user.fullName || "Student"}</h2>
           <p className="profile-email">{user.email}</p>
           <span className="profile-badge status-badge">
-            {user.accessStatus || "Active"}
+            {user.accessStatus || "Unknown"}
           </span>
         </div>
       </div>
@@ -325,34 +331,65 @@ function Profile() {
           <h3 style={{ margin: 0 }}>Recent Coding Practice</h3>
         </div>
 
-        <div className="profile-quizzes-grid">
-          {mockCodingHistory.map((item, idx) => (
-            <div key={idx} className="profile-quiz-card">
-              <div className="quiz-card-header">
-                <h4>{item.problemName}</h4>
-                <span className="quiz-date">{item.timeAgo}</span>
-              </div>
-              <div className="quiz-card-body">
-                <div className="quiz-score-badge">
-                  <span>{item.language}</span>
-                </div>
-                <span
-                  className={`quiz-percent ${item.difficulty === "Easy" ? "good" : item.difficulty === "Medium" ? "average" : "poor"}`}
-                >
-                  {item.difficulty}
-                </span>
-              </div>
+        {codingLoading ? (
+          <p className="profile-empty-text">Loading recent coding activity...</p>
+        ) : codingHistory.length > 0 ? (
+          <>
+            <div className="profile-coding-grid">
+              {codingHistory.map((entry) => {
+                const problem = entry.problemId || {};
+                const course = problem.courseId || {};
+                const status = entry.verdict === "AC"
+                  ? "Solved"
+                  : entry.verdict === "WA"
+                  ? "Attempted"
+                  : "Error";
+                const statusClass = entry.verdict === "AC"
+                  ? "solved"
+                  : entry.verdict === "WA"
+                  ? "attempted"
+                  : "error";
+                return (
+                  <div key={entry._id} className="profile-coding-card">
+                    <div className="coding-card-header">
+                      <h4>{problem.title || "Coding Problem"}</h4>
+                      <span className="coding-date">
+                        {entry.createdAt
+                          ? new Date(entry.createdAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : ""}
+                      </span>
+                    </div>
+                    <div className="coding-card-body">
+                      <span className="coding-course">
+                        {course.courseName || course.courseCode || "Unknown Course"}
+                      </span>
+                      {entry.language && (
+                        <span className="coding-lang">{entry.language.toUpperCase()}</span>
+                      )}
+                      <span className={`coding-status ${statusClass}`}>{status}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
-        <div className="profile-quiz-footer">
-          <button
-            className="view-all-history-btn"
-            onClick={() => navigate("/dashboard/coding")}
-          >
-            View Coding History
-          </button>
-        </div>
+            <div className="profile-quiz-footer">
+              <button
+                className="view-all-history-btn"
+                onClick={() => navigate("/dashboard/coding")}
+              >
+                View Coding History
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="profile-empty-text">
+            {codingError || "No coding activity recorded yet."}
+          </p>
+        )}
       </div>
     </div>
   );

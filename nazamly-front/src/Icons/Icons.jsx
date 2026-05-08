@@ -49,7 +49,7 @@ export const IconUser = () => (
 export const IconClose = ({ onClick }) => (
   <button
     className="input-action-btn"
-    title="مسح"
+    title="Clear"
     onClick={onClick}
     type="button"
   >
@@ -71,7 +71,7 @@ export const IconClose = ({ onClick }) => (
 export const IconEye = ({ open, onClick }) => (
   <button
     className="input-action-btn"
-    title={open ? "إخفاء" : "إظهار"}
+    title={open ? "Hide" : "Show"}
     onClick={onClick}
     type="button"
   >

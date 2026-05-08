@@ -7,6 +7,8 @@ const Session = require("../models/schedule/timeTableEntry.model");
  */
 const ALLOWED_UPDATE_FIELDS = [
   "courseId",
+  "courseCode",
+  "courseName",
   "dayOfWeek",
   "startTime",
   "endTime",

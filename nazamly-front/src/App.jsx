@@ -17,11 +17,46 @@ import Settings from "./pages/Settings";
 import CodingProblems from "./pages/CodingProblems";
 import ProblemSolver from "./pages/ProblemSolver";
 import Profile from "./pages/Profile";
+import StudentOnboarding from "./pages/StudentOnboarding";
 
 import { auth, API_URL } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
+import ForgotPassword from "./components/ForgotPassword";
 import mainLogo from "./assets/logo.jpg";
+
+/* ── Auth layout — declared outside App for stable React identity ── */
+function AuthLayout({ isLogin, onLogin, onSwitchToSignup, onSwitchToLogin, children }) {
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-header">
+          <a href="#">
+            <img src={mainLogo} className="site-logo" alt="Nazamly" />
+            <h1>Nazamly</h1>
+          </a>
+          <p className="tagline">Nazamly — Integrated Education Platform</p>
+        </div>
+        <div className="auth-content">
+          <InfoPanel />
+          {children ?? (
+            isLogin ? (
+              <Login
+                onLogin={onLogin}
+                switchToSignup={onSwitchToSignup}
+              />
+            ) : (
+              <Signup
+                onSignup={onLogin}
+                switchToLogin={onSwitchToLogin}
+              />
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const [user, setUser] = useState(null);
@@ -41,6 +76,11 @@ function App() {
               Authorization: `Bearer ${token}`,
             },
           });
+          if (!res.ok) {
+            await auth.signOut();
+            setUser(null);
+            return;
+          }
           const data = await res.json();
           setUser(data.user);
         } catch {
@@ -63,34 +103,6 @@ function App() {
     setUser(null);
   };
 
-  const AuthLayout = () => (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-header">
-          <a href="#">
-            <img src={mainLogo} className="site-logo" alt="Nazamly" />
-            <h1>Nazamly</h1>
-          </a>
-          <p className="tagline">Nazamly — Integrated Education Platform</p>
-        </div>
-        <div className="auth-content">
-          <InfoPanel />
-          {isLogin ? (
-            <Login
-              onLogin={handleLogin}
-              switchToSignup={() => setIsLogin(false)}
-            />
-          ) : (
-            <Signup
-              onSignup={handleLogin}
-              switchToLogin={() => setIsLogin(true)}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
   if (authLoading) {
     return (
       <div
@@ -110,22 +122,76 @@ function App() {
     <>
       <ThemeToggle />
       <Routes>
+        {/* ── Root redirect ── */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
+
+        {/* ── Auth (Login / Signup) ── */}
         <Route
           path="/login"
-          element={!user ? <AuthLayout /> : <Navigate to="/dashboard" />}
+          element={
+            !user ? (
+              <AuthLayout
+                isLogin={isLogin}
+                onLogin={handleLogin}
+                onSwitchToSignup={() => setIsLogin(false)}
+                onSwitchToLogin={() => setIsLogin(true)}
+              />
+            ) : user.isProfileComplete === true ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <Navigate to="/onboarding" replace />
+            )
+          }
         />
+
+        {/* ── Forgot Password ── */}
+        <Route
+          path="/forgot-password"
+          element={
+            user
+              ? <Navigate to="/dashboard" replace />
+              : <AuthLayout><ForgotPassword /></AuthLayout>
+          }
+        />
+
+        {/* ── Onboarding (incomplete profile only) ── */}
+        <Route
+          path="/onboarding"
+          element={
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : user.isProfileComplete === true ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <StudentOnboarding user={user} setUser={setUser} />
+            )
+          }
+        />
+
         {/* ── Standalone full-page routes (no sidebar/header) ── */}
         <Route
           path="/dashboard/coding/problems/:id"
-          element={user ? <ProblemSolver /> : <Navigate to="/login" />}
+          element={
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : user.isProfileComplete !== true ? (
+              <Navigate to="/onboarding" replace />
+            ) : (
+              <ProblemSolver />
+            )
+          }
         />
+
+        {/* ── Dashboard (complete profile only) ── */}
         <Route
           path="/dashboard"
           element={
-            user ? (
-              <DashboardLayout user={user} onLogout={handleLogout} />
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : user.isProfileComplete !== true ? (
+              <Navigate to="/onboarding" replace />
             ) : (
-              <Navigate to="/login" />
+              <DashboardLayout user={user} onLogout={handleLogout} />
             )
           }
         >
@@ -142,7 +208,9 @@ function App() {
           <Route path="coding" element={<CodingProblems />} />
           <Route path="profile" element={<Profile />} />
         </Route>
-        <Route path="*" element={<Navigate to="/login" />} />
+
+        {/* ── Catch-all: always send to /login (guards handle the rest) ── */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </>
   );

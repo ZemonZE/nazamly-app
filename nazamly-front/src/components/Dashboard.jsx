@@ -51,7 +51,7 @@ function Dashboard() {
   const { user } = useOutletContext();
   const navigate = useNavigate();
 
-  const status = user?.accessStatus || "Active";
+  const status = user?.accessStatus || "Unknown";
   const joinDate = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString("en-US")
     : new Date().toLocaleDateString("en-US");
@@ -62,13 +62,26 @@ function Dashboard() {
       <div className="dash-stats">
         <div className="stat-card">
           <span className="stat-label">Current GPA</span>
-          <span className="stat-value green">{user?.cgpa || "3.0"}</span>
+          <span className="stat-value green">{user?.cgpa != null ? user.cgpa : "—"}</span>
           <span className="stat-sub">out of 5.0</span>
+          {user?.cgpa != null && (
+            <div className="stat-progress-track">
+              <div
+                className="stat-progress-fill"
+                style={{ width: `${Math.min((user.cgpa / 5) * 100, 100)}%` }}
+              />
+            </div>
+          )}
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Completed Hours</span>
+          <span className="stat-value">{user?.completedHours != null ? user.completedHours : "—"}</span>
+          <span className="stat-sub">credit hours earned</span>
         </div>
         <div className="stat-card">
           <span className="stat-label">Account Status</span>
           <span className="stat-value">{status}</span>
-          <span className="stat-sub">Account is Active</span>
+          <span className="stat-sub">{status}</span>
         </div>
         <div className="stat-card">
           <span className="stat-label">Join Date</span>

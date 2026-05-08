@@ -92,7 +92,7 @@ router.delete('/my-courses/:courseId', removeTermCourse);
 
 /**
  * @route   POST /api/gpa/upload-transcript
- * @desc    Upload an image/PDF transcript → OCR extract → enrich → calculate GPA
+ * @desc    Upload an image/PDF transcript → AI extract → enrich → calculate GPA
  * @access  Private (rate limited: 5 uploads/hour)
  */
 router.post(

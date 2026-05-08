@@ -1,6 +1,40 @@
 const QuizAttempt = require('../models/quiz/quizAttempt.model');
 const userRepo = require('../Repos/User_Repo');
+const courseRepo = require('../Repos/Course_Repo');
+const mongoose = require('mongoose');
 const aiService = require('../services/ai.service');
+
+async function resolveCourseId(courseId, user) {
+  if (!courseId) return null;
+
+  let courseDoc = null;
+  const isObjectId = mongoose.Types.ObjectId.isValid(courseId);
+
+  if (isObjectId) {
+    courseDoc = await courseRepo.model.findOne({ _id: courseId, isDeleted: { $ne: true } });
+  }
+
+  if (!courseDoc) {
+    let courseCode = null;
+
+    if (typeof courseId === 'string' && !isObjectId) {
+      courseCode = courseId;
+    }
+
+    if (!courseCode && user?.termCourses?.length) {
+      const termMatch = user.termCourses.find(
+        (c) => c._id?.toString() === courseId.toString()
+      );
+      if (termMatch) courseCode = termMatch.courseCode;
+    }
+
+    if (courseCode) {
+      courseDoc = await courseRepo.findByCode(courseCode);
+    }
+  }
+
+  return courseDoc ? courseDoc._id : null;
+}
 
 /**
  * POST /api/student/quizzes/submit
@@ -23,6 +57,11 @@ exports.submitQuiz = async (req, res) => {
       return res.status(404).json({ error: 'User profile not found' });
     }
     const userId = user._id;
+
+    const resolvedCourseId = await resolveCourseId(courseId, user);
+    if (!resolvedCourseId) {
+      return res.status(400).json({ error: 'Invalid courseId' });
+    }
 
     // 1. Segregate and Initialize
     const essayBatch = [];
@@ -83,7 +122,7 @@ exports.submitQuiz = async (req, res) => {
     const attempt = await QuizAttempt.create({
       quizType: 'AI_GENERATED',
       userId,
-      courseId,
+      courseId: resolvedCourseId,
       totalQuestions,
       score,
       questionsSnapshot,
@@ -116,15 +155,43 @@ exports.getQuizHistory = async (req, res) => {
     }
     const userId = user._id;
 
-    const history = await QuizAttempt.find({ 
-        userId,
-        quizType: 'AI_GENERATED'
-      })
-      .populate('courseId', 'courseName courseCode')
+    const history = await QuizAttempt.find({
+      userId,
+      quizType: 'AI_GENERATED'
+    })
       .sort({ createdAt: -1 })
       .lean();
 
-    res.status(200).json({ history });
+    const courseIds = history
+      .map((attempt) => attempt.courseId)
+      .filter(Boolean)
+      .map((id) => id.toString());
+
+    const courses = courseIds.length > 0
+      ? await courseRepo.model
+          .find({ _id: { $in: courseIds }, isDeleted: { $ne: true } })
+          .select('courseName courseCode')
+          .lean()
+      : [];
+
+    const courseMap = new Map(courses.map((c) => [c._id.toString(), c]));
+    const termCourseMap = new Map(
+      (user.termCourses || []).map((c) => [
+        c._id?.toString(),
+        { courseName: c.name, courseCode: c.courseCode },
+      ])
+    );
+
+    const enriched = history.map((attempt) => {
+      const key = attempt.courseId ? attempt.courseId.toString() : null;
+      const course = key ? (courseMap.get(key) || termCourseMap.get(key)) : null;
+      return {
+        ...attempt,
+        courseId: course || null,
+      };
+    });
+
+    res.status(200).json({ history: enriched });
   } catch (error) {
     console.error('Error fetching quiz history:', error);
     res.status(500).json({ error: 'Failed to fetch history', details: error.message });

@@ -16,7 +16,7 @@ const CONFIDENCE_REVIEW_THRESHOLD = 0.80;
  *
  * Uses batch $in query for performance instead of N individual lookups.
  *
- * @param {Array}  courses  Raw courses from OCR service
+ * @param {Array}  courses  Raw courses from AI transcript extraction
  * @returns {Promise<Array>} Enriched course array
  */
 async function enrichCourses(courses) {
@@ -82,7 +82,7 @@ function calculateTermGPA(courses) {
 
 /**
  * Determine if a transcript needs manual review based on confidence score.
- * @param {number} confidence  OCR confidence (0.0 - 1.0)
+ * @param {number} confidence  AI extraction confidence (0.0 - 1.0)
  * @returns {boolean}
  */
 function needsReview(confidence) {

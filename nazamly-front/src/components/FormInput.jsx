@@ -13,6 +13,7 @@ function FormInput({
   showVisible,
   onToggle,
   errorMsg,
+  disabled,
 }) {
   return (
     <div className="form-group">
@@ -27,6 +28,7 @@ function FormInput({
           onChange={onChange}
           required
           autoComplete="new-password"
+          disabled={disabled}
         />
         <div className="input-actions">
           {showToggle && value && (

@@ -17,7 +17,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
 import { useAppTheme } from "@/constants/theme";
 import { useAuth } from "@/context/AuthContext";
+import {
+  DataSourceModal,
+  HistoryFlow,
+  Course,
+  DataSource,
+  classifyGpa,
+  gradeLabel,
+  computeStrategy,
+} from "@/components/gpa";
 import { API_URL } from "@/firebase";
+
 // --- Interfaces ---
 interface ExtractedCourse {
   courseCode: string;
@@ -916,7 +926,7 @@ export default function GpaPlannerScreen() {
   const [activeTab, setActiveTab] = useState<"calculator" | "planner">(
     "calculator",
   );
-  const [dataSource, setDataSource] = useState<DataSource>("manual");
+  const [dataSource, setDataSource] = useState<DataSource>("history");
   const [activeFlow, setActiveFlow] = useState<"none" | "upload" | "history">(
     "none",
   );

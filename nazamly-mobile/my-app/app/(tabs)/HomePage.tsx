@@ -13,6 +13,7 @@ import {
   SafeAreaView,
   Animated,
   Dimensions,
+  Modal,
 } from "react-native";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -105,6 +106,7 @@ const uploadStudentCard = async (
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
+
 interface StatCardProps {
   icon: keyof typeof Feather.glyphMap;
   label: string;
@@ -135,6 +137,8 @@ interface LocalEntry {
 }
 
 const SCHEDULE_STORAGE_KEY = "@nazamly_schedules_v2";
+const STUDENT_CARD_FRONT_KEY = "@nazamly_student_card_front";
+const STUDENT_CARD_BACK_KEY = "@nazamly_student_card_back";
 
 const DB_DAY_NAMES = [
   "Sunday",
@@ -192,6 +196,9 @@ const HomeScreen = () => {
   const [studentCardUrl, setStudentCardUrl] = useState<string | null>(
     backendUser?.studentCardPhotoURL || null,
   );
+  const [localCardFront, setLocalCardFront] = useState<string | null>(null);
+  const [localCardBack, setLocalCardBack] = useState<string | null>(null);
+  const [viewingCard, setViewingCard] = useState<"front" | "back" | null>(null);
 
   // 🌟 دالة مساعدة لضبط الرابط الكامل للصورة
   const getFullImageUrl = (url?: string | null) => {
@@ -213,9 +220,14 @@ const HomeScreen = () => {
   const today = new Date();
   const currentDayIndex = today.getDay();
   const firstName = user?.displayName?.split(" ")[0] || "Student";
-  const currentGpa = backendUser?.cgpa ?? backendUser?.currentCGPA ?? 3.84;
+  const currentGpa = backendUser?.cgpa ?? backendUser?.currentCGPA ?? 0;
+  const earnedHours =
+    backendUser?.completedHours ??
+    backendUser?.earnedCreditHours ??
+    backendUser?.totalEarnedHours ??
+    0;
   const targetGpa = 4.0;
-  const gpaProgress = Math.min(currentGpa / targetGpa, 1);
+  const gpaProgress = targetGpa > 0 ? Math.min(currentGpa / targetGpa, 1) : 0;
   const todayStr = today.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -328,7 +340,19 @@ const HomeScreen = () => {
       fetchProfileData();
       fetchScheduleData();
       fetchStudentCardData();
-    }, [fetchProfileData, fetchScheduleData, fetchStudentCardData]),
+      // Load local student card images
+      AsyncStorage.getItem(STUDENT_CARD_FRONT_KEY).then((v) =>
+        setLocalCardFront(v),
+      );
+      AsyncStorage.getItem(STUDENT_CARD_BACK_KEY).then((v) =>
+        setLocalCardBack(v),
+      );
+    }, [
+      fetchProfileData,
+      fetchScheduleData,
+      fetchStudentCardData,
+      refreshProfile,
+    ]),
   );
 
   const getGreeting = () => {
@@ -423,6 +447,8 @@ const HomeScreen = () => {
       setCardUploadProgress(0);
     }
   };
+
+  const navigateToStudentCard = () => router.push("/(tabs)/StudentCard" as any);
 
   const navigateToGpa = () => router.push("/(tabs)/GpaPlanner" as any);
   const typeAccent: Record<string, string> = {
@@ -527,11 +553,7 @@ const HomeScreen = () => {
           <StatCard
             icon="clock"
             label="Total Earned Hrs"
-            value={(
-              backendUser?.completedHours ??
-              backendUser?.earnedCreditHours ??
-              0
-            ).toString()}
+            value={earnedHours.toString()}
             color={colors.teal}
             bgColor={colors.tealLight}
           />
@@ -643,6 +665,12 @@ const HomeScreen = () => {
               color: colors.amber,
               onPress: () => router.push("/(tabs)/Questions" as any),
             },
+            {
+              icon: "code",
+              label: "Coding",
+              color: colors.green,
+              onPress: () => router.push("/(tabs)/Coding" as any),
+            },
           ].map(({ icon, label, color, onPress }) => (
             <TouchableOpacity
               key={label}
@@ -671,7 +699,6 @@ const HomeScreen = () => {
               style={[s.studentCardWithPhoto, { backgroundColor: colors.card }]}
             >
               <Image
-                // 🌟 نستخدم الدالة المساعدة بدلاً من studentCardUrl! لتجنب الأخطاء التحذيرية
                 source={{
                   uri: localCardUri || getFullImageUrl(studentCardUrl),
                 }}
@@ -695,7 +722,7 @@ const HomeScreen = () => {
                 ) : (
                   <>
                     <Feather name="upload" size={16} color="#fff" />
-                    <Text style={s.updateCardButtonText}>Save</Text>
+                    <Text style={s.updateCardButtonText}>Update</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -718,13 +745,85 @@ const HomeScreen = () => {
                 </View>
               )}
             </View>
+          ) : localCardFront || localCardBack ? (
+            <View
+              style={[s.studentCardWithPhoto, { backgroundColor: colors.card }]}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
+              >
+                <Ionicons
+                  name="shield-checkmark"
+                  size={18}
+                  color={colors.teal}
+                />
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: colors.teal,
+                    marginLeft: 6,
+                    fontWeight: "600",
+                  }}
+                >
+                  Saved on your device only
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                {localCardFront && (
+                  <TouchableOpacity
+                    style={[
+                      s.cardShowBtn,
+                      { backgroundColor: colors.indigo, flex: 1 },
+                    ]}
+                    onPress={() => setViewingCard("front")}
+                  >
+                    <Feather name="credit-card" size={16} color="#fff" />
+                    <Text style={s.cardShowBtnText}>Show Front</Text>
+                  </TouchableOpacity>
+                )}
+                {localCardBack && (
+                  <TouchableOpacity
+                    style={[
+                      s.cardShowBtn,
+                      { backgroundColor: colors.teal, flex: 1 },
+                    ]}
+                    onPress={() => setViewingCard("back")}
+                  >
+                    <Feather name="credit-card" size={16} color="#fff" />
+                    <Text style={s.cardShowBtnText}>Show Back</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <TouchableOpacity
+                style={[
+                  s.updateCardButton,
+                  {
+                    backgroundColor: colors.indigoPale,
+                    flexDirection: "row",
+                    marginTop: 10,
+                  },
+                ]}
+                onPress={navigateToStudentCard}
+              >
+                <Feather name="edit-2" size={14} color={colors.indigo} />
+                <Text
+                  style={[s.updateCardButtonText, { color: colors.indigo }]}
+                >
+                  Update Card
+                </Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <TouchableOpacity
               style={[
                 s.studentCard,
                 { backgroundColor: colors.card, flexDirection: "row" },
               ]}
-              onPress={handleStudentCardUpload}
+              onPress={navigateToStudentCard}
               disabled={isUploadingCard}
             >
               <View
@@ -748,7 +847,9 @@ const HomeScreen = () => {
                   Student Card
                 </Text>
                 <Text style={[s.cardSubtitle, { color: colors.textMuted }]}>
-                  {isUploadingCard ? "..." : ""}
+                  {isUploadingCard
+                    ? "Uploading..."
+                    : "Save your ID card for quick access"}
                 </Text>
               </View>
               <Feather
@@ -759,6 +860,24 @@ const HomeScreen = () => {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Card Viewer Modal */}
+        <Modal visible={viewingCard !== null} transparent animationType="fade">
+          <TouchableOpacity style={s.cardViewerOverlay} activeOpacity={1} onPress={() => setViewingCard(null)}>
+            <View style={s.cardViewerContent}>
+              <Text style={s.cardViewerTitle}>{viewingCard === 'front' ? 'Front Side' : 'Back Side'}</Text>
+              {viewingCard === 'front' && localCardFront && (
+                <Image source={{ uri: localCardFront }} style={s.cardViewerImage} resizeMode="contain" />
+              )}
+              {viewingCard === 'back' && localCardBack && (
+                <Image source={{ uri: localCardBack }} style={s.cardViewerImage} resizeMode="contain" />
+              )}
+              <TouchableOpacity style={s.cardViewerCloseBtn} onPress={() => setViewingCard(null)}>
+                <Text style={s.cardViewerCloseText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -1061,6 +1180,38 @@ const s = StyleSheet.create({
     gap: 8,
   },
   updateCardButtonText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  cardShowBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  cardShowBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  cardViewerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  cardViewerContent: { width: "100%", alignItems: "center" },
+  cardViewerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 16,
+  },
+  cardViewerImage: { width: "100%", height: 280, borderRadius: 16 },
+  cardViewerCloseBtn: {
+    marginTop: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 14,
+  },
+  cardViewerCloseText: { color: "#fff", fontSize: 15, fontWeight: "600" },
   progressBarOuter: {
     height: 4,
     borderRadius: 2,

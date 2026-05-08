@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import { Course, extractedToCourses } from './types';
 import { API_URL } from '@/firebase';
 
 type ExtractedCourse = { courseCode: string; courseName?: string; mark?: number; gradePoints?: number; creditHours?: number };
@@ -31,7 +32,6 @@ const updateTranscript = async (id: string, courses: ExtractedCourse[], token: s
   return res.json();
 };
 
-import { Course, extractedToCourses } from './types';
 
 interface UploadFlowProps {
   colors: any;
@@ -81,7 +81,7 @@ export default function UploadFlow({ colors, user, onDone, onCancel }: UploadFlo
     try {
       const token = await user.getIdToken();
       setUploadState('processing');
-      const result = await uploadTranscript(selectedFile.uri, selectedFile.mimeType, selectedFile.name, token, selectedFile.file);
+      const result = await uploadTranscript(selectedFile.uri, selectedFile.mimeType, selectedFile.name, token);
       if (result.status === 'completed' && result.extractedCourses?.length > 0) {
         setTranscriptId(result.transcriptId);
         setCourses(result.extractedCourses);
