@@ -1,7 +1,13 @@
 // src/routes/questions.routes.js
 const express = require('express');
 const router = express.Router();
+const authMiddleware = require('../middlewares/auth.middleware');
+const requireActiveUser = require('../middlewares/requireActiveUser.middleware');
 const questionsController = require('../controllers/questions.controller');
+
+// All question routes require a logged-in, verified (active) user
+router.use(authMiddleware);
+router.use(requireActiveUser);
 
 // ─── Professor Style Analysis ───
 // POST /api/questions/analyze-style

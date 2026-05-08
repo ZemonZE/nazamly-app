@@ -18,11 +18,13 @@ import CodingProblems from "./pages/CodingProblems";
 import ProblemSolver from "./pages/ProblemSolver";
 import Profile from "./pages/Profile";
 import StudentOnboarding from "./pages/StudentOnboarding";
+import VerifyEmailPrompt from "./pages/VerifyEmailPrompt";
 
 import { auth, API_URL } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
 import ForgotPassword from "./components/ForgotPassword";
+import VerifiedOnly from "./components/VerifiedOnly";
 import mainLogo from "./assets/logo.jpg";
 
 /* ── Auth layout — declared outside App for stable React identity ── */
@@ -136,6 +138,8 @@ function App() {
                 onSwitchToSignup={() => setIsLogin(false)}
                 onSwitchToLogin={() => setIsLogin(true)}
               />
+            ) : user.isProfileComplete === true && user.accessStatus === "pending" ? (
+              <Navigate to="/verify-email-prompt" replace />
             ) : user.isProfileComplete === true ? (
               <Navigate to="/dashboard" replace />
             ) : (
@@ -168,6 +172,22 @@ function App() {
           }
         />
 
+        {/* ── Verify Email Prompt (pending users with complete profile) ── */}
+        <Route
+          path="/verify-email-prompt"
+          element={
+            !user ? (
+              <Navigate to="/login" replace />
+            ) : user.isProfileComplete !== true ? (
+              <Navigate to="/onboarding" replace />
+            ) : user.accessStatus === "active" ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <VerifyEmailPrompt user={user} setUser={setUser} />
+            )
+          }
+        />
+
         {/* ── Standalone full-page routes (no sidebar/header) ── */}
         <Route
           path="/dashboard/coding/problems/:id"
@@ -177,7 +197,9 @@ function App() {
             ) : user.isProfileComplete !== true ? (
               <Navigate to="/onboarding" replace />
             ) : (
-              <ProblemSolver />
+              <VerifiedOnly user={user}>
+                <ProblemSolver />
+              </VerifiedOnly>
             )
           }
         />
@@ -191,7 +213,7 @@ function App() {
             ) : user.isProfileComplete !== true ? (
               <Navigate to="/onboarding" replace />
             ) : (
-              <DashboardLayout user={user} onLogout={handleLogout} />
+              <DashboardLayout user={user} setUser={setUser} onLogout={handleLogout} />
             )
           }
         >
@@ -202,10 +224,24 @@ function App() {
           <Route path="gpa-calculator" element={<GpaCalculator />} />
           <Route path="gpa-planner" element={<GpaPlanner />} />
           <Route path="materials" element={<Materials />} />
-          <Route path="questions" element={<Questions />} />
+          <Route
+            path="questions"
+            element={
+              <VerifiedOnly user={user}>
+                <Questions />
+              </VerifiedOnly>
+            }
+          />
           <Route path="generator" element={<Generator />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="coding" element={<CodingProblems />} />
+          <Route
+            path="coding"
+            element={
+              <VerifiedOnly user={user}>
+                <CodingProblems />
+              </VerifiedOnly>
+            }
+          />
           <Route path="profile" element={<Profile />} />
         </Route>
 

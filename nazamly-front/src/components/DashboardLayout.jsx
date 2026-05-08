@@ -2,6 +2,7 @@ import { useState } from "react";
 import "../App.css";
 import "../styles/Dashboard.css";
 import { NavLink, Outlet, useLocation, Link } from "react-router-dom";
+import VerificationBanner from "./VerificationBanner";
 import logo from "../assets/logo.jpg";
 import {
   IconHome,
@@ -107,7 +108,7 @@ const PAGE_META = {
   },
 };
 
-function DashboardLayout({ user, onLogout }) {
+function DashboardLayout({ user, setUser, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const name = user?.displayName || user?.fullName || "—";
@@ -219,6 +220,7 @@ function DashboardLayout({ user, onLogout }) {
             <div className="header-badge">CGPA: {user.cgpa}</div>
           )}
         </header>
+        <VerificationBanner user={user} setUser={setUser} />
         <Outlet context={{ user, onLogout }} />
       </main>
     </div>

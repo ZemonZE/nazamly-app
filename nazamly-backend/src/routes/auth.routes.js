@@ -13,6 +13,7 @@ const {
   verifyAdmin,
   uploadStudentCardFile,
 } = require("../controllers/user.controller");
+const { confirmEmailVerified } = require("../controllers/emailVerification.controller");
 
 /**
  * @route   POST /api/auth/sync
@@ -70,5 +71,12 @@ router.post("/upload-photo", requireAuth, ...uploadPhotoFile);
  */
 router.post("/upload-student-card", requireAuth, ...uploadStudentCardFile);
 router.get("/verify-admin", requireAuth, verifyAdmin);
+
+/**
+ * @route   POST /api/auth/confirm-email-verified
+ * @desc    Sync accessStatus to "active" after Firebase confirms email verification
+ * @access  Private
+ */
+router.post("/confirm-email-verified", requireAuth, confirmEmailVerified);
 
 module.exports = router;
