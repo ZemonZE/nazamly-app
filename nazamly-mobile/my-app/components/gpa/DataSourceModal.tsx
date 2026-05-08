@@ -11,8 +11,6 @@ interface DataSourceModalProps {
 }
 
 const options: { src: DataSource; icon: string; title: string; desc: string }[] = [
-  { src: 'manual', icon: 'edit-3', title: 'Enter Manually', desc: 'Type in your courses and grades' },
-  { src: 'upload', icon: 'upload', title: 'Upload Transcript', desc: 'PDF or image — AI extracts grades' },
   { src: 'history', icon: 'clock', title: 'From History', desc: 'Use a previously uploaded transcript' },
 ];
 

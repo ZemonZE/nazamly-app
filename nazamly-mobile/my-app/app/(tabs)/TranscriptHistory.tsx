@@ -130,9 +130,7 @@ export default function TranscriptHistoryScreen() {
             <Text style={[s.title, { color: colors.textPrimary }]}>Transcript History</Text>
             <Text style={[s.subtitle, { color: colors.textMuted }]}>{history.length} uploads</Text>
           </View>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/TranscriptUpload' as any)}>
-            <Feather name="plus" size={22} color={colors.indigo} />
-          </TouchableOpacity>
+          <View style={{ width: 22 }} />
         </View>
 
         {loading ? (
@@ -174,15 +172,15 @@ export default function TranscriptHistoryScreen() {
 
             <TouchableOpacity
               style={[s.uploadBtn, { backgroundColor: colors.indigo }]}
-              onPress={() => router.push('/(tabs)/TranscriptUpload' as any)}
+              onPress={fetchHistory}
               activeOpacity={0.85}
             >
-              <Feather name="upload" size={16} color="#fff" />
-              <Text style={s.uploadBtnText}>Upload Your First Transcript</Text>
+              <Feather name="refresh-cw" size={16} color="#fff" />
+              <Text style={s.uploadBtnText}>Refresh History</Text>
             </TouchableOpacity>
 
             <Text style={[s.emptyHint, { color: colors.textMuted }]}>
-              Supports PDF, JPG, PNG and WEBP
+              Upload transcripts from the GPA Planner
             </Text>
           </View>
         ) : (

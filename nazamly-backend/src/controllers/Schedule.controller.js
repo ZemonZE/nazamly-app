@@ -762,12 +762,12 @@ const getTimeTable = async (req, res) => {
 };
 
 /**
- * @desc    Import classes from a schedule image/PDF via OCR
+ * @desc    Import classes from a schedule image/PDF via AI extraction
  * @route   POST /api/schedule/import-from-image
  * @access  Private (Authenticated User)
  *
  * Accepts a multipart file upload (image or PDF of a schedule/timetable),
- * sends it to the Python OCR microservice for Gemma 3 vision extraction,
+ * sends it to Google Gemini AI for vision extraction,
  * and creates TimeTableEntry records from the extracted classes.
  *
  * Body: multipart/form-data with field 'file'
@@ -786,11 +786,12 @@ const parseScheduleFromImage = async (req, res) => {
 
     const { extractedData, usedModel } = await extractScheduleTableFromImages(files);
     const normalizedEntries = normalizeScheduleEntries(extractedData);
+    console.log(`[Schedule.controller] AI raw entries: ${Array.isArray(extractedData) ? extractedData.length : 0}, normalized: ${normalizedEntries.length}`);
 
     if (!normalizedEntries.length) {
       return res.status(422).json({
         success: false,
-        message: "Could not extract any classes from the uploaded image. Please try a clearer image.",
+        message: "Could not extract any classes from the uploaded image. Please try a clearer image or crop the table region.",
       });
     }
 

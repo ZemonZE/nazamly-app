@@ -68,6 +68,7 @@ const HomeScreen = () => {
   const currentDayIndex = today.getDay();
   const firstName = user?.displayName?.split(' ')[0] || 'Student';
   const currentGpa = backendUser?.cgpa ?? backendUser?.currentCGPA ?? 0;
+  const earnedHours = backendUser?.completedHours ?? backendUser?.earnedCreditHours ?? backendUser?.totalEarnedHours ?? 0;
   const targetGpa = 4.0;
   const gpaProgress = targetGpa > 0 ? Math.min(currentGpa / targetGpa, 1) : 0;
   const todayStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -147,10 +148,13 @@ const HomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       fetchSchedule();
+      if (refreshProfile) {
+        refreshProfile();
+      }
       // Load local student card images
       AsyncStorage.getItem(STUDENT_CARD_FRONT_KEY).then(v => setLocalCardFront(v));
       AsyncStorage.getItem(STUDENT_CARD_BACK_KEY).then(v => setLocalCardBack(v));
-    }, [fetchSchedule])
+    }, [fetchSchedule, refreshProfile])
   );
 
   const getGreeting = () => {
@@ -216,7 +220,7 @@ const HomeScreen = () => {
         {/* Stats */}
         <View style={[s.statsRow, { flexDirection: 'row' }]}>
           <StatCard icon="book-open" label="Schedule" value={getTotalCourses().toString()} color={colors.indigo} bgColor={colors.indigoPale} />
-          <StatCard icon="clock" label="Total Earned Hrs" value={(backendUser?.earnedCreditHours ?? 0).toString()} color={colors.teal} bgColor={colors.tealLight} />
+          <StatCard icon="clock" label="Total Earned Hrs" value={earnedHours.toString()} color={colors.teal} bgColor={colors.tealLight} />
           <StatCard icon="trending-up" label="CGPA" value={currentGpa.toFixed(2)} color={colors.amber} bgColor={colors.amberLight} onPress={navigateToGpa} />
         </View>
 

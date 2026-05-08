@@ -21,6 +21,27 @@ class CodeSubmission_Repo extends Base_Repo {
   }
 
   /**
+   * findRecentByStudent - بتجيب آخر محاولات الطالب عبر كل المسائل
+   *
+   * @param {String} studentId - الـ ID بتاع الطالب
+   * @param {Number} limit - عدد النتائج
+   * @returns {Promise<Array>} array من الـ submissions مرتبة من الأحدث للأقدم
+   */
+  async findRecentByStudent(studentId, limit = 20) {
+    return await this.model
+      .find({ studentId, isDeleted: { $ne: true } })
+      .select('problemId verdict language createdAt')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate({
+        path: 'problemId',
+        select: 'title courseId',
+        populate: { path: 'courseId', select: 'courseName courseCode' },
+      })
+      .lean();
+  }
+
+  /**
    * findByProblem - بتجيب كل الـ submissions لمسألة معينة مع Pagination
    *
    * @param {String} problemId - الـ ID بتاع المسألة

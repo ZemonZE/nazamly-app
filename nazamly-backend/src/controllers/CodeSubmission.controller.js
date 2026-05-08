@@ -164,6 +164,38 @@ async function getSubmissions(req, res) {
 }
 
 /**
+ * getHistory - GET /api/coding/history?limit=
+ * Returns recent coding activity for the logged-in student (latest attempt per problem).
+ */
+async function getHistory(req, res) {
+  console.log("[CodeSubmission.controller] getHistory called");
+  const rawLimit = parseInt(req.query.limit, 10);
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 50) : 10;
+  try {
+    const poolSize = Math.min(limit * 5, 100);
+    const recent = await codeSubmissionRepo.findRecentByStudent(req.user.uid, poolSize);
+
+    const seen = new Set();
+    const unique = [];
+    for (const submission of recent) {
+      const problemId = submission.problemId?._id
+        ? submission.problemId._id.toString()
+        : submission.problemId?.toString();
+      const key = problemId || submission._id.toString();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(submission);
+      if (unique.length >= limit) break;
+    }
+
+    return res.status(200).json({ success: true, data: unique });
+  } catch (err) {
+    console.error('getHistory error:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+/**
  * getAdminSubmissions - GET /api/admin/coding/problems/:id/submissions
  */
 async function getAdminSubmissions(req, res) {
@@ -173,4 +205,4 @@ async function getAdminSubmissions(req, res) {
   return res.status(200).json({ success: true, data: submissions });
 }
 
-module.exports = { submitCode, runCode, getSubmissions, getAdminSubmissions };
+module.exports = { submitCode, runCode, getSubmissions, getHistory, getAdminSubmissions };

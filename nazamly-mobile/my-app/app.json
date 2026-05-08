@@ -30,14 +30,18 @@
       "output": "static",
       "favicon": "./assets/images/Logo.png"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "b950f411-f166-464e-a221-b23369143a8e"
+        "projectId": "0751fc21-43a6-4eca-92f6-52b57f675b1d"
       }
-    }
+    },
+    "owner": "zemonze"
   }
 }

@@ -27,6 +27,9 @@ function Profile() {
   const navigate = useNavigate();
   const [quizHistory, setQuizHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [codingHistory, setCodingHistory] = useState([]);
+  const [codingLoading, setCodingLoading] = useState(true);
+  const [codingError, setCodingError] = useState("");
 
   // Goal Tracker
   const targetGpa = 3.8;
@@ -55,6 +58,29 @@ function Profile() {
       }
     };
     fetchHistory();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchCodingHistory = async () => {
+      try {
+        setCodingLoading(true);
+        setCodingError("");
+        const token = await auth.currentUser.getIdToken();
+        const res = await fetch(`${API_URL}/api/coding/history?limit=4`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (res.ok && Array.isArray(data.data)) {
+          setCodingHistory(data.data);
+        }
+      } catch (err) {
+        setCodingError(err.message || "Failed to load coding history.");
+      } finally {
+        setCodingLoading(false);
+      }
+    };
+    fetchCodingHistory();
   }, [user]);
 
   if (!user) return null;
@@ -299,15 +325,65 @@ function Profile() {
           <h3 style={{ margin: 0 }}>Recent Coding Practice</h3>
         </div>
 
-        <p className="profile-empty-text">No coding activity recorded yet.</p>
-        <div className="profile-quiz-footer">
-          <button
-            className="view-all-history-btn"
-            onClick={() => navigate("/dashboard/coding")}
-          >
-            View Coding History
-          </button>
-        </div>
+        {codingLoading ? (
+          <p className="profile-empty-text">Loading recent coding activity...</p>
+        ) : codingHistory.length > 0 ? (
+          <>
+            <div className="profile-coding-grid">
+              {codingHistory.map((entry) => {
+                const problem = entry.problemId || {};
+                const course = problem.courseId || {};
+                const status = entry.verdict === "AC"
+                  ? "Solved"
+                  : entry.verdict === "WA"
+                  ? "Attempted"
+                  : "Error";
+                const statusClass = entry.verdict === "AC"
+                  ? "solved"
+                  : entry.verdict === "WA"
+                  ? "attempted"
+                  : "error";
+                return (
+                  <div key={entry._id} className="profile-coding-card">
+                    <div className="coding-card-header">
+                      <h4>{problem.title || "Coding Problem"}</h4>
+                      <span className="coding-date">
+                        {entry.createdAt
+                          ? new Date(entry.createdAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : ""}
+                      </span>
+                    </div>
+                    <div className="coding-card-body">
+                      <span className="coding-course">
+                        {course.courseName || course.courseCode || "Unknown Course"}
+                      </span>
+                      {entry.language && (
+                        <span className="coding-lang">{entry.language.toUpperCase()}</span>
+                      )}
+                      <span className={`coding-status ${statusClass}`}>{status}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="profile-quiz-footer">
+              <button
+                className="view-all-history-btn"
+                onClick={() => navigate("/dashboard/coding")}
+              >
+                View Coding History
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="profile-empty-text">
+            {codingError || "No coding activity recorded yet."}
+          </p>
+        )}
       </div>
     </div>
   );

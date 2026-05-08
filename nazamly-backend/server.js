@@ -32,53 +32,6 @@ connectDB()
       console.log("=".repeat(60));
       console.log("💡 Use the Network URL in your mobile app");
       console.log("=".repeat(60));
-
-      // ── START PYTHON OCR SERVICE AUTOMATICALLY ──
-      const { spawn } = require('child_process');
-      const path = require('path');
-      const fs = require('fs');
-
-      const ocrDir = path.join(__dirname, 'ocr-service');
-      const isWindows = os.platform() === 'win32';
-
-      // Use the venv in nazamly-backend/venv
-      const venvPython = path.join(__dirname, 'venv', isWindows ? 'Scripts\\python.exe' : 'bin/python');
-      const pythonExe = fs.existsSync(venvPython) ? venvPython : (isWindows ? 'py' : 'python3');
-
-      console.log(`🤖 Starting OCR Service using: ${fs.existsSync(venvPython) ? 'venv' : 'system python'}`);
-
-      const pythonProcess = spawn(pythonExe, ['app.py'], {
-        cwd: ocrDir,
-        shell: false
-      });
-
-      pythonProcess.stdout.on('data', (data) => {
-        console.log(`[🐍 PYTHON OCR]: ${data.toString().trim()}`);
-      });
-
-      pythonProcess.stderr.on('data', (data) => {
-        console.error(`[🐍 PYTHON ERR]: ${data.toString().trim()}`);
-      });
-
-      pythonProcess.on('error', (err) => {
-        console.error(`[🐍 PYTHON OCR]: Failed to start OCR service: ${err.message}`);
-      });
-
-      pythonProcess.on('close', (code) => {
-        console.log(`[🐍 PYTHON OCR]: Process exited with code ${code}`);
-      });
-
-      const killPython = () => {
-        if (pythonProcess && !pythonProcess.killed) pythonProcess.kill();
-      };
-
-      process.on('exit', killPython);
-      process.on('SIGINT', () => { killPython(); process.exit(); });
-      process.on('SIGTERM', () => { killPython(); process.exit(); });
-      // SIGUSR2 is not supported on Windows — only register on Unix
-      if (os.platform() !== 'win32') {
-        process.once('SIGUSR2', () => { killPython(); process.kill(process.pid, 'SIGUSR2'); });
-      }
     });
   })
   .catch((err) => {

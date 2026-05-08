@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:229323424819:android:bbc359298b6b1c2d784f46",
+        "mobilesdk_app_id": "1:229323424819:android:4b42e295aafee8c0784f46",
         "android_client_info": {
-          "package_name": "host.exp.exponent"
+          "package_name": "com.nazamly.myapp"
         }
       },
       "oauth_client": [

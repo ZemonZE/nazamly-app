@@ -7,7 +7,7 @@ export interface Course {
   credits: number;
 }
 
-export type DataSource = 'manual' | 'upload' | 'history';
+export type DataSource = 'history';
 export type UploadState = 'idle' | 'uploading' | 'processing' | 'review' | 'error';
 
 export function classifyGpa(v: number | string) {

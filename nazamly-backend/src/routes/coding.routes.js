@@ -4,7 +4,7 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const authMiddleware = require('../middlewares/auth.middleware');
 const submissionRateLimiter = require('../middlewares/submissionRateLimiter');
 const { listProblems, getProblem } = require('../controllers/CodingProblem.controller');
-const { submitCode, runCode, getSubmissions } = require('../controllers/CodeSubmission.controller');
+const { submitCode, runCode, getSubmissions, getHistory } = require('../controllers/CodeSubmission.controller');
 const { getProgress, toggleDifficulty } = require('../controllers/StudentProgress.controller');
 
 const runRateLimiter = rateLimit({
@@ -21,6 +21,7 @@ router.get('/problems/:id', getProblem);
 router.post('/submissions', submissionRateLimiter, submitCode);
 router.post('/run', runRateLimiter, runCode);
 router.get('/submissions', getSubmissions);
+router.get('/history', getHistory);
 router.get('/progress', getProgress);
 router.patch('/problems/:id/difficulty-preference', toggleDifficulty);
 

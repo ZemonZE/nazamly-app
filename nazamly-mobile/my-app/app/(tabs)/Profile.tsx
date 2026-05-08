@@ -94,6 +94,9 @@ const ProfileScreen = () => {
   const [localPhotoUri, setLocalPhotoUri] = useState<string | null>(null);
   const [quizHistory, setQuizHistory] = useState<any[]>([]);
   const [quizLoading, setQuizLoading] = useState(false);
+  const [codingHistory, setCodingHistory] = useState<any[]>([]);
+  const [codingLoading, setCodingLoading] = useState(false);
+  const [codingError, setCodingError] = useState('');
   const [notifEnabled, setNotifEnabled] = useState(true);
 
   const fetchProfile = useCallback(async () => {
@@ -122,6 +125,7 @@ const ProfileScreen = () => {
       fetchProfile();
       loadLocalAvatar();
       loadQuizHistory();
+      loadCodingHistory();
     }, [fetchProfile]),
   );
 
@@ -144,6 +148,28 @@ const ProfileScreen = () => {
       console.error('[Profile] quiz history error:', err);
     } finally {
       setQuizLoading(false);
+    }
+  };
+
+  const loadCodingHistory = async () => {
+    if (!user) return;
+    setCodingLoading(true);
+    setCodingError('');
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${API_URL}/api/coding/history?limit=4`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.data)) {
+        setCodingHistory(data.data);
+      } else if (!res.ok) {
+        setCodingError(data.message || data.error || 'Failed to load coding history');
+      }
+    } catch (err: any) {
+      setCodingError(err.message || 'Failed to load coding history');
+    } finally {
+      setCodingLoading(false);
     }
   };
   useEffect(() => {
@@ -501,6 +527,53 @@ const ProfileScreen = () => {
               ) : (
                 <Text style={{ color: colors.textMuted, fontSize: 13 }}>No quiz activities recorded yet.</Text>
               )}
+            </View>
+
+            {/* Recent Coding Practice */}
+            <View style={[s.detailsCard, { backgroundColor: colors.card }]}> 
+              <Text style={[s.detailsCardTitle, { color: colors.textMuted }]}> 
+                Recent Coding Practice
+              </Text>
+              {codingLoading ? (
+                <ActivityIndicator size="small" color={colors.indigo} style={{ marginVertical: 16 }} />
+              ) : codingHistory.length > 0 ? (
+                codingHistory.map((entry: any, idx: number) => {
+                  const verdict = entry.verdict || 'N/A';
+                  const badgeColor = verdict === 'AC' ? '#22c55e' : verdict === 'WA' ? '#f59e0b' : '#ef4444';
+                  const problem = entry.problemId || {};
+                  const course = problem.courseId || {};
+                  const dateLabel = entry.createdAt
+                    ? new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    : '';
+                  return (
+                    <View key={entry._id || idx} style={s.codingRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.courseTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                          {problem.title || 'Coding Problem'}
+                        </Text>
+                        <Text style={[s.courseMeta, { color: colors.textMuted }]} numberOfLines={1}>
+                          {(course.courseName || course.courseCode || 'Unknown Course')} · {(entry.language || '').toUpperCase()} · {dateLabel}
+                        </Text>
+                      </View>
+                      <View style={[s.codingBadge, { backgroundColor: badgeColor + '20' }]}> 
+                        <Text style={[s.codingBadgeText, { color: badgeColor }]}>{verdict}</Text>
+                      </View>
+                    </View>
+                  );
+                })
+              ) : (
+                <Text style={{ color: colors.textMuted, fontSize: 13 }}>
+                  {codingError || 'No coding activity recorded yet.'}
+                </Text>
+              )}
+
+              <TouchableOpacity
+                style={[s.sectionButton, { borderColor: colors.indigo, backgroundColor: colors.indigoPale, flexDirection: 'row' }]}
+                onPress={() => router.push('/(tabs)/Coding' as any)}
+              >
+                <Feather name="code" size={16} color={colors.indigo} />
+                <Text style={[s.sectionButtonText, { color: colors.indigo }]}>View Coding History</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Preferences */}
@@ -962,6 +1035,31 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.04)",
   },
+  codingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.04)",
+  },
+  codingBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  codingBadgeText: { fontSize: 12, fontWeight: "800" },
+  sectionButton: {
+    marginTop: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  sectionButtonText: { fontSize: 14, fontWeight: "700" },
   quizScoreBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,

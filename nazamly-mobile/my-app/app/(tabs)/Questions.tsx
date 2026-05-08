@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
-  ActivityIndicator, Dimensions,
+  ActivityIndicator, TextInput,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
@@ -14,19 +14,31 @@ type DriveFile = { id: string; name: string };
 const getMyCoursesMaterials = async (token: string) => {
   const res = await fetch(`${API_URL}/api/course-materials/my-courses`, { headers: { Authorization: `Bearer ${token}` } });
   const json = await res.json();
-  return json.data || [];
+  if (!res.ok) throw new Error(json.error || 'Failed to load courses');
+  return json.courses || [];
 };
 
 const getSubFolderFiles = async (courseCode: string, subFolderType: string, token: string) => {
-  const res = await fetch(`${API_URL}/api/course-materials/${courseCode}/files/${subFolderType}`, { headers: { Authorization: `Bearer ${token}` } });
+  const safeCode = encodeURIComponent(courseCode);
+  const res = await fetch(`${API_URL}/api/course-materials/${safeCode}/files/${subFolderType}`, { headers: { Authorization: `Bearer ${token}` } });
   const json = await res.json();
-  return json.data || { files: [] };
+  if (!res.ok) throw new Error(json.error || 'Failed to load materials');
+  return { files: json.files || [] };
 };
 
 const getQuizHistory = async (token: string) => {
-  const res = await fetch(`${API_URL}/api/questions/archive`, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(`${API_URL}/api/student/quizzes/history`, { headers: { Authorization: `Bearer ${token}` } });
   const json = await res.json();
-  return { history: json.data || [] };
+  if (!res.ok) throw new Error(json.error || 'Failed to load history');
+  return { history: json.history || [] };
+};
+
+const getArchiveQuestions = async (courseId: string, lectureIds: string[], token: string) => {
+  const url = `${API_URL}/api/questions/archive?courseId=${courseId}&lectureId=${lectureIds.join(',')}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Failed to fetch archive');
+  return { midterms: json.midterms || [], finals: json.finals || [] };
 };
 
 const generateExamStream = async (opts: any, token: string, onStatus: (s: string) => void) => {
@@ -76,11 +88,9 @@ const submitQuiz = async (data: any, token: string) => {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
-  const json = await res.json();
-  return json.data || json || { success: true };
+  return res.json();
 };
 
-const { width: SCREEN_W } = Dimensions.get('window');
 
 // ── Exam config (matches frontend) ──
 const EXAM_CONFIG: Record<string, { total: number; mcq: number; tf: number }> = {
@@ -107,13 +117,23 @@ interface AIQuestion {
   questionText: string;
   options?: string[];
   correctAnswer: string;
-  type: 'mcq' | 'tf';
+  type?: 'mcq' | 'tf' | 'essay' | 'short';
   difficulty?: number;
   derivedFromConcept?: string;
   explanation?: string;
   isCorrect?: boolean;
   studentAnswer?: string;
   aiConfidenceScore?: number;
+}
+
+interface ArchiveQuestion {
+  _id?: string;
+  questionText: string;
+  options?: string[];
+  correctAnswer?: string;
+  examType?: 'midterm' | 'final';
+  year?: number;
+  explanation?: string;
 }
 
 interface QuizHistoryItem {
@@ -130,7 +150,7 @@ export default function QuestionsScreen() {
   const { user, backendUser } = useAuth();
 
   // ── Tab State ──
-  const [activeTab, setActiveTab] = useState<'generate' | 'history'>('generate');
+  const [activeTab, setActiveTab] = useState<'generate' | 'history' | 'archive'>('generate');
 
   // ── Step 1: Courses ──
   const [courses, setCourses] = useState<CourseMaterial[]>([]);
@@ -157,7 +177,17 @@ export default function QuestionsScreen() {
   // ── Quiz History ──
   const [quizHistory, setQuizHistory] = useState<QuizHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [selectedHistoryQuiz, setSelectedHistoryQuiz] = useState<QuizHistoryItem | null>(null);
+
+  // ── Archive State ──
+  const [archiveMidterms, setArchiveMidterms] = useState<ArchiveQuestion[]>([]);
+  const [archiveFinals, setArchiveFinals] = useState<ArchiveQuestion[]>([]);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [hasSearchedArchive, setHasSearchedArchive] = useState(false);
+  const [archiveAnswers, setArchiveAnswers] = useState<Record<string, string>>({});
+  const [archiveRevealed, setArchiveRevealed] = useState<Record<string, boolean>>({});
 
   const currentConfig = EXAM_CONFIG[examType];
   const answeredCount = Object.keys(aiUserAnswers).length;
@@ -171,19 +201,22 @@ export default function QuestionsScreen() {
       setCoursesLoading(true);
       setCoursesError(null);
       try {
-        // Prefer user's registered courses (like web does)
+        const token = await user.getIdToken();
+        const materials = await getMyCoursesMaterials(token);
+        const materialMap = new Map((materials || []).map((c: any) => [c.courseCode, c]));
+
         if (backendUser?.termCourses && backendUser.termCourses.length > 0) {
-          const mapped = backendUser.termCourses.map((c: any) => ({
-            courseId: c._id || c.courseCode,
-            courseCode: c.courseCode,
-            courseName: c.name || c.courseName,
-          }));
+          const mapped = backendUser.termCourses.map((c: any) => {
+            const match = materialMap.get(c.courseCode);
+            return match || {
+              courseId: c._id || c.courseCode,
+              courseCode: c.courseCode,
+              courseName: c.name || c.courseName,
+            };
+          });
           setCourses(mapped);
         } else {
-          // Fallback: fetch from materials service
-          const token = await user.getIdToken();
-          const data = await getMyCoursesMaterials(token);
-          setCourses(data || []);
+          setCourses(materials || []);
         }
       } catch (err: any) {
         setCoursesError(err.message || 'Failed to load courses');
@@ -201,12 +234,13 @@ export default function QuestionsScreen() {
   const loadHistory = async () => {
     if (!user) return;
     setHistoryLoading(true);
+    setHistoryError(null);
     try {
       const token = await user.getIdToken();
       const response = await getQuizHistory(token);
       setQuizHistory(response.history || []);
     } catch (err: any) {
-      console.error('Failed to load history:', err);
+      setHistoryError(err.message || 'Failed to load history');
     } finally {
       setHistoryLoading(false);
     }
@@ -219,6 +253,11 @@ export default function QuestionsScreen() {
     setSelectedLectures([]);
     setLectures([]);
     setAiQuestions([]);
+    setArchiveMidterms([]);
+    setArchiveFinals([]);
+    setHasSearchedArchive(false);
+    setArchiveAnswers({});
+    setArchiveRevealed({});
 
     setLoadingLectures(true);
     try {
@@ -236,6 +275,28 @@ export default function QuestionsScreen() {
     setSelectedLectures(prev =>
       prev.includes(lectureId) ? prev.filter(id => id !== lectureId) : [...prev, lectureId],
     );
+  };
+
+  // ── Fetch Archive ──
+  const handleFetchArchive = async () => {
+    if (!user || !selectedCourse || selectedLectures.length === 0) return;
+    setArchiveLoading(true);
+    setArchiveError(null);
+    setHasSearchedArchive(true);
+    setArchiveMidterms([]);
+    setArchiveFinals([]);
+    setArchiveAnswers({});
+    setArchiveRevealed({});
+    try {
+      const token = await user.getIdToken();
+      const response = await getArchiveQuestions(selectedCourse.courseId, selectedLectures, token);
+      setArchiveMidterms(response.midterms || []);
+      setArchiveFinals(response.finals || []);
+    } catch (err: any) {
+      setArchiveError(err.message || 'Failed to fetch archive');
+    } finally {
+      setArchiveLoading(false);
+    }
   };
 
   // ── Generate Exam (SSE fetch) ──
@@ -313,7 +374,7 @@ export default function QuestionsScreen() {
         token
       );
 
-      if (response.success && response.attempt?.questionsSnapshot) {
+      if (response.attempt?.questionsSnapshot) {
         setAiQuestions(response.attempt.questionsSnapshot);
       }
       setAiSubmitted(true);
@@ -341,6 +402,33 @@ export default function QuestionsScreen() {
       }, 0)
     : 0;
   const aiScorePercent = aiSubmitted && aiQuestions.length > 0 ? Math.round((aiScore / aiQuestions.length) * 100) : 0;
+
+  const isTFArchiveQuestion = (q: ArchiveQuestion) => {
+    if (!q.options || q.options.length !== 2) return false;
+    const normalized = q.options.map(opt => opt.toLowerCase().trim());
+    return normalized.includes('true') && normalized.includes('false');
+  };
+
+  const handleArchiveSelectAnswer = (key: string, option: string) => {
+    if (archiveAnswers[key] !== undefined) return;
+    setArchiveAnswers(prev => ({ ...prev, [key]: option }));
+  };
+
+  const handleArchiveReveal = (key: string) => {
+    setArchiveRevealed(prev => ({ ...prev, [key]: true }));
+  };
+
+  const isArchiveQuestionResolved = (key: string) =>
+    archiveAnswers[key] !== undefined || archiveRevealed[key] === true;
+
+  const getArchiveOptionStyle = (key: string, option: string, correctAnswer?: string) => {
+    const resolved = isArchiveQuestionResolved(key);
+    const selected = archiveAnswers[key];
+    if (!resolved) return {};
+    if (option === correctAnswer) return { backgroundColor: '#22c55e20', borderColor: '#22c55e' };
+    if (selected === option && option !== correctAnswer) return { backgroundColor: '#ef444420', borderColor: '#ef4444' };
+    return {};
+  };
 
   // ── Option styling ──
   const getOptionStyle = (q: AIQuestion, option: string, qIdx: number) => {
@@ -372,6 +460,13 @@ export default function QuestionsScreen() {
         >
           <Feather name="award" size={16} color={activeTab === 'history' ? '#fff' : colors.textMuted} />
           <Text style={[s.tabBtnText, activeTab === 'history' && { color: '#fff' }]}>My Quizzes</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.tabBtn, activeTab === 'archive' && { backgroundColor: colors.indigo }]}
+          onPress={() => setActiveTab('archive')}
+        >
+          <MaterialCommunityIcons name="archive" size={16} color={activeTab === 'archive' ? '#fff' : colors.textMuted} />
+          <Text style={[s.tabBtnText, activeTab === 'archive' && { color: '#fff' }]}>Archive</Text>
         </TouchableOpacity>
       </View>
 
@@ -559,7 +654,7 @@ export default function QuestionsScreen() {
                       <Text style={[s.qText, { color: colors.textPrimary }]}>{q.questionText}</Text>
 
                       {/* Options */}
-                      {q.options && q.options.length > 0 && (
+                      {q.options && q.options.length > 0 ? (
                         <View style={s.optionsGrid}>
                           {q.options.map((option, optIdx) => (
                             <TouchableOpacity
@@ -580,6 +675,18 @@ export default function QuestionsScreen() {
                               <Text style={[s.optionText, { color: colors.textPrimary }]}>{option}</Text>
                             </TouchableOpacity>
                           ))}
+                        </View>
+                      ) : (
+                        <View style={s.essayBox}>
+                          <TextInput
+                            style={[s.essayInput, { color: colors.textPrimary, borderColor: colors.border }]}
+                            value={aiUserAnswers[idx] || ''}
+                            onChangeText={(text) => handleSelectAnswer(idx, text)}
+                            multiline
+                            editable={!aiSubmitted}
+                            placeholder="Type your answer here..."
+                            placeholderTextColor={colors.textMuted}
+                          />
                         </View>
                       )}
 
@@ -628,6 +735,12 @@ export default function QuestionsScreen() {
 
             {historyLoading ? (
               <ActivityIndicator size="large" color={colors.indigo} style={{ marginVertical: 30 }} />
+            ) : historyError ? (
+              <View style={s.emptyState}>
+                <Text style={{ fontSize: 36 }}>⚠️</Text>
+                <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>Failed to load history</Text>
+                <Text style={[s.emptyDesc, { color: colors.textMuted }]}>{historyError}</Text>
+              </View>
             ) : quizHistory.length === 0 ? (
               <View style={s.emptyState}>
                 <Text style={{ fontSize: 40 }}>🌟</Text>
@@ -680,7 +793,7 @@ export default function QuestionsScreen() {
               </Text>
             </View>
 
-            {selectedHistoryQuiz.questionsSnapshot.map((q, idx) => (
+                {selectedHistoryQuiz.questionsSnapshot.map((q, idx) => (
               <View key={q._id || idx} style={[s.questionCard, { backgroundColor: colors.card }]}>
                 <Text style={[s.qNumber, { color: colors.textMuted }]}>Q{idx + 1}</Text>
                 <Text style={[s.qText, { color: colors.textPrimary }]}>{q.questionText}</Text>
@@ -707,9 +820,212 @@ export default function QuestionsScreen() {
                     {q.correctAnswer && <Text style={[s.correctAnswerText, { color: colors.indigo }]}>Correct: {q.correctAnswer}</Text>}
                   </View>
                 )}
+                {!q.options || q.options.length === 0 ? (
+                  <View style={[s.explanationBox, { backgroundColor: colors.bg }]}>
+                    <Text style={[s.explanationTitle, { color: colors.textPrimary }]}>Your Answer</Text>
+                    <Text style={[s.explanationText, { color: colors.textSecondary }]}>
+                      {q.studentAnswer || 'No answer provided'}
+                    </Text>
+                    {q.correctAnswer && (
+                      <Text style={[s.correctAnswerText, { color: colors.indigo }]}>Expected: {q.correctAnswer}</Text>
+                    )}
+                  </View>
+                ) : null}
               </View>
             ))}
           </>
+        )}
+
+        {/* ═══════════════════════════════════
+            TAB: ARCHIVE
+        ═══════════════════════════════════ */}
+        {activeTab === 'archive' && (
+          <View style={[s.card, { backgroundColor: colors.card }]}>
+            <View style={s.cardHeaderRow}>
+              <MaterialCommunityIcons name="archive" size={24} color={colors.indigo} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Past Exams Archive</Text>
+                <Text style={[s.cardDesc, { color: colors.textMuted }]}>Review midterm and final questions.</Text>
+              </View>
+            </View>
+
+            {/* Course selection */}
+            <Text style={[s.stepLabel, { color: colors.textSecondary }]}>Select Course</Text>
+            {coursesLoading ? (
+              <ActivityIndicator size="small" color={colors.indigo} style={{ marginVertical: 10 }} />
+            ) : courses.length === 0 ? (
+              <Text style={{ color: colors.textMuted, padding: 10 }}>No courses available.</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.courseScroll}>
+                {courses.map(c => (
+                  <TouchableOpacity
+                    key={c.courseId}
+                    style={[s.courseChip, selectedCourse?.courseId === c.courseId && { backgroundColor: colors.indigo, borderColor: colors.indigo }]}
+                    onPress={() => handleCourseSelect(c)}
+                  >
+                    <Text style={[s.courseChipText, selectedCourse?.courseId === c.courseId && { color: '#fff' }]} numberOfLines={1}>
+                      {c.courseCode}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+
+            {/* Lecture selection */}
+            {selectedCourse && (
+              <>
+                <Text style={[s.stepLabel, { color: colors.textSecondary, marginTop: 18 }]}>Select Materials</Text>
+                {loadingLectures ? (
+                  <ActivityIndicator size="small" color={colors.indigo} style={{ marginVertical: 10 }} />
+                ) : lectures.length === 0 ? (
+                  <Text style={{ color: colors.textMuted, padding: 10 }}>No lectures found.</Text>
+                ) : (
+                  <View style={s.lectureGrid}>
+                    {lectures.map(lec => {
+                      const isSelected = selectedLectures.includes(lec.id);
+                      return (
+                        <TouchableOpacity
+                          key={lec.id}
+                          style={[s.lectureCard, isSelected && { backgroundColor: colors.indigo + '15', borderColor: colors.indigo }]}
+                          onPress={() => toggleLecture(lec.id)}
+                        >
+                          <View style={[s.lectureCheck, isSelected && { backgroundColor: colors.indigo }]}>
+                            {isSelected && <Feather name="check" size={12} color="#fff" />}
+                          </View>
+                          <Text style={[s.lectureName, { color: colors.textPrimary }]} numberOfLines={2}>{lec.name}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </>
+            )}
+
+            {selectedLectures.length > 0 && (
+              <TouchableOpacity
+                style={[s.generateBtn, { backgroundColor: colors.indigo, marginTop: 16 }]}
+                onPress={handleFetchArchive}
+                disabled={archiveLoading}
+              >
+                <MaterialCommunityIcons name="magnify" size={20} color="#fff" />
+                <Text style={s.generateBtnText}>{archiveLoading ? 'Searching...' : 'Search Archive'}</Text>
+              </TouchableOpacity>
+            )}
+
+            {archiveError && (
+              <View style={s.emptyState}>
+                <Text style={{ fontSize: 36 }}>⚠️</Text>
+                <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>Search Failed</Text>
+                <Text style={[s.emptyDesc, { color: colors.textMuted }]}>{archiveError}</Text>
+              </View>
+            )}
+
+            {hasSearchedArchive && !archiveLoading && !archiveError && (
+              <View style={{ marginTop: 16 }}>
+                {archiveMidterms.length === 0 && archiveFinals.length === 0 ? (
+                  <View style={s.emptyState}>
+                    <Text style={{ fontSize: 40 }}>📘</Text>
+                    <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>No Archives Found</Text>
+                    <Text style={[s.emptyDesc, { color: colors.textMuted }]}>No past exam questions for this selection.</Text>
+                  </View>
+                ) : (
+                  <>
+                    {archiveMidterms.length > 0 && (
+                      <View style={{ marginBottom: 18 }}>
+                        <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Midterm Questions</Text>
+                        {archiveMidterms.map((q, idx) => {
+                          const key = `mid-${idx}`;
+                          const isTF = isTFArchiveQuestion(q);
+                          const resolved = isArchiveQuestionResolved(key);
+                          return (
+                            <View key={q._id || key} style={[s.questionCard, { backgroundColor: colors.bg }]}> 
+                              <Text style={[s.qNumber, { color: colors.textMuted }]}>Midterm Q{idx + 1} {q.year ? `· ${q.year}` : ''}</Text>
+                              <Text style={[s.qText, { color: colors.textPrimary }]}>{q.questionText}</Text>
+                              {q.options && q.options.length > 0 && (
+                                <View style={s.optionsGrid}>
+                                  {q.options.map((option, optIdx) => (
+                                    <TouchableOpacity
+                                      key={optIdx}
+                                      style={[s.optionBtn, { borderColor: colors.border }, getArchiveOptionStyle(key, option, q.correctAnswer)]}
+                                      onPress={() => handleArchiveSelectAnswer(key, option)}
+                                      disabled={resolved}
+                                    >
+                                      <View style={[s.optionLetter, { backgroundColor: colors.border }]}>
+                                        <Text style={[s.optionLetterText, { color: colors.textMuted }]}>
+                                          {isTF ? (option === 'True' ? 'T' : 'F') : String.fromCharCode(65 + optIdx)}
+                                        </Text>
+                                      </View>
+                                      <Text style={[s.optionText, { color: colors.textPrimary }]}>{option}</Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              )}
+                              {!resolved && (
+                                <TouchableOpacity style={[s.revealBtn, { borderColor: colors.indigo }]} onPress={() => handleArchiveReveal(key)}>
+                                  <Text style={[s.revealBtnText, { color: colors.indigo }]}>Show Answer</Text>
+                                </TouchableOpacity>
+                              )}
+                              {resolved && q.correctAnswer && (
+                                <View style={[s.explanationBox, { backgroundColor: colors.card }]}>
+                                  <Text style={[s.correctAnswerText, { color: colors.indigo }]}>Correct: {q.correctAnswer}</Text>
+                                </View>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
+
+                    {archiveFinals.length > 0 && (
+                      <View>
+                        <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Final Questions</Text>
+                        {archiveFinals.map((q, idx) => {
+                          const key = `fin-${idx}`;
+                          const isTF = isTFArchiveQuestion(q);
+                          const resolved = isArchiveQuestionResolved(key);
+                          return (
+                            <View key={q._id || key} style={[s.questionCard, { backgroundColor: colors.bg }]}>
+                              <Text style={[s.qNumber, { color: colors.textMuted }]}>Final Q{idx + 1} {q.year ? `· ${q.year}` : ''}</Text>
+                              <Text style={[s.qText, { color: colors.textPrimary }]}>{q.questionText}</Text>
+                              {q.options && q.options.length > 0 && (
+                                <View style={s.optionsGrid}>
+                                  {q.options.map((option, optIdx) => (
+                                    <TouchableOpacity
+                                      key={optIdx}
+                                      style={[s.optionBtn, { borderColor: colors.border }, getArchiveOptionStyle(key, option, q.correctAnswer)]}
+                                      onPress={() => handleArchiveSelectAnswer(key, option)}
+                                      disabled={resolved}
+                                    >
+                                      <View style={[s.optionLetter, { backgroundColor: colors.border }]}>
+                                        <Text style={[s.optionLetterText, { color: colors.textMuted }]}>
+                                          {isTF ? (option === 'True' ? 'T' : 'F') : String.fromCharCode(65 + optIdx)}
+                                        </Text>
+                                      </View>
+                                      <Text style={[s.optionText, { color: colors.textPrimary }]}>{option}</Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              )}
+                              {!resolved && (
+                                <TouchableOpacity style={[s.revealBtn, { borderColor: colors.indigo }]} onPress={() => handleArchiveReveal(key)}>
+                                  <Text style={[s.revealBtnText, { color: colors.indigo }]}>Show Answer</Text>
+                                </TouchableOpacity>
+                              )}
+                              {resolved && q.correctAnswer && (
+                                <View style={[s.explanationBox, { backgroundColor: colors.card }]}>
+                                  <Text style={[s.correctAnswerText, { color: colors.indigo }]}>Correct: {q.correctAnswer}</Text>
+                                </View>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            )}
+          </View>
         )}
 
         <View style={{ height: 30 }} />
@@ -789,6 +1105,13 @@ const styles = (colors: any) => StyleSheet.create({
   optionLetter: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   optionLetterText: { fontSize: 12, fontWeight: '800' },
   optionText: { flex: 1, fontSize: 14 },
+
+  essayBox: { marginTop: 6 },
+  essayInput: { borderWidth: 1, borderRadius: 12, padding: 12, minHeight: 120, textAlignVertical: 'top', fontSize: 14 },
+
+  sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: 10 },
+  revealBtn: { marginTop: 10, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, alignSelf: 'flex-start' },
+  revealBtnText: { fontSize: 12, fontWeight: '700' },
 
   explanationBox: { marginTop: 14, padding: 14, borderRadius: 12 },
   explanationTitle: { fontSize: 14, fontWeight: '700', marginBottom: 6 },

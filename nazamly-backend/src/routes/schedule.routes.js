@@ -81,7 +81,7 @@ router.get("/timetable/:timeTableId", requireAuth, getTimeTable);
 
 /**
  * @route   POST /api/schedule/parse-from-image
- * @desc    Upload schedule image → OCR extract → preview entries
+ * @desc    Upload schedule image → AI extract → preview entries
  * @access  Private
  */
 router.post(
@@ -93,7 +93,7 @@ router.post(
 
 /**
  * @route   POST /api/schedule/replace-from-image
- * @desc    Upload schedule image → OCR extract → replace timetable entries
+ * @desc    Upload schedule image → AI extract → replace timetable entries
  * @access  Private
  */
 router.post(
@@ -105,7 +105,7 @@ router.post(
 
 /**
  * @route   POST /api/schedule/import-from-image
- * @desc    Upload schedule image/PDF → OCR extract → add classes to timetable
+ * @desc    Upload schedule image/PDF → AI extract → add classes to timetable
  * @access  Private
  */
 router.post(

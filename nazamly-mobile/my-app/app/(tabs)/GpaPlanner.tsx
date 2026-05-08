@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppTheme } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import {
-  DataSourceModal, UploadFlow, HistoryFlow,
+  DataSourceModal, HistoryFlow,
   Course, DataSource, classifyGpa, gradeLabel, computeStrategy,
 } from '@/components/gpa';
 import { API_URL } from '@/firebase';
@@ -43,8 +43,8 @@ export default function GpaPlannerScreen() {
   const [profileError, setProfileError] = useState('');
 
   const [activeTab, setActiveTab] = useState<'calculator' | 'planner'>('calculator');
-  const [dataSource, setDataSource] = useState<DataSource>('manual');
-  const [activeFlow, setActiveFlow] = useState<'none' | 'upload' | 'history'>('none');
+  const [dataSource, setDataSource] = useState<DataSource>('history');
+  const [activeFlow, setActiveFlow] = useState<'none' | 'history'>('none');
   const [showSourceModal, setShowSourceModal] = useState(false);
 
   const [courses, setCourses] = useState<Course[]>([]);
@@ -176,12 +176,7 @@ export default function GpaPlannerScreen() {
 
   const handleSourceSelect = (src: DataSource) => {
     setDataSource(src);
-    if (src === 'upload') setActiveFlow('upload');
-    else if (src === 'history') setActiveFlow('history');
-    else {
-      setCourses([]);
-      setGrades({});
-    }
+    if (src === 'history') setActiveFlow('history');
   };
 
   const handleFlowDone = (newCourses: Course[], newGrades: Record<string, number>) => {
@@ -344,13 +339,7 @@ export default function GpaPlannerScreen() {
   const profileCls = classifyGpa(profile.cgpa);
 
   // ── Inline flows ──
-  if (activeFlow === 'upload') {
-    return (
-      <View style={[s.container, { backgroundColor: colors.bg, paddingHorizontal: 20, paddingTop: 16 }]}>
-        <UploadFlow colors={colors} user={user} onDone={handleFlowDone} onCancel={() => setActiveFlow('none')} />
-      </View>
-    );
-  }
+
 
   if (activeFlow === 'history') {
     return (
@@ -414,10 +403,10 @@ export default function GpaPlannerScreen() {
             {/* Data source selector */}
             <TouchableOpacity style={[s.sourceRow, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => setShowSourceModal(true)}>
               <View style={[s.sourceIconWrap, { backgroundColor: colors.indigoPale }]}>
-                <Feather name={dataSource === 'upload' ? 'upload' : dataSource === 'history' ? 'clock' : 'edit-3'} size={16} color={colors.indigo} />
+                <Feather name="clock" size={16} color={colors.indigo} />
               </View>
               <Text style={[s.sourceLabel, { color: colors.textPrimary }]}>
-                {dataSource === 'upload' ? 'From Transcript Upload' : dataSource === 'history' ? 'From Transcript History' : 'Manual Entry'}
+                From Transcript History
               </Text>
               <Feather name="chevron-down" size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -453,17 +442,10 @@ export default function GpaPlannerScreen() {
                   return (
                     <View key={c.id} style={[s.courseRow, { borderBottomColor: colors.divider }]}>
                       <View style={{ flex: 1, paddingLeft: 10 }}>
-                        {dataSource === 'manual' ? (
-                          <>
-                            <TextInput style={[s.courseName, { color: colors.textPrimary }]} value={c.name} onChangeText={v => updateManualCourse(c.id, 'name', v)} placeholder="Course name" placeholderTextColor={colors.textMuted} />
-                            <TextInput style={[s.courseMeta, { color: colors.textMuted }]} value={c.code} onChangeText={v => updateManualCourse(c.id, 'code', v)} placeholder="Code · Credits" placeholderTextColor={colors.textMuted} />
-                          </>
-                        ) : (
-                          <>
-                            <Text style={[s.courseName, { color: colors.textPrimary }]} numberOfLines={1}>{c.name || c.code}</Text>
-                            <Text style={[s.courseMeta, { color: colors.textMuted }]}>{c.code} · {c.credits} Hrs</Text>
-                          </>
-                        )}
+                        <>
+                          <Text style={[s.courseName, { color: colors.textPrimary }]} numberOfLines={1}>{c.name || c.code}</Text>
+                          <Text style={[s.courseMeta, { color: colors.textMuted }]}>{c.code} · {c.credits} Hrs</Text>
+                        </>
                       </View>
                       <View style={s.courseControls}>
                         <View style={[s.stepperWrap, { borderColor: colors.border, backgroundColor: colors.bg }]}>
@@ -477,32 +459,16 @@ export default function GpaPlannerScreen() {
                         </View>
                         <Text style={[s.coursePts, { color: gCls.color }]}>{(gVal * c.credits).toFixed(1)} Pts</Text>
                       </View>
-                      {dataSource === 'manual' && (
-                        <TouchableOpacity onPress={() => removeManualCourse(c.id)} style={{ padding: 8 }}>
-                          <Feather name="x" size={16} color={colors.red} />
-                        </TouchableOpacity>
-                      )}
                     </View>
                   );
                 })}
-                {dataSource === 'manual' && (
-                  <TouchableOpacity style={[s.addCourseBtn, { borderTopColor: colors.divider }]} onPress={addManualCourse}>
-                    <Feather name="plus" size={16} color={colors.indigo} />
-                    <Text style={[s.addCourseBtnText, { color: colors.indigo }]}>Add Course</Text>
-                  </TouchableOpacity>
-                )}
               </View>
             ) : (
               <View style={[s.emptyCoursesCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Feather name="book-open" size={32} color={colors.indigoLight} />
                 <Text style={[s.emptyCoursesText, { color: colors.textMuted }]}>
-                  {dataSource === 'manual' ? 'Tap "Add Course" to get started' : 'Select a data source above to load courses'}
+                  Select "From History" above to load courses from a previous transcript
                 </Text>
-                {dataSource === 'manual' && (
-                  <TouchableOpacity style={[s.primaryBtn, { backgroundColor: colors.indigo, paddingHorizontal: 24, marginTop: 8 }]} onPress={addManualCourse}>
-                    <Text style={s.primaryBtnText}>Add Course</Text>
-                  </TouchableOpacity>
-                )}
               </View>
             )}
             <View style={{ height: 110 }} />

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
-  Modal, TextInput, ActivityIndicator, Alert, Platform, Animated,
+  Modal, TextInput, ActivityIndicator, Alert, Animated,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,9 +20,9 @@ const parseScheduleFromImage = async (uri: string, mimeType: string, name: strin
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || json.error || 'Failed to parse schedule');
-  return json.data || json;
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(payload.message || payload.error || 'Failed to parse schedule');
+  return payload.data || payload;
 };
 
 const replaceScheduleWithEntries = async (entries: OCREntry[], token: string) => {
@@ -44,8 +44,9 @@ const replaceScheduleWithEntries = async (entries: OCREntry[], token: string) =>
     },
     body: JSON.stringify({ schedule: schedulePayload }),
   });
-  if (!res.ok) throw new Error('Failed to replace schedule');
-  return res.json().then(d => d.data || d);
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(payload.message || payload.error || 'Failed to replace schedule');
+  return payload.data || payload;
 };
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -414,7 +415,7 @@ const TimetableScreen = () => {
   const handleOcrUpload = async (uri: string, mimeType: string, name: string) => {
     if (!user) return;
     try {
-      setScanMessage('Analyzing your schedule with AI...');
+      setScanMessage('Processing your schedule image...');
       setScanLoading(true);
       const token = await user.getIdToken();
       const res = await parseScheduleFromImage(uri, mimeType, name, token);
@@ -426,6 +427,7 @@ const TimetableScreen = () => {
         Alert.alert('No schedule found', 'Could not extract schedule from this image.');
       }
     } catch (err: any) {
+      console.error('[TimeTable] OCR parse error:', err);
       Alert.alert('Error', err.message || 'Upload failed');
     } finally {
       setScanLoading(false);
@@ -470,6 +472,7 @@ const TimetableScreen = () => {
       setScanModalVisible(false);
       setOcrPreviewEntries([]);
     } catch (err: any) {
+      console.error('[TimeTable] OCR replace error:', err);
       Alert.alert('Error', err.message || 'Replace failed');
     } finally {
       setScanLoading(false);
@@ -647,6 +650,15 @@ const TimetableScreen = () => {
         <View style={s.scanningBanner}>
           <ActivityIndicator size="small" color={colors.indigo} />
           <Text style={s.scanningText}>{scanMessage}</Text>
+        </View>
+      )}
+
+      {scanLoading && (
+        <View style={s.processingOverlay}>
+          <View style={s.processingCard}>
+            <ActivityIndicator size="large" color={colors.indigo} />
+            <Text style={s.processingText}>{scanMessage}</Text>
+          </View>
         </View>
       )}
 
@@ -1115,6 +1127,9 @@ const styles = (colors: any) => StyleSheet.create({
   // Scanning banner
   scanningBanner:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, padding: 14, backgroundColor: colors.indigo + '12', borderRadius: 12, marginBottom: 8 },
   scanningText:    { fontSize: 13, color: colors.indigo, fontWeight: '500' },
+  processingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  processingCard:    { width: '100%', maxWidth: 320, backgroundColor: colors.card, borderRadius: 16, padding: 20, alignItems: 'center', gap: 12 },
+  processingText:    { fontSize: 14, color: colors.textPrimary, textAlign: 'center' },
 
   // Day card
   dayCard:         { marginBottom: 16 },

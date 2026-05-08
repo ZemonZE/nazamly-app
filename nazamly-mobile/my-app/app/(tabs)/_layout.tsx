@@ -108,7 +108,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen name="TranscriptHistory" options={{ href: null }} />
-      <Tabs.Screen name="TranscriptUpload" options={{ href: null }} />
       <Tabs.Screen name="StudentCard" options={{ href: null }} />
       <Tabs.Screen
         name="Profile"
