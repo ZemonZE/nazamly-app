@@ -22,10 +22,11 @@ import StudentOnboarding from "./pages/StudentOnboarding";
 import { auth, API_URL } from "./firebase";
 import { onAuthStateChanged } from "firebase/auth";
 
+import ForgotPassword from "./components/ForgotPassword";
 import mainLogo from "./assets/logo.jpg";
 
 /* ── Auth layout — declared outside App for stable React identity ── */
-function AuthLayout({ isLogin, onLogin, onSwitchToSignup, onSwitchToLogin }) {
+function AuthLayout({ isLogin, onLogin, onSwitchToSignup, onSwitchToLogin, children }) {
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -38,16 +39,18 @@ function AuthLayout({ isLogin, onLogin, onSwitchToSignup, onSwitchToLogin }) {
         </div>
         <div className="auth-content">
           <InfoPanel />
-          {isLogin ? (
-            <Login
-              onLogin={onLogin}
-              switchToSignup={onSwitchToSignup}
-            />
-          ) : (
-            <Signup
-              onSignup={onLogin}
-              switchToLogin={onSwitchToLogin}
-            />
+          {children ?? (
+            isLogin ? (
+              <Login
+                onLogin={onLogin}
+                switchToSignup={onSwitchToSignup}
+              />
+            ) : (
+              <Signup
+                onSignup={onLogin}
+                switchToLogin={onSwitchToLogin}
+              />
+            )
           )}
         </div>
       </div>
@@ -138,6 +141,16 @@ function App() {
             ) : (
               <Navigate to="/onboarding" replace />
             )
+          }
+        />
+
+        {/* ── Forgot Password ── */}
+        <Route
+          path="/forgot-password"
+          element={
+            user
+              ? <Navigate to="/dashboard" replace />
+              : <AuthLayout><ForgotPassword /></AuthLayout>
           }
         />
 
