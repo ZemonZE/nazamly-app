@@ -30,14 +30,20 @@ const getQuizHistory = async (token: string) => {
   const res = await fetch(`${API_URL}/api/student/quizzes/history`, { headers: { Authorization: `Bearer ${token}` } });
   const json = await res.json();
   if (!res.ok) throw new Error(json.error || 'Failed to load history');
-  return { history: json.history || [] };
+  return { history: json.history || json.data || [] };
 };
 
-const getArchiveQuestions = async (courseId: string, lectureIds: string[], token: string) => {
-  const url = `${API_URL}/api/questions/archive?courseId=${courseId}&lectureId=${lectureIds.join(',')}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+const getArchiveQuestions = async (
+  courseId: string,
+  lectureIds: string[],
+  token: string,
+) => {
+  const url = `${API_URL}/api/questions/archive?courseId=${courseId}&lectureId=${lectureIds.join(",")}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error || 'Failed to fetch archive');
+  if (!res.ok) throw new Error(json.error || "Failed to fetch archive");
   return { midterms: json.midterms || [], finals: json.finals || [] };
 };
 
@@ -88,7 +94,8 @@ const submitQuiz = async (data: any, token: string) => {
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
   });
-  return res.json();
+  const json = await res.json();
+  return json.data || json;
 };
 
 

@@ -23,16 +23,15 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.nazamly.myapp",
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "buildType": "apk"
     },
     "web": {
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/Logo.png"
     },
-    "plugins": [
-      "expo-router"
-    ],
+    "plugins": ["expo-router"],
     "experiments": {
       "typedRoutes": true
     },

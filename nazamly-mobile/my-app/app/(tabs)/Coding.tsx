@@ -98,7 +98,7 @@ export default function CodingScreen() {
   const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'submissions' | 'progress'>('submissions');
-
+  // ── Submissions Tab ──
   const [submissions, setSubmissions] = useState<CodeSubmission[]>([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
 

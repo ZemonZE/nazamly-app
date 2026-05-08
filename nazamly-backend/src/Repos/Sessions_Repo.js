@@ -15,6 +15,8 @@ const ALLOWED_UPDATE_FIELDS = [
   "groupNumber",
   "sessionType",
   "location",
+  "courseName",
+  "timeTableId",
 ];
 
 /**

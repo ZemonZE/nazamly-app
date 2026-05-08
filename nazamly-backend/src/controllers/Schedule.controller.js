@@ -5,11 +5,20 @@ const { extractScheduleTableFromImages } = require("../services/ai.service");
 // ── Models no longer imported directly — all DB access goes through repos ──
 
 /**
- * Day name → number mapping for AI-generated schedules
+ * Save Timetable (Unified Workflow for Web and Mobile)
+ * POST /api/schedule/save-timetable
  */
-const DAY_NAME_TO_NUMBER = {
-  Saturday: 6, Sunday: 0, Monday: 1, Tuesday: 2,
-  Wednesday: 3, Thursday: 4, Friday: 5,
+const saveTimetable = async (req, res) => {
+    try {
+        const firebaseUid = req.user.uid;
+        const { entries, title } = req.body;
+
+        // TODO: استكمال برمجة هذه الدالة لاحقاً
+        return res.status(501).json({ success: false, message: "Not implemented yet" });
+    } catch (error) {
+        console.error("Error in saveTimetable:", error);
+        return res.status(500).json({ success: false, message: "Internal server error" });
+    }
 };
 
 const DAY_NUMBER_TO_NAME = {
@@ -502,9 +511,6 @@ const saveAISchedule = async (req, res) => {
       });
     }
 
-    // ── OLD BRANCH (commented out — using userRepo instead of direct User model) ──
-    // const user = await User.findOne({ firebaseUid });
-    // ── END OLD BRANCH ──────────────────────────────────────────────────────────────
     const user = await userRepo.findByFirebaseUid(firebaseUid);
     if (!user) {
       return res.status(404).json({
@@ -514,16 +520,10 @@ const saveAISchedule = async (req, res) => {
     }
     const userId = user._id;
 
-    // Pad single-digit time values (e.g. "8:00" → "08:00")
-    const padTime = (t) => {
-      if (!t) return "08:00";
-      const [h, m] = t.split(":");
-      return `${h.padStart(2, "0")}:${(m || "00").padStart(2, "0")}`;
-    };
-
     // Check if user already has a schedule
     const existingSchedules = await scheduleRepo.findByUserId(userId);
-    const existingSchedule = existingSchedules.length > 0 ? existingSchedules[0] : null;
+    const existingSchedule =
+      existingSchedules.length > 0 ? existingSchedules[0] : null;
 
     let timetableId;
 
@@ -539,7 +539,7 @@ const saveAISchedule = async (req, res) => {
       timetableId = created._id;
     } else {
       timetableId = existingSchedule._id;
-      // Soft-delete existing entries
+      // Delete existing entries linked to this schedule
       if (existingSchedule.entries && existingSchedule.entries.length > 0) {
         for (const oldEntry of existingSchedule.entries) {
           const entryId = oldEntry._id || oldEntry;
@@ -548,38 +548,42 @@ const saveAISchedule = async (req, res) => {
       }
     }
 
-    // Build entry documents with the real timeTableId
-    const entryDocs = schedule.map((s) => ({
+    // Create new entries
+    const entryDocs = schedule.map((entry) => ({
       userId,
       timeTableId: timetableId,
-      courseCode: s.courseCode || "",
-      courseName: s.courseCode || "",
-      dayOfWeek: typeof s.dayOfWeek === "number"
-        ? s.dayOfWeek
-        : (DAY_NAME_TO_NUMBER[s.dayOfWeek] ?? 0),
-      startTime: padTime(s.startTime),
-      endTime: padTime(s.endTime),
-      groupNumber: s.group || "",
-      sessionType: mapAIType(s.type),
-      location: s.location || "",
+      courseCode: normalizeCourseCode(
+        entry.courseCode || entry.courseName || "",
+      ),
+      courseName: String(entry.courseName || entry.courseCode || "").trim(),
+      dayOfWeek: normalizeDayOfWeek(entry.dayOfWeek),
+      startTime: normalizeTime(entry.startTime),
+      endTime: normalizeTime(entry.endTime),
+      groupNumber: normalizeDigits(
+        entry.groupNumber || entry.group || "",
+      ).trim(),
+      sessionType: normalizeSessionType(entry.sessionType || entry.type || ""),
+      location: String(entry.location || "").trim(),
     }));
 
-    // Create entries (timeTableId already set)
     const createdEntries = await sessionsRepo.createMany(entryDocs);
-    const entryIds = createdEntries.map((e) => e._id);
+    const entryIds = createdEntries.map((entry) => entry._id);
 
-    // Update the TimeTable with entry IDs
+    // Update timetable with new entries
     await scheduleRepo.update(timetableId, {
       entries: entryIds,
-      title: title || (existingSchedule && existingSchedule.title) || "AI Generated Schedule",
+      title:
+        title ||
+        (existingSchedule && existingSchedule.title) ||
+        "AI Generated Schedule",
       sourceType: "AI_generated",
     });
 
     return res.status(201).json({
       success: true,
-      message: "AI schedule saved to timetable successfully",
+      message: "AI Schedule saved successfully",
       data: {
-        timetableId: timetableId,
+        timetableId,
         entriesCount: createdEntries.length,
       },
     });
@@ -587,44 +591,33 @@ const saveAISchedule = async (req, res) => {
     console.error("❌ Save AI Schedule Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Error saving AI schedule"
+      message: error.message || "Error saving AI schedule",
     });
   }
 };
 
 /**
- * @desc    Get timetable entries grouped by day for mobile display
- * @route   GET /api/schedule/my-timetable
- * @access  Private (Authenticated User)
- *
- * Returns a flat array of entry objects with courseCode, courseName,
- * dayOfWeek, startTime, endTime, sessionType, location, groupNumber
- * for the mobile app to render directly.
+ * Fetch My Timetable (Deeply Populated)
+ * GET /api/schedule/my-timetable
  */
 const getMyTimetable = async (req, res) => {
   console.log("[Schedule.controller] getMyTimetable called");
   try {
     const firebaseUid = req.user.uid;
-
-    // ── OLD BRANCH (commented out — using userRepo instead of direct User model) ──
-    // const user = await User.findOne({ firebaseUid });
-    // ── END OLD BRANCH ──────────────────────────────────────────────────────────────
     const user = await userRepo.findByFirebaseUid(firebaseUid);
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     const userId = user._id;
 
     const schedules = await scheduleRepo.findByUserId(userId);
-
     if (!schedules || schedules.length === 0) {
       return res.status(200).json({
         success: true,
-        message: "No timetable found",
-        data: { title: "", entries: [] },
+        message: "No schedule found",
+        data: { entries: [], title: "My Schedule" },
       });
     }
 
@@ -653,10 +646,10 @@ const getMyTimetable = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error retrieving timetable:', error);
+    console.error("❌ Get My Timetable Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Error retrieving timetable"
+      message: error.message || "Error retrieving timetable",
     });
   }
 };
@@ -713,8 +706,12 @@ const addTimeTableEntry = async (req, res) => {
       normalizedStart,
       normalizeTime(endTime),
     );
-    const normalizedCourseCode = normalizeCourseCode(courseCode || courseName || "");
-    const normalizedCourseName = String(courseName || normalizedCourseCode || "").trim();
+    const normalizedCourseCode = normalizeCourseCode(
+      courseCode || courseName || "",
+    );
+    const normalizedCourseName = String(
+      courseName || normalizedCourseCode || "",
+    ).trim();
     const normalizedType = normalizeSessionType(sessionType);
 
     // 1. إنشاء العنصر الجديد في قاعدة البيانات
@@ -737,6 +734,7 @@ const addTimeTableEntry = async (req, res) => {
 
     return res.status(201).json({ success: true, data: newEntry });
   } catch (error) {
+    console.error("[Schedule.controller] Error in addTimeTableEntry:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

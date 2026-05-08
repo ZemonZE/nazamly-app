@@ -20,7 +20,8 @@ const ALLOWED_UPDATE_FIELDS = [
   "cgpa",
   "completedHours",
   "pastSemesters",
-  "termCourses"
+  "termCourses",
+  "timeTableId"
 ];
 
 /**

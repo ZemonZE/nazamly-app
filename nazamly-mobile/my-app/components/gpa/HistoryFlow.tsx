@@ -4,11 +4,37 @@ import {
   ActivityIndicator, Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { API_URL } from '@/firebase';
 
-type TranscriptHistoryItem = { id: string; fileName: string; status: string; createdAt: string; termGPA?: number; totalCreditHours?: number };
-const getTranscriptHistory = async (_t: string) => [] as TranscriptHistoryItem[];
-const deleteTranscript = async (_id: string, _t: string) => ({});
-const getTranscriptById = async (_id: string, _t: string) => ({ extractedCourses: [] as any[] });
+type TranscriptHistoryItem = { id: string; _id?: string; fileName: string; status: string; createdAt: string; termGPA?: number; totalCreditHours?: number };
+
+const getTranscriptHistory = async (token: string): Promise<TranscriptHistoryItem[]> => {
+  const res = await fetch(`${API_URL}/api/gpa/transcripts`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('Failed to fetch history');
+  const json = await res.json();
+  return (json.data || []).map((item: any) => ({ ...item, id: item._id || item.id }));
+};
+
+const deleteTranscript = async (id: string, token: string) => {
+  const res = await fetch(`${API_URL}/api/gpa/transcripts/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('Failed to delete transcript');
+  return res.json();
+};
+
+const getTranscriptById = async (id: string, token: string) => {
+  const res = await fetch(`${API_URL}/api/gpa/transcripts/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error('Failed to load transcript');
+  const json = await res.json();
+  return json.data || json;
+};
+
 import { Course, extractedToCourses } from './types';
 
 interface HistoryFlowProps {

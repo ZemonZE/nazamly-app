@@ -44,30 +44,20 @@ router.get("/student-card", requireAuth, getStudentCard);
 
 /**
  * @route   POST /api/auth/update-photo
- * @desc    Update user profile photo using URL
- * @access  Private
- */
-router.post("/update-photo", requireAuth, updatePhoto);
-
-/**
- * @route   POST /api/auth/update-student-card
- * @desc    Update user student card photo using URL
- * @access  Private
- */
-router.post("/update-student-card", requireAuth, updateStudentCard);
-
-/**
- * @route   POST /api/auth/upload-photo
  * @desc    Upload user profile photo file
  * @access  Private
  */
-router.post("/upload-photo", requireAuth, ...uploadPhotoFile);
+router.post("/update-photo", requireAuth, ...uploadPhotoFile);
 
 /**
- * @route   POST /api/auth/upload-student-card
+ * @route   POST /api/auth/update-student-card
  * @desc    Upload user student card file
  * @access  Private
  */
+router.post("/update-student-card", requireAuth, ...uploadStudentCardFile);
+
+// Keep upload endpoints for backward compatibility if needed, or remove if fully transitioned
+router.post("/upload-photo", requireAuth, ...uploadPhotoFile);
 router.post("/upload-student-card", requireAuth, ...uploadStudentCardFile);
 router.get("/verify-admin", requireAuth, verifyAdmin);
 

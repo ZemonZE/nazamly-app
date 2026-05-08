@@ -6,6 +6,7 @@ const requireAuth = require("../middlewares/auth.middleware");
 const imageUpload = require("../middlewares/imageUpload.middleware");
 
 const {
+  saveTimetable,
   addOrUpdateSchedule,
   getMySchedule,
   deleteSession,
@@ -18,6 +19,30 @@ const {
   replaceScheduleFromImage,
   importScheduleFromImage,
 } = require("../controllers/Schedule.controller");
+
+// ── Unified Routes ──
+
+/**
+ * @route   POST /api/schedule/save-timetable
+ * @desc    Save/Update unified timetable and sync timeTableId to User Profile
+ * @access  Private
+ */
+router.post("/save-timetable", requireAuth, saveTimetable);
+
+/**
+ * @route   GET /api/schedule/active-id
+ * @desc    Get the current active timeTableId from the user's profile
+ * @access  Private
+ */
+router.get("/active-id", requireAuth, async (req, res) => {
+    try {
+        const userRepo = require("../Repos/User_Repo");
+        const student = await userRepo.findByFirebaseUid(req.user.uid);
+        res.json({ success: true, timeTableId: student?.timeTableId || null });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
 // ── Legacy Routes ──
 
