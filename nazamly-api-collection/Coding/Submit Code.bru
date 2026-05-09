@@ -1,0 +1,36 @@
+meta {
+  name: Submit Code
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/coding/submissions
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "problemId": "REPLACE_WITH_PROBLEM_ID",
+    "code": "def solution(n):\n    return n * 2",
+    "language": "python"
+  }
+}
+
+docs {
+  # Submit Code
+  
+  Submits code for evaluation against all test cases. Rate limited per user.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | problemId | string | ✅ | Problem ObjectId |
+  | code | string | ✅ | Source code |
+  | language | string | ✅ | Programming language |
+}

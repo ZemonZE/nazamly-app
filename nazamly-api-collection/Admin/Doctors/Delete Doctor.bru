@@ -1,0 +1,24 @@
+meta {
+  name: Delete Doctor
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{base_url}}/admin/doctors/:id
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_DOCTOR_ID
+}
+
+docs {
+  # [Admin] Delete Doctor
+  Requires admin role.
+}

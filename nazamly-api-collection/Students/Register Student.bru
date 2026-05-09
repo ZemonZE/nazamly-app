@@ -1,0 +1,45 @@
+meta {
+  name: Register Student
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/students/register
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "studentCode": "2227328",
+    "fullName": "Yousef Mohamed",
+    "academicYear": 3,
+    "department": "CS",
+    "cgpa": 3.15,
+    "completedHours": 125,
+    "registeredCourses": []
+  }
+}
+
+docs {
+  # Register Student (Onboarding)
+  
+  Completes the authenticated user's student profile. Can only be called once.
+  Returns 409 if profile is already complete.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | studentCode | string | ✅ | University student ID |
+  | fullName | string | ✅ | Full name |
+  | academicYear | number | ✅ | 1-4, Year 1 forces department to "General" |
+  | department | string | ✅ | CS, Math, Physics, Chemistry, etc. |
+  | cgpa | number | ✅ | Current CGPA |
+  | completedHours | number | ✅ | Total completed credit hours |
+  | registeredCourses | string[] | ❌ | Array of Course ObjectIds to register for |
+}

@@ -1,26 +1,29 @@
 import { useState, useEffect } from "react";
-import "../styles/ThemeToggle.css";
+import { Moon, Sun } from "lucide-react";
 
 export default function ThemeToggle() {
   const [dark, setDark] = useState(() => {
-    return localStorage.getItem("nazamly-theme") === "dark";
+    return document.documentElement.classList.contains("dark");
   });
 
   useEffect(() => {
-    const theme = dark ? "dark" : "light";
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("nazamly-theme", theme);
+    if (dark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("nazamly-theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("nazamly-theme", "light");
+    }
   }, [dark]);
 
   return (
     <button
-      className="theme-toggle"
+      className="inline-flex items-center justify-center rounded-full p-2 text-muted-foreground hover:bg-secondary/60 hover:text-foreground transition-colors"
       onClick={() => setDark((d) => !d)}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
       title={dark ? "Light Mode" : "Dark Mode"}
     >
-      <span className={`theme-icon ${dark ? "hidden" : "visible"}`}>🌙</span>
-      <span className={`theme-icon ${dark ? "visible" : "hidden"}`}>☀️</span>
+      {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
     </button>
   );
 }

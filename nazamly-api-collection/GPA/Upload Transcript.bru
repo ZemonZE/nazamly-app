@@ -1,0 +1,28 @@
+meta {
+  name: Upload Transcript
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/gpa/upload-transcript
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:multipart-form {
+  transcript: @file()
+}
+
+docs {
+  # Upload Transcript
+  
+  Uploads an image/PDF transcript for AI extraction and GPA calculation.
+  Rate limited: 5 uploads per hour.
+  
+  Field name: `transcript`. Accepts images and PDF files.
+}

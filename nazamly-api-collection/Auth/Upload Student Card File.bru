@@ -1,0 +1,26 @@
+meta {
+  name: Upload Student Card File
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{base_url}}/auth/upload-student-card
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:multipart-form {
+  photo: @file()
+}
+
+docs {
+  # Upload Student Card File
+  
+  Upload a student card photo file (multipart/form-data).
+  Field name: `photo`. Max size: 10MB. Images only.
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Get Transcript By ID
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{base_url}}/gpa/transcripts/:id
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_TRANSCRIPT_ID
+}
+
+docs {
+  # Get Transcript By ID
+  
+  Returns a specific transcript record with extracted courses.
+}

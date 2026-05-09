@@ -1,0 +1,46 @@
+meta {
+  name: Firebase Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{firebase_api_key}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{user_email}}",
+    "password": "{{user_password}}",
+    "returnSecureToken": true
+  }
+}
+
+script:post-response {
+  if (res.body.idToken) {
+    bru.setEnvVar("auth_token", res.body.idToken);
+  }
+}
+
+docs {
+  # Firebase Login (Get Auth Token)
+  
+  Authenticates with Firebase and stores the `idToken` as `auth_token` env variable.
+  **Run this first** before any authenticated request.
+  
+  The post-response script automatically saves the token so all other requests can use it.
+  
+  ## Response
+  ```json
+  {
+    "kind": "identitytoolkit#VerifyPasswordResponse",
+    "localId": "NNNBQOWvChYFL4yekoNirOlQTK82",
+    "email": "202227328@std.sci.cu.edu.eg",
+    "idToken": "eyJhbGci...",
+    "registered": true,
+    "expiresIn": "3600"
+  }
+  ```
+}

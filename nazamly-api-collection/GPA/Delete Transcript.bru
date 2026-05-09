@@ -1,0 +1,25 @@
+meta {
+  name: Delete Transcript
+  type: http
+  seq: 10
+}
+
+delete {
+  url: {{base_url}}/gpa/transcripts/:id
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_TRANSCRIPT_ID
+}
+
+docs {
+  # Delete Transcript
+  
+  Soft-deletes a specific transcript record.
+}

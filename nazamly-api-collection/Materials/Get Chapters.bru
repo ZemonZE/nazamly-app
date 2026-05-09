@@ -1,0 +1,25 @@
+meta {
+  name: Get Chapters
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{base_url}}/materials/chapters/:courseInstanceId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  courseInstanceId: REPLACE_WITH_COURSE_INSTANCE_ID
+}
+
+docs {
+  # Get Chapters
+  
+  Returns all chapters for a specific course instance.
+}

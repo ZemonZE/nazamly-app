@@ -1,0 +1,26 @@
+meta {
+  name: Sync Drive To Database
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/admin/course-materials/sync-drive
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "courseCode": "CS316"
+  }
+}
+
+docs {
+  # [Admin] Sync Drive to Database
+  Requires admin role. Syncs materials from Google Drive into the database.
+}

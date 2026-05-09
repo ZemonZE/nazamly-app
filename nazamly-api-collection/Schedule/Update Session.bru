@@ -1,0 +1,36 @@
+meta {
+  name: Update Session
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{base_url}}/schedule/session/:sessionId
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  sessionId: REPLACE_WITH_SESSION_ID
+}
+
+body:json {
+  {
+    "courseCode": "CS303",
+    "dayOfWeek": "Monday",
+    "startTime": "09:00",
+    "endTime": "10:30",
+    "sessionType": "Lab",
+    "location": "Lab 5"
+  }
+}
+
+docs {
+  # Update Session
+  
+  Updates a specific session in the user's schedule. All fields are optional — only provided fields are updated.
+}

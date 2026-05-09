@@ -1,0 +1,21 @@
+meta {
+  name: GPA History
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{base_url}}/gpa/history
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # GPA History
+  
+  Returns the GPA trend over time (completed transcripts + cumulative GPA).
+}

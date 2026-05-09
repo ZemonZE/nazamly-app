@@ -1,0 +1,25 @@
+meta {
+  name: Import Schedule From Image
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{base_url}}/schedule/import-from-image
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:multipart-form {
+  file: @file()
+}
+
+docs {
+  # Import Schedule From Image (Legacy)
+  
+  Legacy alias for Replace Schedule From Image. Same behavior.
+}

@@ -1,0 +1,60 @@
+meta {
+  name: Save AI Schedule
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/schedule/save-ai
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "title": "AI Generated Schedule",
+    "schedule": [
+      {
+        "courseCode": "CS303",
+        "type": "Lecture",
+        "dayOfWeek": "Sunday",
+        "startTime": "08:00",
+        "endTime": "09:30",
+        "group": "1",
+        "location": "Hall A"
+      },
+      {
+        "courseCode": "CS308",
+        "type": "Lab",
+        "dayOfWeek": "Monday",
+        "startTime": "10:00",
+        "endTime": "12:00",
+        "group": "2",
+        "location": "Lab 3"
+      }
+    ]
+  }
+}
+
+docs {
+  # Save AI Schedule
+  
+  Saves an AI-generated schedule. Replaces all existing entries with the new schedule.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | title | string | ❌ | Title (default: "AI Generated Schedule") |
+  | schedule | array | ✅ | Array of AI schedule sessions |
+  | schedule[].courseCode | string | ✅ | Course code |
+  | schedule[].type | string | ✅ | "Lecture", "Section", "Lab" |
+  | schedule[].dayOfWeek | string/number | ✅ | Day name or number |
+  | schedule[].startTime | string | ✅ | "HH:MM" |
+  | schedule[].endTime | string | ✅ | "HH:MM" |
+  | schedule[].group | string | ❌ | Group number |
+  | schedule[].location | string | ❌ | Location |
+}

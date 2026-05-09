@@ -1,0 +1,21 @@
+meta {
+  name: Get My Courses
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/gpa/my-courses
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Get My Term Courses
+  
+  Returns the authenticated user's registered courses for the current term.
+}

@@ -1,0 +1,24 @@
+meta {
+  name: Delete Problem
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{base_url}}/admin/coding/problems/:id
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_PROBLEM_ID
+}
+
+docs {
+  # [Admin] Delete Coding Problem
+  Requires admin role.
+}

@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { IconTrash } from "../Icons/DashboardIcons";
 import { calculateTermGPA } from "../services/gpaService";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 
 /* mark → grade‑point (same formula the backend uses) */
 const markToGP = (m) => (m < 60 ? 0 : Number((m / 10 - 5).toFixed(1)));
@@ -71,156 +75,177 @@ function GpaCalculator() {
     : 0;
 
   return (
-    <div className="dash-home">
+    <div className="container mx-auto p-6 space-y-6">
       {/* ── GPA Result Card ── */}
-      <div className="gpa-result-card">
-        <div className="gpa-main">
-          <span className="gpa-label">
+      <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+        <CardHeader>
+          <CardTitle className="text-3xl font-bold">
             {result ? "Semester GPA" : "Current GPA"}
-          </span>
-          <span className="gpa-value">{result ? result.termGPA : "—"}</span>
-        </div>
-        <div className="gpa-sub-stats">
-          <div className="gpa-sub-item">
-            <span className="gpa-sub-label">Expected CGPA</span>
-            <span className="gpa-sub-value">
-              {result ? result.newCGPA : "—"}
-            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center">
+            <div className="text-6xl font-bold text-primary mb-6">
+              {result ? result.termGPA : "—"}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Expected CGPA</p>
+                <p className="text-2xl font-semibold">{result ? result.newCGPA : "—"}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Total Hours</p>
+                <p className="text-2xl font-semibold">
+                  {result ? result.termHoursCalculated : totalCredits}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Courses Count</p>
+                <p className="text-2xl font-semibold">{courses.length}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Average Grade</p>
+                <p className="text-2xl font-semibold">{avgMark}</p>
+              </div>
+            </div>
           </div>
-          <div className="gpa-sub-item">
-            <span className="gpa-sub-label">Total Hours</span>
-            <span className="gpa-sub-value">
-              {result ? result.termHoursCalculated : totalCredits}
-            </span>
-          </div>
-          <div className="gpa-sub-item">
-            <span className="gpa-sub-label">Courses Count</span>
-            <span className="gpa-sub-value">{courses.length}</span>
-          </div>
-          <div className="gpa-sub-item">
-            <span className="gpa-sub-label">Average Grade</span>
-            <span className="gpa-sub-value">{avgMark}</span>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {error && <div className="planner-alert planner-alert-red">{error}</div>}
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-destructive">{error}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Bottom Grid ── */}
-      <div className="gpa-grid">
+      <div className="grid md:grid-cols-2 gap-6">
         {/* Add Course */}
-        <div className="gpa-card">
-          <h3>Add Course</h3>
+        <Card>
+          <CardHeader>
+            <CardTitle>Add Course</CardTitle>
+            <CardDescription>Enter course details to calculate your GPA</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="courseCode">Course Code</Label>
+              <Input
+                id="courseCode"
+                type="text"
+                placeholder="Example: CS 301"
+                value={courseCode}
+                onChange={(e) => setCourseCode(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addCourse()}
+              />
+            </div>
 
-          <div className="form-group">
-            <label>Course Code</label>
-            <input
-              className="gpa-input"
-              type="text"
-              placeholder="Example: CS 301"
-              value={courseCode}
-              onChange={(e) => setCourseCode(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addCourse()}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="mark">Grade (0 — 100)</Label>
+              <Input
+                id="mark"
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={mark}
+                onChange={(e) => setMark(e.target.value)}
+              />
+            </div>
 
-          <div className="form-group">
-            <label>Grade (0 — 100)</label>
-            <input
-              className="gpa-input"
-              type="number"
-              min={0}
-              max={100}
-              step={1}
-              value={mark}
-              onChange={(e) => setMark(e.target.value)}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="credits">Credit Hours</Label>
+              <Input
+                id="credits"
+                type="number"
+                min={1}
+                max={6}
+                value={credits}
+                onChange={(e) => setCredits(e.target.value)}
+              />
+            </div>
 
-          <div className="form-group">
-            <label>Credit Hours</label>
-            <input
-              className="gpa-input"
-              type="number"
-              min={1}
-              max={6}
-              value={credits}
-              onChange={(e) => setCredits(e.target.value)}
-            />
-          </div>
-
-          <div
-            className="form-group"
-            style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-          >
-            <input
-              type="checkbox"
-              id="isRetake"
-              checked={isRetake}
-              onChange={(e) => setIsRetake(e.target.checked)}
-            />
-            <label htmlFor="isRetake" style={{ margin: 0 }}>
-              Retake Course
-            </label>
-          </div>
-
-          <button className="btn-primary" onClick={addCourse}>
-            + Add Course
-          </button>
-        </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="isRetake"
+                checked={isRetake}
+                onChange={(e) => setIsRetake(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="isRetake" className="cursor-pointer">
+                Retake Course
+              </Label>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button onClick={addCourse} className="w-full">
+              + Add Course
+            </Button>
+          </CardFooter>
+        </Card>
 
         {/* Courses List */}
-        <div className="gpa-card">
-          <h3>Added Courses</h3>
-          <p className="gpa-courses-count">
-            {courses.length
-              ? `${courses.length} course(s) added`
-              : "No courses added yet"}
-          </p>
-
-          <div className="gpa-courses-list">
-            {courses.length === 0 && (
-              <div className="gpa-empty">
-                <span>📚</span>
-                <p>Add courses to calculate your GPA</p>
-              </div>
-            )}
-            {courses.map((c) => (
-              <div key={c.id} className="gpa-course-item">
-                <div className="gpa-course-info">
-                  <span className="gpa-course-name">{c.courseCode}</span>
-                  <span className="gpa-course-detail">
-                    {c.creditHours} hours • grade {c.mark}/100 →{" "}
-                    {markToGP(c.mark)} GPA
-                    {c.isRetake ? " (Retake)" : ""}
-                  </span>
+        <Card>
+          <CardHeader>
+            <CardTitle>Added Courses</CardTitle>
+            <CardDescription>
+              {courses.length
+                ? `${courses.length} course(s) added`
+                : "No courses added yet"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+              {courses.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <span className="text-4xl mb-2 block">📚</span>
+                  <p>Add courses to calculate your GPA</p>
                 </div>
-                <div className="gpa-course-right">
-                  <span className="gpa-course-grade">
-                    {(markToGP(c.mark) * c.creditHours).toFixed(1)}
-                  </span>
-                  <button
-                    className="gpa-delete-btn"
-                    onClick={() => removeCourse(c.id)}
-                  >
-                    <IconTrash width={16} height={16} />
-                  </button>
+              )}
+              {courses.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <p className="font-semibold">{c.courseCode}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {c.creditHours} hours • grade {c.mark}/100 → {markToGP(c.mark)} GPA
+                      {c.isRetake ? " (Retake)" : ""}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-bold text-primary">
+                      {(markToGP(c.mark) * c.creditHours).toFixed(1)}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeCourse(c.id)}
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <IconTrash width={16} height={16} />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-
+              ))}
+            </div>
+          </CardContent>
           {courses.length > 0 && (
-            <button
-              className="btn-primary"
-              style={{ marginTop: 16 }}
-              onClick={handleCalculate}
-              disabled={loading}
-            >
-              {loading ? "Calculating..." : "Calculate GPA"}
-            </button>
+            <CardFooter>
+              <Button
+                onClick={handleCalculate}
+                disabled={loading}
+                className="w-full"
+                size="lg"
+              >
+                {loading ? "Calculating..." : "Calculate GPA"}
+              </Button>
+            </CardFooter>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

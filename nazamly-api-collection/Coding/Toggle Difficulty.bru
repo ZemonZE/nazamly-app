@@ -1,0 +1,25 @@
+meta {
+  name: Toggle Difficulty
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{base_url}}/coding/problems/:id/difficulty-preference
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_PROBLEM_ID
+}
+
+docs {
+  # Toggle Difficulty Preference
+  
+  Toggles a problem's difficulty preference for the student.
+}

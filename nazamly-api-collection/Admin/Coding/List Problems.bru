@@ -1,0 +1,20 @@
+meta {
+  name: List Problems (Admin)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/admin/coding/problems
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # [Admin] List Coding Problems
+  Requires admin role. Returns all coding problems with admin-level detail.
+}

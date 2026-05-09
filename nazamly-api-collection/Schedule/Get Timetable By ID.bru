@@ -1,0 +1,25 @@
+meta {
+  name: Get Timetable By ID
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{base_url}}/schedule/timetable/:timeTableId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  timeTableId: REPLACE_WITH_TIMETABLE_ID
+}
+
+docs {
+  # Get Timetable By ID
+  
+  Returns a specific timetable document with all entries populated.
+}

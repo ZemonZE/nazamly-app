@@ -1,0 +1,21 @@
+meta {
+  name: Get Submissions
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/coding/submissions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Get My Submissions
+  
+  Returns all code submissions for the authenticated student.
+}

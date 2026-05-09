@@ -1,0 +1,31 @@
+meta {
+  name: Update Problem
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{base_url}}/admin/coding/problems/:id
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_PROBLEM_ID
+}
+
+body:multipart-form {
+  descriptionFile: @file()
+  testCasesFile: @file()
+  title: Updated Two Sum
+  difficulty: Medium
+}
+
+docs {
+  # [Admin] Update Coding Problem
+  Requires admin role. Update problem details and files.
+}

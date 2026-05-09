@@ -1,0 +1,20 @@
+meta {
+  name: Get Doctors
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/admin/doctors
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # [Admin] Get Doctors
+  Requires admin role. Returns all doctor profiles.
+}

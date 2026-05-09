@@ -1,0 +1,236 @@
+[{
+  "_id": {
+    "$oid": "69e785941de0a98931b57bdf"
+  },
+  "title": "Sum of Two Numbers",
+  "descriptionMd": "## Sum of Two Numbers\n\nGiven two integers `a` and `b` on separate lines, print their sum.\n\n### Input\nTwo integers, one per line.\n\n### Output\nA single integer — the sum.\n\n### Example\nInput:\n3\n5\n\nOutput:\n8\n",
+  "testCases": [
+    {
+      "input": "3\n5",
+      "expectedOutput": "8",
+      "visible": true,
+      "_id": {
+        "$oid": "69e785941de0a98931b57be0"
+      }
+    },
+    {
+      "input": "10\n20",
+      "expectedOutput": "30",
+      "visible": true,
+      "_id": {
+        "$oid": "69e785941de0a98931b57be1"
+      }
+    },
+    {
+      "input": "-1\n1",
+      "expectedOutput": "0",
+      "visible": false,
+      "_id": {
+        "$oid": "69e785941de0a98931b57be2"
+      }
+    },
+    {
+      "input": "100\n200",
+      "expectedOutput": "300",
+      "visible": false,
+      "_id": {
+        "$oid": "69e785941de0a98931b57be3"
+      }
+    }
+  ],
+  "supportedLanguages": [
+    "js",
+    "cpp"
+  ],
+  "topic": "Basic I/O",
+  "tags": [
+    "math, beginner"
+  ],
+  "courseId": {
+    "$oid": "69d5058e0ea5bfc08ea0cdbc"
+  },
+  "estimatedMinutes": 15,
+  "difficulty": 1,
+  "acCount": 3,
+  "isDeleted": false,
+  "createdAt": {
+    "$date": "2026-04-21T14:11:32.096Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T23:48:47.567Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69e785e71de0a98931b57bea"
+  },
+  "title": "Student Records",
+  "descriptionMd": "## Student Records\n\nDefine a `struct` named `Student` with the following fields:\n- `name` (string)\n- `gpa` (double)\n- `level` (int)\n\nRead an array of students, then answer a series of queries.\n\n---\n\n### Input Format\n\n```\nn\nname1 gpa1 level1\nname2 gpa2 level2\n...\nq\nquery1\nquery2\n...\n```\n\n- `n` — number of students\n- Each of the next `n` lines contains: `name` (no spaces), `gpa` (0.0–4.0), `level` (1–4)\n- `q` — number of queries\n- Each query is one of:\n  - `AVG_GPA` — print the average GPA of all students, rounded to 2 decimal places\n  - `TOP_GPA` — print the name of the student with the highest GPA (guaranteed unique)\n  - `LEVEL_COUNT x` — print the number of students in level `x`\n\n---\n\n### Output Format\n\nFor each query, print the result on a separate line.\n\n---\n\n### Example\n\n**Input:**\n```\n3\nMohamed 3.8 2\nWalid 4.0 3\nSara 3.5 2\n3\nAVG_GPA\nTOP_GPA\nLEVEL_COUNT 2\n```\n\n**Output:**\n```\n3.77\nWalid\n2\n```\n\n---\n\n### Constraints\n\n- 1 ≤ n ≤ 100\n- 1 ≤ q ≤ 50\n- GPA is given with up to 1 decimal place\n- Level is between 1 and 4\n- Names contain only letters, no spaces\n",
+  "testCases": [
+    {
+      "input": "3\nMohamed 3.8 2\nWalid 4.0 3\nSara 3.5 2\n3\nAVG_GPA\nTOP_GPA\nLEVEL_COUNT 2",
+      "expectedOutput": "3.77\nWalid\n2",
+      "visible": true,
+      "_id": {
+        "$oid": "69e785e71de0a98931b57beb"
+      }
+    },
+    {
+      "input": "3\nAli 2.0 1\nNour 3.0 1\nHana 4.0 1\n3\nAVG_GPA\nTOP_GPA\nLEVEL_COUNT 1",
+      "expectedOutput": "3.00\nHana\n3",
+      "visible": true,
+      "_id": {
+        "$oid": "69e785e71de0a98931b57bec"
+      }
+    },
+    {
+      "input": "1\nOmar 3.9 4\n3\nAVG_GPA\nTOP_GPA\nLEVEL_COUNT 4",
+      "expectedOutput": "3.90\nOmar\n1",
+      "visible": false,
+      "_id": {
+        "$oid": "69e785e71de0a98931b57bed"
+      }
+    },
+    {
+      "input": "4\nLayla 2.5 2\nKarim 3.7 3\nDina 1.8 1\nYoussef 4.0 4\n2\nTOP_GPA\nLEVEL_COUNT 3",
+      "expectedOutput": "Youssef\n1",
+      "visible": false,
+      "_id": {
+        "$oid": "69e785e71de0a98931b57bee"
+      }
+    },
+    {
+      "input": "5\nAhmed 3.2 2\nMona 3.2 2\nTarek 3.2 2\nRania 3.2 2\nSami 4.0 1\n3\nAVG_GPA\nLEVEL_COUNT 2\nLEVEL_COUNT 3",
+      "expectedOutput": "3.36\n4\n0",
+      "visible": false,
+      "_id": {
+        "$oid": "69e785e71de0a98931b57bef"
+      }
+    },
+    {
+      "input": "4\nA 1.0 1\nB 2.0 2\nC 3.0 3\nD 4.0 4\n4\nLEVEL_COUNT 1\nLEVEL_COUNT 2\nLEVEL_COUNT 3\nLEVEL_COUNT 4",
+      "expectedOutput": "1\n1\n1\n1",
+      "visible": false,
+      "_id": {
+        "$oid": "69e785e71de0a98931b57bf0"
+      }
+    },
+    {
+      "input": "3\nZiad 0.0 1\nLina 2.0 2\nFady 4.0 3\n1\nAVG_GPA",
+      "expectedOutput": "2.00",
+      "visible": false,
+      "_id": {
+        "$oid": "69e785e71de0a98931b57bf1"
+      }
+    }
+  ],
+  "supportedLanguages": [
+    "cpp"
+  ],
+  "topic": "Structs",
+  "tags": [
+    "structs, arrays, queries"
+  ],
+  "courseId": {
+    "$oid": "69d5058e0ea5bfc08ea0cdbc"
+  },
+  "estimatedMinutes": 30,
+  "difficulty": 2,
+  "acCount": 0,
+  "isDeleted": false,
+  "createdAt": {
+    "$date": "2026-04-21T14:12:55.848Z"
+  },
+  "updatedAt": {
+    "$date": "2026-04-21T14:12:55.848Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "69e7867d1de0a98931b57c0e"
+  },
+  "title": "Binary Search",
+  "descriptionMd": "\nGiven a **strictly increasing** array of integers and a target value, write a program to find the **0‑based index** of the target if it exists. If the target is not present, return `-1`.\n\nYou must implement an **O(log N)** solution.\n\n### Input\n\n- The first line contains an integer **N** (1 ≤ N ≤ 10⁵) – the size of the array.\n- The second line contains **N** distinct integers sorted in **strictly increasing** order.\n- The third line contains an integer **target** – the value to search for.\n\nAll values fit in a 32‑bit signed integer range (`-10⁹` … `10⁹`).\n\n### Output\n\nA single integer – the 0‑based index of the target if found, otherwise `-1`.\n\n### Example\n\n#### Example 1\n\n**Input**\n\n5  \n1 3 5 7 9  \n5\n\n**Output**\n\n2\n\n*Explanation:* `5` is at index 2 (0‑based).\n\n#### Example 2\n\n**Input**\n\n4  \n2 4 6 8  \n3\n\n**Output**\n\n-1\n\n*Explanation:* `3` is not present in the array.\n\n### Constraints\n\n- Time limit: 1 second  \n- Memory limit: 256 MB  \n- Your solution must run in **O(log N)** time.",
+  "testCases": [
+    {
+      "input": "5\n1 3 5 7 9\n5",
+      "expectedOutput": "2",
+      "visible": true,
+      "_id": {
+        "$oid": "69e7867d1de0a98931b57c0f"
+      }
+    },
+    {
+      "input": "4\n2 4 6 8\n3",
+      "expectedOutput": "-1",
+      "visible": true,
+      "_id": {
+        "$oid": "69e7867d1de0a98931b57c10"
+      }
+    },
+    {
+      "input": "1\n10\n10",
+      "expectedOutput": "0",
+      "visible": false,
+      "_id": {
+        "$oid": "69e7867d1de0a98931b57c11"
+      }
+    },
+    {
+      "input": "1\n10\n5",
+      "expectedOutput": "-1",
+      "visible": false,
+      "_id": {
+        "$oid": "69e7867d1de0a98931b57c12"
+      }
+    },
+    {
+      "input": "6\n-5 -1 0 3 7 11\n7",
+      "expectedOutput": "4",
+      "visible": false,
+      "_id": {
+        "$oid": "69e7867d1de0a98931b57c13"
+      }
+    },
+    {
+      "input": "7\n0 2 4 6 8 10 12\n0",
+      "expectedOutput": "0",
+      "visible": false,
+      "_id": {
+        "$oid": "69e7867d1de0a98931b57c14"
+      }
+    },
+    {
+      "input": "7\n0 2 4 6 8 10 12\n12",
+      "expectedOutput": "6",
+      "visible": false,
+      "_id": {
+        "$oid": "69e7867d1de0a98931b57c15"
+      }
+    }
+  ],
+  "supportedLanguages": [
+    "js",
+    "cpp"
+  ],
+  "topic": "Binary Search",
+  "tags": [
+    "binary search, beginner"
+  ],
+  "courseId": {
+    "$oid": "69d5058e0ea5bfc08ea0cdbc"
+  },
+  "estimatedMinutes": 15,
+  "difficulty": 1,
+  "acCount": 1,
+  "isDeleted": false,
+  "createdAt": {
+    "$date": "2026-04-21T14:15:25.193Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-07T23:49:44.129Z"
+  },
+  "__v": 0
+}]

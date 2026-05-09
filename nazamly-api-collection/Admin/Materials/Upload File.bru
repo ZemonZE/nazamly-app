@@ -1,0 +1,25 @@
+meta {
+  name: Upload File (Admin)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/admin/materials/files
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:multipart-form {
+  file: @file()
+  folderId: REPLACE_WITH_FOLDER_ID
+}
+
+docs {
+  # [Admin] Upload Material File
+  Requires admin role. Max: 50MB.
+}

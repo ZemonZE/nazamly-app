@@ -1,0 +1,45 @@
+meta {
+  name: Target Strategy
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/gpa/target-strategy
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "targetCGPA": 3.5,
+    "courses": [
+      {
+        "name": "Software Engineering",
+        "courseCode": "CS303",
+        "creditHours": 3
+      },
+      {
+        "name": "Advanced Database",
+        "courseCode": "CS308",
+        "creditHours": 3
+      }
+    ]
+  }
+}
+
+docs {
+  # Generate Target Strategy
+  
+  Generates a smart study plan showing what grades you need in each course to reach a target CGPA.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | targetCGPA | number | ✅ | Desired target CGPA |
+  | courses | array | ✅ | Array of current term courses (without grades) |
+}

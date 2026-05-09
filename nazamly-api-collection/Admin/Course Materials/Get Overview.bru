@@ -1,0 +1,20 @@
+meta {
+  name: Get Course Materials Overview
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/admin/course-materials
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # [Admin] Get Course Materials Overview
+  Requires admin role. Returns all course materials overviews with Drive folder info.
+}

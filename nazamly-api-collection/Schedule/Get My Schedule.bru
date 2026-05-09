@@ -1,0 +1,22 @@
+meta {
+  name: Get My Schedule
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/schedule/my-schedule
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Get My Schedule
+  
+  Returns the user's active schedule with all sessions populated.
+  Returns `data: []` if no schedule exists (not 404).
+}

@@ -5,7 +5,7 @@ const path = require("path");
 const fs = require("fs");
 
 // ── Disk storage for uploaded images ─────────────────────────────────────────
-const uploadsDir = path.join(__dirname, "../../../uploads");
+const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const diskStorage = multer.diskStorage({
@@ -238,13 +238,13 @@ const verifyAdmin = async (req, res) => {
   console.log("[user.controller] verifyAdmin called");
   try {
     // req.user comes from authMiddleware (decoded Firebase token with custom claims)
-    
+
     if (!req.user.admin) {
-      return res.status(403).json({ 
-        message: 'Forbidden: Admin access required' 
+      return res.status(403).json({
+        message: 'Forbidden: Admin access required'
       });
     }
-    
+
     res.json({
       message: "Admin verified",
       user: {

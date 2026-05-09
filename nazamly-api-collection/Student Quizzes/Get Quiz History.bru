@@ -1,0 +1,21 @@
+meta {
+  name: Get Quiz History
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/student/quizzes/history
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Get Quiz History
+  
+  Returns the student's quiz submission history.
+}

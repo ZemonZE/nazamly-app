@@ -5,7 +5,12 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { auth, API_URL } from "../firebase";
-import "../styles/ProblemSolver.css";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+/* Legacy ProblemSolver.css removed — Tailwind migration complete */
+
+/* ── Language map for syntax highlighter ── */
+const LANG_MAP = { js: "javascript", cpp: "cpp", emu8086: "nasm", plsql: "sql" };
 
 const DIFFICULTY_LABELS = { 1: "Easy", 2: "Medium", 3: "Hard" };
 const DIFFICULTY_CLASS  = { 1: "ps-easy", 2: "ps-medium", 3: "ps-hard" };
@@ -346,18 +351,61 @@ export default function ProblemSolver() {
             </button>
           </div>
 
-          {/* editor */}
-          <textarea
-            className="ps-editor"
-            value={code}
-            onChange={e => setCode(e.target.value)}
-            onKeyDown={handleEditorKeyDown}
-            spellCheck={false}
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            placeholder="Write your solution here…"
-          />
+          {/* editor — layered textarea over syntax-highlighted pre */}
+          <div className="ps-editor-wrap" style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+            <SyntaxHighlighter
+              language={LANG_MAP[language] || "javascript"}
+              style={oneDark}
+              customStyle={{
+                margin: 0,
+                padding: '1rem',
+                fontSize: '0.85rem',
+                lineHeight: '1.6',
+                fontFamily: '"Fira Code", "JetBrains Mono", "Cascadia Code", monospace',
+                background: '#282c34',
+                borderRadius: '0.75rem',
+                height: '100%',
+                overflow: 'auto',
+                boxSizing: 'border-box',
+                minHeight: '300px',
+              }}
+              wrapLongLines
+            >
+              {code || ' '}
+            </SyntaxHighlighter>
+            <textarea
+              className="ps-editor"
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              onKeyDown={handleEditorKeyDown}
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              placeholder="Write your solution here…"
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                padding: '1rem',
+                fontSize: '0.85rem',
+                lineHeight: '1.6',
+                fontFamily: '"Fira Code", "JetBrains Mono", "Cascadia Code", monospace',
+                background: 'transparent',
+                color: 'transparent',
+                caretColor: '#fff',
+                resize: 'none',
+                border: 'none',
+                outline: 'none',
+                overflow: 'auto',
+                boxSizing: 'border-box',
+                zIndex: 2,
+                minHeight: '300px',
+              }}
+            />
+          </div>
 
           {/* run results */}
           {runResults && (

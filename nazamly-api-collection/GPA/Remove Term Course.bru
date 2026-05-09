@@ -1,0 +1,25 @@
+meta {
+  name: Remove Term Course
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/gpa/my-courses/:courseId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  courseId: REPLACE_WITH_COURSE_ID
+}
+
+docs {
+  # Remove Term Course
+  
+  Removes a course from the user's current term by course ObjectId.
+}

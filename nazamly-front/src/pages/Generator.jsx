@@ -3,6 +3,13 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { IconTrash } from "../Icons/DashboardIcons";
 import { auth, API_URL } from "../firebase";
+/* Legacy Dashboard.css removed — Tailwind migration complete */
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import NavigationGuard from "../components/NavigationGuard";
 
 /* ═══════════════════════════════════
    SHARED CONSTANTS
@@ -796,23 +803,31 @@ function Generator() {
   /* ═══════════════════════════════
      RENDER
   ═══════════════════════════════ */
+  // Determine if user is actively editing
+  const hasUnsavedFormData = 
+    form.subject.trim() !== "" || 
+    form.group.trim() !== "" || 
+    form.place.trim() !== "";
+  const isAiGenerating = aiLoading;
+  const shouldBlockNavigation = hasUnsavedFormData || isAiGenerating;
+
   return (
-    <div className="dash-home">
+    <>
+      <NavigationGuard
+        when={shouldBlockNavigation}
+        message={
+          isAiGenerating
+            ? "AI schedule generation is in progress. Are you sure you want to leave?"
+            : "You have unsaved schedule data. Are you sure you want to leave?"
+        }
+      />
+      <div className="container mx-auto p-6 space-y-6">
       {/* ── Tab Switcher ── */}
-      <div className="gen-tabs">
-        <button
-          className={`gen-tab-btn ${tab === "smart" ? "active" : ""}`}
-          onClick={() => setTab("smart")}
-        >
-          🤖 Smart Schedule
-        </button>
-        <button
-          className={`gen-tab-btn ${tab === "manual" ? "active" : ""}`}
-          onClick={() => setTab("manual")}
-        >
-          📝 Manual Schedule
-        </button>
-      </div>
+      <Tabs value={tab} onValueChange={setTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
+          <TabsTrigger value="smart">🤖 Smart Schedule</TabsTrigger>
+          <TabsTrigger value="manual">📝 Manual Schedule</TabsTrigger>
+        </TabsList>
 
       {/* ── Conflict Popup (manual) ── */}
       {conflict && (
@@ -831,331 +846,346 @@ function Generator() {
       {/* ════════════════════════════
          MANUAL TAB
       ════════════════════════════ */}
-      {tab === "manual" && (
-        <div className="gen-grid">
+      <TabsContent value="manual" className="space-y-6">
+        <div className="grid md:grid-cols-2 gap-6">
           {/* ── Form ── */}
-          <div className="gpa-card">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                addSchedule();
-              }}
-            >
-              <h3 style={{ marginBottom: "16px" }}>Add Schedule Slot</h3>
-
-              <div className="form-group">
-                <label>Course Name</label>
-                <input
-                  className="gpa-input"
-                  type="text"
-                  placeholder="Example: Operating Systems"
-                  value={form.subject}
-                  onChange={(e) => handleChange("subject", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Course Type</label>
-                <div className="type-selector">
-                  {Object.entries(TYPE_LABELS).map(([key, val]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      className={`type-btn ${form.type === key ? "active" : ""}`}
-                      onClick={() => handleChange("type", key)}
-                    >
-                      <span className="type-code">{key}</span>
-                      <span className="type-name">{val}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Day</label>
-                <select
-                  className="gpa-input"
-                  value={form.day}
-                  onChange={(e) => handleChange("day", e.target.value)}
-                  required
-                >
-                  {DAYS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>
-                  Duration of{" "}
-                  {form.type === "ن"
-                    ? "Lecture"
-                    : form.type === "ع"
-                      ? "Lab"
-                      : "Section"}
-                </label>
-                <div className="duration-selector">
-                  <button
-                    type="button"
-                    className={`duration-btn ${form.duration === 2 ? "active" : ""}`}
-                    onClick={() => handleChange("duration", 2)}
-                  >
-                    2 Hours
-                  </button>
-                  <button
-                    type="button"
-                    className={`duration-btn ${form.duration === 3 ? "active" : ""}`}
-                    onClick={() => handleChange("duration", 3)}
-                  >
-                    3 Hours
-                  </button>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Time Slot</label>
-                <select
-                  className="gpa-input"
-                  value={form.slotIndex}
-                  onChange={(e) =>
-                    handleChange("slotIndex", parseInt(e.target.value))
-                  }
-                  required
-                >
-                  {slots.map((s, i) => (
-                    <option key={i} value={i}>
-                      {s.start} — {s.end}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Group Number</label>
-                <input
-                  className="gpa-input"
-                  type="text"
-                  placeholder="Example: G1"
-                  value={form.group}
-                  onChange={(e) => handleChange("group", e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Location</label>
-                <input
-                  className="gpa-input"
-                  type="text"
-                  placeholder="Example: Room 101"
-                  value={form.place}
-                  onChange={(e) => handleChange("place", e.target.value)}
-                  required
-                />
-              </div>
-
-              <button type="submit" className="btn-primary">
-                + Add to Schedule
-              </button>
-            </form>
-          </div>
-
-          {/* ── Schedule ── */}
-          <div className="gen-schedule" ref={manualScheduleRef}>
-            {schedules.length > 0 && (
-              <button
-                className="btn-primary pdf-export-btn"
-                onClick={() => exportPDF("My-Schedule.pdf", "manual")}
-                disabled={exporting}
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Schedule Slot</CardTitle>
+              <CardDescription>Create your schedule manually</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  addSchedule();
+                }}
+                className="space-y-4"
               >
-                {exporting ? "Exporting..." : "📥 Export PDF"}
-              </button>
-            )}
-            {schedules.length === 0 ? (
-              <div className="gpa-card">
-                <div className="gpa-empty">
-                  <span>📅</span>
-                  <p>Add slots to view your schedule</p>
+                <div className="space-y-2">
+                  <Label htmlFor="subject">Course Name</Label>
+                  <Input
+                    id="subject"
+                    type="text"
+                    placeholder="Example: Operating Systems"
+                    value={form.subject}
+                    onChange={(e) => handleChange("subject", e.target.value)}
+                    required
+                  />
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Course Type</Label>
+                  <div className="type-selector">
+                    {Object.entries(TYPE_LABELS).map(([key, val]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        className={`type-btn ${form.type === key ? "active" : ""}`}
+                        onClick={() => handleChange("type", key)}
+                      >
+                        <span className="type-code">{key}</span>
+                        <span className="type-name">{val}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="day">Day</Label>
+                  <select
+                    id="day"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={form.day}
+                    onChange={(e) => handleChange("day", e.target.value)}
+                    required
+                  >
+                    {DAYS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Duration of{" "}
+                    {form.type === "ن"
+                      ? "Lecture"
+                      : form.type === "ع"
+                        ? "Lab"
+                        : "Section"}
+                  </Label>
+                  <div className="duration-selector">
+                    <button
+                      type="button"
+                      className={`duration-btn ${form.duration === 2 ? "active" : ""}`}
+                      onClick={() => handleChange("duration", 2)}
+                    >
+                      2 Hours
+                    </button>
+                    <button
+                      type="button"
+                      className={`duration-btn ${form.duration === 3 ? "active" : ""}`}
+                      onClick={() => handleChange("duration", 3)}
+                    >
+                      3 Hours
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="slot">Time Slot</Label>
+                  <select
+                    id="slot"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={form.slotIndex}
+                    onChange={(e) =>
+                      handleChange("slotIndex", parseInt(e.target.value))
+                    }
+                    required
+                  >
+                    {slots.map((s, i) => (
+                      <option key={i} value={i}>
+                        {s.start} — {s.end}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="group">Group Number</Label>
+                  <Input
+                    id="group"
+                    type="text"
+                    placeholder="Example: G1"
+                    value={form.group}
+                    onChange={(e) => handleChange("group", e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="place">Location</Label>
+                  <Input
+                    id="place"
+                    type="text"
+                    placeholder="Example: Room 101"
+                    value={form.place}
+                    onChange={(e) => handleChange("place", e.target.value)}
+                    required
+                  />
+                </div>
+
+                <Button type="submit" className="w-full">
+                  + Add to Schedule
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* ── Schedule Display ── */}
+          <div>
+            {schedules.length > 0 && (
+              <div className="mb-4">
+                <Button
+                  onClick={() => exportPDF("My-Schedule.pdf", "manual")}
+                  disabled={exporting}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {exporting ? "Exporting..." : "📥 Export PDF"}
+                </Button>
               </div>
-            ) : (
-              DAYS.map((day) => {
-                const items = scheduleByDay[day];
-                if (!items?.length) return null;
-                return (
-                  <div key={day} className="gen-day-card">
-                    <h4 className="gen-day-title">{day}</h4>
-
-                    <div className="gen-item-header">
-                      <span>Time</span>
-                      <span>Course</span>
-                      <span>Group</span>
-                      <span>Location</span>
-                      <span></span>
+            )}
+            
+            <div className="gen-schedule" ref={manualScheduleRef}>
+              {schedules.length === 0 ? (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center py-8 text-muted-foreground">
+                      <span className="text-4xl mb-2 block">📅</span>
+                      <p>Add slots to view your schedule</p>
                     </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                DAYS.map((day) => {
+                  const items = scheduleByDay[day];
+                  if (!items?.length) return null;
+                  return (
+                    <div key={day} className="gen-day-card">
+                      <h4 className="gen-day-title">{day}</h4>
 
-                    <div className="gen-day-items">
-                      {items
-                        .sort((a, b) => {
-                          const getMinutes = (timeStr) => {
-                            const [time, modifier] = timeStr.split(" ");
-                            let [hours, minutes] = time.split(":").map(Number);
-                            if (hours === 12) hours = 0;
-                            if (modifier === "PM") hours += 12;
-                            return hours * 60 + minutes;
-                          };
+                      <div className="gen-item-header">
+                        <span>Time</span>
+                        <span>Course</span>
+                        <span>Group</span>
+                        <span>Location</span>
+                        <span></span>
+                      </div>
 
-                          return (
-                            getMinutes(a.slot.start) - getMinutes(b.slot.start)
-                          );
-                        })
-                        .map((item) => (
-                          <div key={item.id} className="gen-item">
-                            <div className="gen-item-time">
-                              <span>{item.slot.start}</span>
-                              <span className="gen-time-sep">↓</span>
-                              <span>{item.slot.end}</span>
-                            </div>
+                      <div className="gen-day-items">
+                        {items
+                          .sort((a, b) => {
+                            const getMinutes = (timeStr) => {
+                              const [time, modifier] = timeStr.split(" ");
+                              let [hours, minutes] = time.split(":").map(Number);
+                              if (hours === 12) hours = 0;
+                              if (modifier === "PM") hours += 12;
+                              return hours * 60 + minutes;
+                            };
 
-                            <div className="gen-col">
-                              <div className="gen-item-top">
-                                <span className="gen-subject">
-                                  {item.subject}
-                                </span>
-                                <span
-                                  className={`type-badge ${TYPE_COLORS[item.type]}`}
-                                >
-                                  {item.type}
+                            return (
+                              getMinutes(a.slot.start) - getMinutes(b.slot.start)
+                            );
+                          })
+                          .map((item) => (
+                            <div key={item.id} className="gen-item">
+                              <div className="gen-item-time">
+                                <span>{item.slot.start}</span>
+                                <span className="gen-time-sep">↓</span>
+                                <span>{item.slot.end}</span>
+                              </div>
+
+                              <div className="gen-col">
+                                <div className="gen-item-top">
+                                  <span className="gen-subject">
+                                    {item.subject}
+                                  </span>
+                                  <span
+                                    className={`type-badge ${TYPE_COLORS[item.type]}`}
+                                  >
+                                    {item.type}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="gen-col">
+                                <span className="gen-col-value">
+                                  {item.group || "—"}
                                 </span>
                               </div>
-                            </div>
 
-                            <div className="gen-col">
-                              <span className="gen-col-value">
-                                {item.group || "—"}
-                              </span>
-                            </div>
+                              <div className="gen-col">
+                                <span className="gen-col-value">
+                                  {item.place || "—"}
+                                </span>
+                              </div>
 
-                            <div className="gen-col">
-                              <span className="gen-col-value">
-                                {item.place || "—"}
-                              </span>
+                              <button
+                                className="gpa-delete-btn"
+                                onClick={() => removeSchedule(item.id)}
+                              >
+                                <IconTrash width={16} height={16} />
+                              </button>
                             </div>
-
-                            <button
-                              className="gpa-delete-btn"
-                              onClick={() => removeSchedule(item.id)}
-                            >
-                              <IconTrash width={16} height={16} />
-                            </button>
-                          </div>
-                        ))}
+                          ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
-      )}
+      </TabsContent>
 
       {/* ════════════════════════════
          SMART AI TAB
       ════════════════════════════ */}
-      {tab === "smart" && (
+      <TabsContent value="smart" className="space-y-6">
         <div className="ai-gen-wrap">
           {/* ── Upload + Course input ── */}
           {!aiResults && (
-            <div className="gpa-card ai-upload-card">
-              <h3 style={{ marginBottom: "4px" }}>
-                🤖 Generate Smart Schedule
-              </h3>
-              <p className="ai-upload-desc">
-                Upload college schedule images and select course numbers — we
-                will suggest the 3 best schedules without conflicts
-              </p>
-
-              {/* Drop zone */}
-              <div
-                className="ai-dropzone"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
-                  multiple
-                  hidden
-                  onChange={handleFilePick}
-                />
-                <span className="ai-dropzone-icon">📷</span>
-                <p>Click or drag images here</p>
-                <p className="ai-dropzone-hint">
-                  JPG, PNG, WEBP, PDF — up to 5 files
-                </p>
-              </div>
-
-              {/* Thumbnails */}
-              {aiFiles.length > 0 && (
-                <div className="ai-thumbs">
-                  {aiFiles.map((f, i) => (
-                    <div key={i} className="ai-thumb">
-                      <span className="ai-thumb-name">{f.name}</span>
-                      <button
-                        className="ai-thumb-remove"
-                        onClick={() => removeFile(i)}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+            <Card className="ai-upload-card">
+              <CardHeader>
+                <CardTitle>🤖 Generate Smart Schedule</CardTitle>
+                <CardDescription>
+                  Upload college schedule images and select course numbers — we
+                  will suggest the 3 best schedules without conflicts
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Drop zone */}
+                <div
+                  className="ai-dropzone"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    multiple
+                    hidden
+                    onChange={handleFilePick}
+                  />
+                  <span className="ai-dropzone-icon">📷</span>
+                  <p>Click or drag images here</p>
+                  <p className="ai-dropzone-hint">
+                    JPG, PNG, WEBP, PDF — up to 5 files
+                  </p>
                 </div>
-              )}
 
-              {/* Course numbers input */}
-              <div className="form-group" style={{ marginTop: "16px" }}>
-                <label>Course Numbers (Optional)</label>
-                <input
-                  className="gpa-input"
-                  type="text"
-                  placeholder="Example: 402, 407, 408, 490"
-                  value={aiCourses}
-                  onChange={(e) => setAiCourses(e.target.value)}
-                />
-                <span className="ai-input-hint">
-                  Separate numbers with a comma — leave empty to show all
-                  courses
-                </span>
-              </div>
+                {/* Thumbnails */}
+                {aiFiles.length > 0 && (
+                  <div className="ai-thumbs">
+                    {aiFiles.map((f, i) => (
+                      <div key={i} className="ai-thumb">
+                        <span className="ai-thumb-name">{f.name}</span>
+                        <button
+                          className="ai-thumb-remove"
+                          onClick={() => removeFile(i)}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-              {aiError && (
-                <div className="ai-error" role="alert" aria-live="polite">
-                  <div className="ai-error-title">{aiError.title}</div>
-                  <p className="ai-error-message">{aiError.message}</p>
-                  {aiError.hint && (
-                    <p className="ai-error-hint">{aiError.hint}</p>
-                  )}
+                {/* Course numbers input */}
+                <div className="space-y-2">
+                  <Label htmlFor="courses">Course Numbers (Optional)</Label>
+                  <Input
+                    id="courses"
+                    type="text"
+                    placeholder="Example: 402, 407, 408, 490"
+                    value={aiCourses}
+                    onChange={(e) => setAiCourses(e.target.value)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Separate numbers with a comma — leave empty to show all courses
+                  </p>
                 </div>
-              )}
 
-              <button
-                className="btn-primary"
-                style={{ marginTop: "16px", width: "100%" }}
-                onClick={handleGenerate}
-                disabled={aiLoading}
-              >
-                {aiLoading ? "Analyzing with AI..." : "🚀 Generate Schedules"}
-              </button>
+                {aiError && (
+                  <div className="ai-error" role="alert" aria-live="polite">
+                    <div className="ai-error-title">{aiError.title}</div>
+                    <p className="ai-error-message">{aiError.message}</p>
+                    {aiError.hint && (
+                      <p className="ai-error-hint">{aiError.hint}</p>
+                    )}
+                  </div>
+                )}
 
-              {aiLoading && (
-                <div className="ai-loading-bar">
-                  <div className="ai-loading-fill" />
-                </div>
-              )}
-            </div>
+                <Button
+                  onClick={handleGenerate}
+                  disabled={aiLoading}
+                  className="w-full"
+                  size="lg"
+                >
+                  {aiLoading ? "Analyzing with AI..." : "🚀 Generate Schedules"}
+                </Button>
+
+                {aiLoading && (
+                  <div className="ai-loading-bar">
+                    <div className="ai-loading-fill" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
 
           {/* ── Results ── */}
@@ -1183,8 +1213,8 @@ function Generator() {
                     )}
                   </span>
                 </div>
-                <button
-                  className="btn-primary ai-retry-btn"
+                <Button
+                  variant="outline"
                   onClick={() => {
                     setAiResults(null);
                     setAiFiles([]);
@@ -1192,7 +1222,7 @@ function Generator() {
                   }}
                 >
                   ↻ Try Again
-                </button>
+                </Button>
               </div>
 
               {/* Schedule selector pills */}
@@ -1220,27 +1250,22 @@ function Generator() {
 
                 if (!hasContent) {
                   return (
-                    <div className="gpa-card">
-                      <div className="gpa-empty">
-                        <span>📋</span>
-                        <p>No suitable schedules found</p>
-                      </div>
-                    </div>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center py-8 text-muted-foreground">
+                          <span className="text-4xl mb-2 block">📋</span>
+                          <p>No suitable schedules found</p>
+                        </div>
+                      </CardContent>
+                    </Card>
                   );
                 }
 
                 return (
                   <>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "10px",
-                        flexWrap: "wrap",
-                        alignItems: "center",
-                      }}
-                    >
-                      <button
-                        className="btn-primary pdf-export-btn"
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <Button
+                        variant="outline"
                         onClick={() =>
                           exportPDF(
                             `Smart-Schedule-${aiSelected + 1}.pdf`,
@@ -1250,34 +1275,22 @@ function Generator() {
                         disabled={exporting}
                       >
                         {exporting ? "Exporting..." : "📥 Export PDF"}
-                      </button>
-                      <button
-                        className="btn-primary pdf-export-btn"
-                        style={{ background: "#4f46e5" }}
+                      </Button>
+                      <Button
                         onClick={handleSaveToMobile}
                         disabled={saving}
                       >
                         {saving ? "Saving..." : "📱 Save to Mobile"}
-                      </button>
+                      </Button>
                     </div>
                     {saveSuccess && (
-                      <p
-                        style={{
-                          marginTop: "8px",
-                          padding: "10px 14px",
-                          borderRadius: "8px",
-                          fontSize: "14px",
-                          fontWeight: "600",
-                          background: saveSuccess.startsWith("✅")
-                            ? "#f0fdf4"
-                            : "#fef2f2",
-                          color: saveSuccess.startsWith("✅")
-                            ? "#16a34a"
-                            : "#dc2626",
-                        }}
-                      >
-                        {saveSuccess}
-                      </p>
+                      <Card className={saveSuccess.startsWith("✅") ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}>
+                        <CardContent className="pt-6">
+                          <p className={`text-sm font-semibold ${saveSuccess.startsWith("✅") ? "text-green-700" : "text-red-700"}`}>
+                            {saveSuccess}
+                          </p>
+                        </CardContent>
+                      </Card>
                     )}
                     <div className="gen-schedule" ref={aiScheduleRef}>
                       {DAYS.map((day) => {
@@ -1363,8 +1376,10 @@ function Generator() {
             </>
           )}
         </div>
-      )}
+      </TabsContent>
+    </Tabs>
     </div>
+    </>
   );
 }
 

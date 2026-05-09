@@ -1,15 +1,32 @@
 services:
+  backend:
+    image: zemonze/nazamly-backend:latest
+    container_name: nazamly-backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      - piston
+    env_file:
+      - ./.env
+    volumes:
+      - ./firebase-adminsdk.json:/app/firebase-adminsdk.json:ro
+    environment:
+      # Override .env's localhost URL → Docker internal network
+      - PISTON_BASE_URL=http://piston:2000/api/v2
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-adminsdk.json
+
   piston:
-    image: ghcr.io/engineer-man/piston
+    image: ghcr.io/engineer-man/piston:latest
+    container_name: piston
+    restart: always
     ports:
       - "2000:2000"
-    restart: unless-stopped
+    # Piston needs privileged mode to create isolate sandboxes
     privileged: true
     tmpfs:
       - /piston/jobs
     volumes:
-      - piston_data:/piston
-      - ./piston-index.js:/piston_api/src/index.js
+      - piston_data:/piston/packages
 
 volumes:
   piston_data:

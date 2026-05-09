@@ -1,0 +1,28 @@
+meta {
+  name: Parse Schedule From Image
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{base_url}}/schedule/parse-from-image
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:multipart-form {
+  file: @file()
+}
+
+docs {
+  # Parse Schedule From Image
+  
+  Uploads a schedule image → AI extracts entries → returns preview (does NOT save).
+  Use this for preview before confirming save.
+  
+  Field name: `file`. Accepts images and PDFs.
+}

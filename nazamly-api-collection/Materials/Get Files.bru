@@ -1,0 +1,25 @@
+meta {
+  name: Get Files
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/materials/files/:folderId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  folderId: REPLACE_WITH_FOLDER_ID
+}
+
+docs {
+  # Get Files In Folder
+  
+  Returns all files in a specific materials folder.
+}

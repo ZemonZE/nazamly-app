@@ -1,0 +1,27 @@
+meta {
+  name: Link Doctor To Course
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/admin/link-doctor-to-course
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "doctorId": "REPLACE_WITH_DOCTOR_ID",
+    "courseId": "REPLACE_WITH_COURSE_ID"
+  }
+}
+
+docs {
+  # [Admin] Link Doctor to Course
+  Requires admin role. Creates a CourseInstance linking a doctor to a course.
+}

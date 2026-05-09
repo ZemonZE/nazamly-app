@@ -1,0 +1,27 @@
+meta {
+  name: Update Student Card URL
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/auth/update-student-card
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "studentCardPhotoURL": "https://example.com/student-card.jpg"
+  }
+}
+
+docs {
+  # Update Student Card URL
+  
+  Updates the user's student card photo via a URL string.
+}

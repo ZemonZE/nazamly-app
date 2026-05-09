@@ -1,0 +1,26 @@
+meta {
+  name: Upload Photo File
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{base_url}}/auth/upload-photo
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:multipart-form {
+  photo: @file()
+}
+
+docs {
+  # Upload Photo File
+  
+  Upload a profile photo image file (multipart/form-data).
+  Field name: `photo`. Max size: 10MB. Images only.
+}

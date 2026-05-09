@@ -1,0 +1,25 @@
+meta {
+  name: Delete Session
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{base_url}}/schedule/session/:sessionId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  sessionId: REPLACE_WITH_SESSION_ID
+}
+
+docs {
+  # Delete Session
+  
+  Removes a session from the user's schedule and soft-deletes it.
+}

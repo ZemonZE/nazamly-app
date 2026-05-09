@@ -1,0 +1,39 @@
+meta {
+  name: Get Profile
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/auth/get-profile
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Get Profile
+  
+  Retrieves the authenticated user's full profile including term courses, GPA, and department info.
+  
+  ## Response
+  ```json
+  {
+    "success": true,
+    "message": "Profile retrieved successfully",
+    "data": {
+      "_id": "...",
+      "email": "202227328@std.sci.cu.edu.eg",
+      "displayName": "...",
+      "department": "CS",
+      "cgpa": 3.15,
+      "completedHours": 125,
+      "academicYear": 3,
+      "termCourses": [...]
+    }
+  }
+  ```
+}

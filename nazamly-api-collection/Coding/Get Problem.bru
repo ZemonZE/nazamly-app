@@ -1,0 +1,25 @@
+meta {
+  name: Get Problem
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/coding/problems/:id
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_PROBLEM_ID
+}
+
+docs {
+  # Get Coding Problem
+  
+  Returns a specific coding problem with description and test cases.
+}

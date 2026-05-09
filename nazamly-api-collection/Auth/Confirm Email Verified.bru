@@ -1,0 +1,48 @@
+meta {
+  name: Confirm Email Verified
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{base_url}}/auth/confirm-email-verified
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Confirm Email Verified
+  
+  Syncs `accessStatus` to `"active"` after Firebase confirms the user's email is verified.
+  Call this after the user clicks the verification link in their email.
+  
+  ## Flow
+  1. Checks `req.user.email_verified` from the Firebase token. If `false` → **400**
+  2. Finds user in MongoDB. If not found → **404**
+  3. If already `"active"` → **200** (idempotent, no DB write)
+  4. Otherwise updates `accessStatus` to `"active"` → **200**
+  
+  ## Responses
+  
+  **400** - Email not verified yet
+  ```json
+  { "message": "Email has not been verified yet" }
+  ```
+  
+  **200** - Already verified (idempotent)
+  ```json
+  { "message": "Email already verified", "user": { ... } }
+  ```
+  
+  **200** - Just activated
+  ```json
+  { "user": { ... } }
+  ```
+  
+  > ⚠️ **Note**: After verifying email in Firebase, the user must **re-login** (get a fresh idToken)
+  > so the token includes `email_verified: true`. Then call this endpoint.
+}

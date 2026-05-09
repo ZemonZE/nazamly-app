@@ -1,0 +1,28 @@
+meta {
+  name: Create Folder
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/materials/folders
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "name": "Lecture Notes",
+    "courseInstanceId": "REPLACE_WITH_COURSE_INSTANCE_ID"
+  }
+}
+
+docs {
+  # Create Materials Folder
+  
+  Creates a new folder for organizing course materials.
+}

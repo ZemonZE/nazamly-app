@@ -1,0 +1,37 @@
+meta {
+  name: Create Problem
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/admin/coding/problems
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:multipart-form {
+  descriptionFile: @file()
+  testCasesFile: @file()
+  title: Two Sum
+  difficulty: Easy
+  language: python
+}
+
+docs {
+  # [Admin] Create Coding Problem
+  Requires admin role. Upload description and test cases files.
+  
+  ## Form Fields
+  | Field | Type | Description |
+  |-------|------|-------------|
+  | descriptionFile | file | Problem description (markdown/text) |
+  | testCasesFile | file | Test cases file (JSON) |
+  | title | string | Problem title |
+  | difficulty | string | Easy, Medium, Hard |
+  | language | string | Programming language |
+}

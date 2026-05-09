@@ -1,0 +1,21 @@
+meta {
+  name: Get Student Card
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/auth/student-card
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Get Student Card
+  
+  Returns the student card photo URL for the authenticated user.
+}

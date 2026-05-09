@@ -1,0 +1,24 @@
+meta {
+  name: Delete File (Admin)
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{base_url}}/admin/materials/files/:fileId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  fileId: REPLACE_WITH_FILE_ID
+}
+
+docs {
+  # [Admin] Delete Material File
+  Requires admin role.
+}

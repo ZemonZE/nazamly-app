@@ -1,0 +1,24 @@
+meta {
+  name: Trigger Profiling
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/admin/trigger-profiling/:courseId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  courseId: REPLACE_WITH_COURSE_ID
+}
+
+docs {
+  # [Admin] Trigger Professor Profiling
+  Requires admin role. Triggers AI-based professor-style profiling using archived questions.
+}

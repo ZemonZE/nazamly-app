@@ -1,0 +1,24 @@
+meta {
+  name: Delete Course Instance
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{base_url}}/admin/course-instances/:id
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_INSTANCE_ID
+}
+
+docs {
+  # [Admin] Delete Course Instance
+  Requires admin role.
+}

@@ -1,0 +1,35 @@
+meta {
+  name: Analyze Professor Style
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/questions/analyze-style
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "courseId": "REPLACE_WITH_COURSE_OBJECT_ID"
+  }
+}
+
+docs {
+  # Analyze Professor Style
+  
+  Triggers AI analysis of historical exam questions to build a professor's question style profile.
+  Rate limited: 5 requests per minute.
+  
+  > ⚠️ Requires verified (active) user. Unverified users get `403 EMAIL_NOT_VERIFIED`.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | courseId | string | ✅ | MongoDB ObjectId of the target course |
+}

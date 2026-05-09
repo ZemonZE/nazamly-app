@@ -1,0 +1,21 @@
+meta {
+  name: Get My Course Materials
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/course-materials/my-courses
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Get My Course Materials
+  
+  Returns courses that have initialized Google Drive folders (student read-only view).
+}

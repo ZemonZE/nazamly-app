@@ -1,0 +1,31 @@
+meta {
+  name: Sync User
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/auth/sync
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Sync User
+  
+  Syncs user data after Firebase login. Creates user in MongoDB if not exists.
+  Always call this after first login.
+  
+  ## Response
+  ```json
+  {
+    "success": true,
+    "message": "User synced successfully",
+    "user": { ... }
+  }
+  ```
+}

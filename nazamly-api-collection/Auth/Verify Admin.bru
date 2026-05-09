@@ -1,0 +1,22 @@
+meta {
+  name: Verify Admin
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{base_url}}/auth/verify-admin
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Verify Admin
+  
+  Checks if the authenticated user has admin privileges (Firebase custom claims).
+  Returns 403 if not admin.
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Delete Chapter
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{base_url}}/materials/chapters/:chapterId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  chapterId: REPLACE_WITH_CHAPTER_ID
+}
+
+docs {
+  # Delete Chapter
+  
+  Deletes a chapter entry by ID.
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Get Archived Questions
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/questions/archive
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Get Archived Questions (Past Exams)
+  
+  Returns all archived/past exam questions.
+  
+  > ⚠️ Requires verified (active) user. Unverified users get `403 EMAIL_NOT_VERIFIED`.
+}

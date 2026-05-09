@@ -1,0 +1,32 @@
+meta {
+  name: Get SubFolder Files
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/course-materials/:courseCode/files/:subFolderType
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  courseCode: CS303
+  subFolderType: lectures
+}
+
+docs {
+  # Get SubFolder Files
+  
+  Lists files in a specific sub-folder of a course.
+  
+  ## Path Parameters
+  | Param | Description |
+  |-------|-------------|
+  | courseCode | Course code (e.g. "CS303") |
+  | subFolderType | "lectures", "sections", "labs", "exams" |
+}

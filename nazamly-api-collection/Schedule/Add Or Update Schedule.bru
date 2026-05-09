@@ -1,0 +1,54 @@
+meta {
+  name: Add Or Update Schedule
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/schedule/AddOrUpdate
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "title": "Fall 2026",
+    "entries": [
+      {
+        "courseCode": "CS303",
+        "courseName": "Software Engineering",
+        "dayOfWeek": 0,
+        "startTime": "08:00",
+        "endTime": "09:30",
+        "sessionType": "Lecture",
+        "location": "Hall A",
+        "groupNumber": "1"
+      }
+    ]
+  }
+}
+
+docs {
+  # Add Or Update Schedule
+  
+  Creates a new schedule or adds entries to an existing one.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | title | string | ❌ | Schedule title (default: "My Schedule") |
+  | SemesterId | string | ❌ | Semester ObjectId |
+  | entries | array | ✅ | Array of session entries |
+  | entries[].courseCode | string | ✅ | Course code |
+  | entries[].courseName | string | ❌ | Course name |
+  | entries[].dayOfWeek | number | ✅ | 0=Saturday, 1=Sunday, ... 6=Friday |
+  | entries[].startTime | string | ✅ | "HH:MM" format |
+  | entries[].endTime | string | ✅ | "HH:MM" format |
+  | entries[].sessionType | string | ✅ | "Lecture", "Section", "Lab" |
+  | entries[].location | string | ❌ | Room/Hall |
+  | entries[].groupNumber | string | ❌ | Group number |
+}

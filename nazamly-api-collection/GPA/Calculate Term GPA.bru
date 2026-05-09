@@ -1,0 +1,49 @@
+meta {
+  name: Calculate Term GPA
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/gpa/calculate
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "courses": [
+      {
+        "name": "Software Engineering",
+        "courseCode": "CS303",
+        "creditHours": 3,
+        "grade": "A"
+      },
+      {
+        "name": "Advanced Database",
+        "courseCode": "CS308",
+        "creditHours": 3,
+        "grade": "B+"
+      }
+    ]
+  }
+}
+
+docs {
+  # Calculate Term GPA
+  
+  Calculates term GPA and expected new CGPA from submitted courses and grades.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | courses | array | ✅ | Array of course objects with grades |
+  | courses[].name | string | ✅ | Course name |
+  | courses[].courseCode | string | ✅ | Course code (e.g. "CS303") |
+  | courses[].creditHours | number | ✅ | Credit hours for this course |
+  | courses[].grade | string | ✅ | Grade: A+, A, A-, B+, B, B-, C+, C, C-, D+, D, F |
+}

@@ -172,35 +172,52 @@ function Questions() {
   const allAnswered = totalQuestions > 0 && answeredCount === totalQuestions;
   const progressPercent = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
 
-  // ── Initial Data Fetch — prefer user.termCourses, fallback to materials service ──
+  // ── Initial Data Fetch — fetch real course ObjectIds, filter to user's enrolled courses ──
   useEffect(() => {
     setCoursesLoading(true);
     setCoursesError(null);
 
-    // If the user has registered courses from onboarding, use them directly
-    if (user?.termCourses && user.termCourses.length > 0) {
-      const mapped = user.termCourses.map((c) => ({
-        courseId: c._id || c.courseCode,
-        courseCode: c.courseCode,
-        courseName: c.name || c.courseName,
-      }));
-      setCourses(mapped);
-      setCoursesLoading(false);
-      return;
-    }
+    const loadCourses = async () => {
+      try {
+        const token = await auth.currentUser.getIdToken();
+        // Always fetch the real courses list to get correct ObjectIds
+        const res = await fetch(`${API_URL}/api/courses`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch courses");
+        const allCourses = await res.json();
+        const coursesList = Array.isArray(allCourses) ? allCourses : (allCourses.courses || allCourses.data || []);
 
-    // Fallback: fetch from materials service (covers legacy users)
-    getMyCoursesMaterials()
-      .then((data) => {
-        setCourses(data || []);
-      })
-      .catch((err) => {
+        // If user has termCourses, filter to only enrolled courses
+        if (user?.termCourses && user.termCourses.length > 0) {
+          const enrolledCodes = new Set(user.termCourses.map((c) => c.courseCode));
+          const filtered = coursesList
+            .filter((c) => enrolledCodes.has(c.courseCode))
+            .map((c) => ({
+              courseId: c._id,
+              courseCode: c.courseCode,
+              courseName: c.courseName,
+            }));
+          console.log("[Questions] courses (real ObjectIds):", filtered);
+          setCourses(filtered);
+        } else {
+          // No termCourses — show all courses
+          const mapped = coursesList.map((c) => ({
+            courseId: c._id,
+            courseCode: c.courseCode,
+            courseName: c.courseName,
+          }));
+          setCourses(mapped);
+        }
+      } catch (err) {
         console.error("Failed to load courses:", err);
         setCoursesError(err.message || "Failed to load courses.");
-      })
-      .finally(() => {
+      } finally {
         setCoursesLoading(false);
-      });
+      }
+    };
+
+    if (auth.currentUser) loadCourses();
   }, [user]);
 
   useEffect(() => {
@@ -311,7 +328,7 @@ function Questions() {
   };
 
   const handleFetchArchive = async () => {
-    if (!selectedCourseObj || selectedLectures.length === 0) return;
+    if (!selectedCourseObj) return;
 
     setArchiveLoading(true);
     setArchiveError(null);
@@ -322,9 +339,14 @@ function Questions() {
     setArchiveRevealed({});
 
     try {
-      const url = `${API_URL}/api/questions/archive?courseId=${selectedCourseObj.courseId}&lectureId=${selectedLectures.join(",")}`;
-      const response = await fetch(url);
+      const token = await auth.currentUser.getIdToken();
+      const url = `${API_URL}/api/questions/archive?courseId=${selectedCourseObj.courseId}`;
+      console.log("[Archive] Fetching:", url, "courseObj:", selectedCourseObj);
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await response.json();
+      console.log("[Archive] Response:", response.status, data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to fetch archive");

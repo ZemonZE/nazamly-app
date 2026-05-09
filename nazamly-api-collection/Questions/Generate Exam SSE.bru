@@ -1,0 +1,33 @@
+meta {
+  name: Generate Exam (SSE Stream)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/questions/generate-stream?courseId=COURSE_ID&materialFileIds=ID1,ID2&examType=Quiz&questionCount=10
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Generate Exam (SSE Stream)
+  
+  Uses Server-Sent Events (SSE) for real-time exam question delivery.
+  Must be GET (EventSource API only supports GET).
+  Rate limited: 5 requests per minute.
+  
+  > ⚠️ Requires verified (active) user. Unverified users get `403 EMAIL_NOT_VERIFIED`.
+  
+  ## Query Parameters
+  | Param | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | courseId | string | ✅ | MongoDB ObjectId of the target course |
+  | materialFileIds | string | ✅ | Comma-separated MaterialFile ObjectIds |
+  | examType | string | ❌ | "Quiz", "Midterm", "Final" (default: "Quiz") |
+  | questionCount | number | ❌ | Number of questions (default: 10) |
+}

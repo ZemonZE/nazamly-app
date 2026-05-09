@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation } from "react-router-dom";
-import "../styles/GpaPlanner.css";
+/* Legacy GpaPlanner.css removed — Tailwind migration in progress */
 import {
   calculateTermGPA as apiCalculate,
   generateTargetPlan as apiTargetPlan,

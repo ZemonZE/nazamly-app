@@ -1,0 +1,26 @@
+meta {
+  name: Delete SubFolder File
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{base_url}}/admin/course-materials/:courseCode/files/:subFolderType/:fileId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  courseCode: CS316
+  subFolderType: lectures
+  fileId: REPLACE_WITH_FILE_ID
+}
+
+docs {
+  # [Admin] Delete SubFolder File
+  Requires admin role. Deletes a file from a course subfolder on Drive.
+}

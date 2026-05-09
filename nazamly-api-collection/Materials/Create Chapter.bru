@@ -1,0 +1,28 @@
+meta {
+  name: Create Chapter
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/materials/chapters
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "name": "Chapter 1 - Introduction",
+    "courseInstanceId": "REPLACE_WITH_COURSE_INSTANCE_ID"
+  }
+}
+
+docs {
+  # Create Chapter
+  
+  Creates a new chapter entry for a course instance.
+}

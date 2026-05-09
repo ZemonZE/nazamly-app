@@ -1,0 +1,43 @@
+meta {
+  name: Update Transcript
+  type: http
+  seq: 9
+}
+
+patch {
+  url: {{base_url}}/gpa/transcripts/:id
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_TRANSCRIPT_ID
+}
+
+body:json {
+  {
+    "courses": [
+      {
+        "name": "Software Engineering",
+        "courseCode": "CS303",
+        "creditHours": 3,
+        "grade": "A"
+      }
+    ]
+  }
+}
+
+docs {
+  # Update Transcript (Correct Courses)
+  
+  Manually correct extracted courses and recalculate GPA.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | courses | array | ✅ | Corrected course array with grades |
+}

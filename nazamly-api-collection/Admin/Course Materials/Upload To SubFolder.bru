@@ -1,0 +1,35 @@
+meta {
+  name: Upload To SubFolder
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/admin/course-materials/:courseCode/upload/:subFolderType
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  courseCode: CS316
+  subFolderType: lectures
+}
+
+body:multipart-form {
+  file: @file()
+}
+
+docs {
+  # [Admin] Upload File to SubFolder
+  Requires admin role. Upload a file to a specific course subfolder on Drive.
+  
+  ## Path Parameters
+  | Param | Description |
+  |-------|-------------|
+  | courseCode | Course code (e.g. "CS316") |
+  | subFolderType | "lectures", "sections", "labs", "exams" |
+}

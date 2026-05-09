@@ -1,0 +1,24 @@
+meta {
+  name: Get Problem Submissions
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/admin/coding/problems/:id/submissions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_PROBLEM_ID
+}
+
+docs {
+  # [Admin] Get Problem Submissions
+  Requires admin role. Returns all student submissions for a specific problem.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: Update Course
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{base_url}}/admin/courses/:id
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_COURSE_ID
+}
+
+body:json {
+  {
+    "courseName": "Data Structures & Algorithms",
+    "creditHours": 4
+  }
+}
+
+docs {
+  # [Admin] Update Course
+  Requires admin role.
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Create Doctor
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/admin/doctors
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "name": "Dr. Ahmed Hassan",
+    "department": "CS"
+  }
+}
+
+docs {
+  # [Admin] Create Doctor
+  Requires admin role. Creates a new doctor profile.
+}

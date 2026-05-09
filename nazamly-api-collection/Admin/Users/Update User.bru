@@ -1,0 +1,31 @@
+meta {
+  name: Update User
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{base_url}}/admin/users/:id
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_USER_ID
+}
+
+body:json {
+  {
+    "role": "admin",
+    "accessStatus": "active"
+  }
+}
+
+docs {
+  # [Admin] Update User
+  Requires admin role. Updates a user's profile (role, status, etc).
+}

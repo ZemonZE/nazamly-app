@@ -1,0 +1,21 @@
+meta {
+  name: Get Progress
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{base_url}}/coding/progress
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Get Student Progress
+  
+  Returns the student's coding progress across all problems.
+}

@@ -32,29 +32,12 @@ export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 
 
-// 🔥 Dynamic API URL — auto-detects the dev machine's IP from Expo debugger
-// Falls back to localhost for web, and Expo's hostUri for native devices
+// 🔥 AWS Production API URL
+// Previously used dynamic local IP detection for dev — now pointing to AWS
+const AWS_API_URL = 'http://13.60.63.216:5000';
+
 function resolveApiUrl(): string {
-  if (Platform.OS === 'web') return 'http://127.0.0.1:5000';
-
-  try {
-    // Expo DevTools injects the dev machine's hostname via Constants
-    const Constants = require('expo-constants').default;
-    const debuggerHost =
-      Constants.expoConfig?.hostUri ||   // SDK 55+
-      Constants.manifest?.debuggerHost || // Legacy
-      null;
-
-    if (debuggerHost) {
-      const host = debuggerHost.split(':')[0]; // strip port (e.g., "192.168.1.105:8081" → "192.168.1.105")
-      return `http://${host}:5000`;
-    }
-  } catch (_) {
-    // expo-constants not available
-  }
-
-  // Ultimate fallback
-  return 'http://192.168.1.105:5000';
+  return AWS_API_URL;
 }
 
 export const API_URL = resolveApiUrl();

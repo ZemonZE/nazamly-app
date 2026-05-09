@@ -1,0 +1,36 @@
+meta {
+  name: Run Code
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/coding/run
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "problemId": "REPLACE_WITH_PROBLEM_ID",
+    "code": "print('Hello World')",
+    "language": "python"
+  }
+}
+
+docs {
+  # Run Code (Sandbox)
+  
+  Runs code in a sandbox without submitting. Rate limited: 20 per minute.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | problemId | string | ✅ | Problem ObjectId |
+  | code | string | ✅ | Source code |
+  | language | string | ✅ | Programming language |
+}

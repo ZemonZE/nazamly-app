@@ -1,0 +1,28 @@
+meta {
+  name: Create Course Instance
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/admin/course-instances
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "courseId": "REPLACE_WITH_COURSE_ID",
+    "doctorId": "REPLACE_WITH_DOCTOR_ID",
+    "semester": "Fall 2026"
+  }
+}
+
+docs {
+  # [Admin] Create Course Instance
+  Requires admin role. Links a course to a doctor for a semester.
+}

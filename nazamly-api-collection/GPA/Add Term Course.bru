@@ -1,0 +1,36 @@
+meta {
+  name: Add Term Course
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/gpa/my-courses
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "name": "Operating Systems",
+    "courseCode": "CS306",
+    "creditHours": 3
+  }
+}
+
+docs {
+  # Add Term Course
+  
+  Adds a course to the user's current term course list.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | name | string | ✅ | Course name |
+  | courseCode | string | ✅ | Course code |
+  | creditHours | number | ✅ | Credit hours |
+}

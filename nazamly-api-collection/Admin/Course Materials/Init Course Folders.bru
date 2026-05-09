@@ -1,0 +1,26 @@
+meta {
+  name: Init Course Folders
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/admin/course-materials/init
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "courseCode": "CS316"
+  }
+}
+
+docs {
+  # [Admin] Initialize Course Folders on Drive
+  Requires admin role. Creates the Google Drive folder structure (lectures, sections, labs, exams) for a course.
+}

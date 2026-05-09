@@ -1,0 +1,32 @@
+meta {
+  name: Update Photo URL
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/auth/update-photo
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "photoURL": "https://example.com/photo.jpg"
+  }
+}
+
+docs {
+  # Update Photo URL
+  
+  Updates the user's profile photo via a URL string.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | photoURL | string | ✅ | Valid URL to the profile photo |
+}

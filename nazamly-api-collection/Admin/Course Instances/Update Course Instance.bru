@@ -1,0 +1,30 @@
+meta {
+  name: Update Course Instance
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{base_url}}/admin/course-instances/:id
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_INSTANCE_ID
+}
+
+body:json {
+  {
+    "semester": "Spring 2027"
+  }
+}
+
+docs {
+  # [Admin] Update Course Instance
+  Requires admin role.
+}

@@ -1,0 +1,24 @@
+meta {
+  name: Get Folders (Admin)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/admin/materials/folders/:courseInstanceId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  courseInstanceId: REPLACE_WITH_COURSE_INSTANCE_ID
+}
+
+docs {
+  # [Admin] Get Material Folders
+  Requires admin role. Returns all folders for a course instance.
+}

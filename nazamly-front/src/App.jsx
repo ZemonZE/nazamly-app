@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import "./App.css";
+/* App.css removed — all styles now in index.css + Tailwind */
 import ThemeToggle from "./components/ThemeToggle";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
@@ -25,22 +25,38 @@ import { onAuthStateChanged } from "firebase/auth";
 
 import ForgotPassword from "./components/ForgotPassword";
 import VerifiedOnly from "./components/VerifiedOnly";
+import { AnimatedBackground } from "./components/AnimatedBackground";
 import mainLogo from "./assets/logo.jpg";
 
-/* ── Auth layout — declared outside App for stable React identity ── */
+/* ── GeometricBanner — colorful SVG pattern from the Spline design ── */
+function GeometricBanner() {
+  return (
+    <svg className="absolute inset-x-0 top-0 h-44 w-full" viewBox="0 0 600 180" preserveAspectRatio="xMidYMid slice">
+      <rect width="600" height="180" fill="var(--brand-ink)" />
+      <circle cx="60" cy="90" r="60" fill="var(--brand-orange)" />
+      <path d="M120 180 A60 60 0 0 1 240 180 Z" fill="var(--brand-pink)" />
+      <rect x="240" y="0" width="80" height="180" fill="var(--brand-teal)" />
+      <circle cx="380" cy="90" r="60" fill="var(--brand-coral)" />
+      <path d="M440 0 A60 60 0 0 1 560 0 Z" fill="var(--brand-orange)" transform="rotate(180 500 0)" />
+      <rect x="500" y="60" width="100" height="60" fill="var(--brand-teal)" />
+      <circle cx="560" cy="150" r="30" fill="var(--brand-pink)" />
+    </svg>
+  );
+}
+
+/* ── Auth layout — exact Spline design: animated BG + hero panel ── */
 function AuthLayout({ isLogin, onLogin, onSwitchToSignup, onSwitchToLogin, children }) {
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-header">
-          <a href="#">
-            <img src={mainLogo} className="site-logo" alt="Nazamly" />
-            <h1>Nazamly</h1>
-          </a>
-          <p className="tagline">Nazamly — Integrated Education Platform</p>
-        </div>
-        <div className="auth-content">
-          <InfoPanel />
+    <div className="relative min-h-screen overflow-hidden">
+      <AnimatedBackground variant="intense" />
+      <div className="mx-auto grid min-h-screen max-w-7xl grid-cols-1 items-center gap-10 px-6 py-10 lg:grid-cols-2 lg:gap-16">
+        {/* Form side */}
+        <div className="mx-auto w-full max-w-md">
+          <div className="mb-10 inline-flex items-center gap-3">
+            <img src={mainLogo} className="h-12 w-12 rounded-xl object-cover shadow-md" alt="Nazamly" />
+            <span className="font-display text-xl font-semibold">Nazamly</span>
+          </div>
+
           {children ?? (
             isLogin ? (
               <Login
@@ -54,6 +70,28 @@ function AuthLayout({ isLogin, onLogin, onSwitchToSignup, onSwitchToLogin, child
               />
             )
           )}
+        </div>
+
+        {/* Hero panel — animated CSS scene (desktop only) */}
+        <div className="relative hidden h-[600px] overflow-hidden rounded-3xl border border-border/60 bg-card/40 shadow-xl backdrop-blur lg:block">
+          <GeometricBanner />
+          <div className="absolute inset-x-0 bottom-0 p-10">
+            <h2 className="font-display text-4xl font-light leading-tight">
+              Plan smarter.<br /><span className="font-bold">Study deeper.</span>
+            </h2>
+            <p className="mt-3 max-w-sm text-muted-foreground">
+              Your AI-assisted student companion for grades, materials, and code.
+            </p>
+          </div>
+          {/* Floating tiles */}
+          <div className="absolute left-10 top-20 rotate-[-6deg] rounded-2xl bg-card p-4 shadow-lg float-shape" style={{ animationDelay: "-3s" }}>
+            <div className="text-xs text-muted-foreground">Current GPA</div>
+            <div className="font-display text-2xl font-bold">3.86</div>
+          </div>
+          <div className="absolute right-8 top-44 rotate-[5deg] rounded-2xl bg-brand-ink p-4 text-white shadow-lg float-shape" style={{ animationDelay: "-7s" }}>
+            <div className="text-xs opacity-70">Next event</div>
+            <div className="font-display text-lg font-semibold">Ergonomics · 11:00</div>
+          </div>
         </div>
       </div>
     </div>

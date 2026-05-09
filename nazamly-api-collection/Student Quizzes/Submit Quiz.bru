@@ -1,0 +1,30 @@
+meta {
+  name: Submit Quiz
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/student/quizzes/submit
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "courseId": "REPLACE_WITH_COURSE_ID",
+    "answers": [],
+    "score": 8,
+    "total": 10
+  }
+}
+
+docs {
+  # Submit Quiz
+  
+  Submits a completed quiz with answers and score.
+}

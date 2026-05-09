@@ -1,0 +1,24 @@
+meta {
+  name: Delete Course
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{base_url}}/admin/courses/:id
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_COURSE_ID
+}
+
+docs {
+  # [Admin] Delete Course
+  Requires admin role.
+}

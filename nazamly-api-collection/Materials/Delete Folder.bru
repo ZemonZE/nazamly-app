@@ -1,0 +1,25 @@
+meta {
+  name: Delete Folder
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{base_url}}/materials/folders/:folderId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  folderId: REPLACE_WITH_FOLDER_ID
+}
+
+docs {
+  # Delete Materials Folder
+  
+  Deletes a materials folder by ID.
+}

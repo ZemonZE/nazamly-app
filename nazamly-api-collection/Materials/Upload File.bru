@@ -1,0 +1,27 @@
+meta {
+  name: Upload File
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/materials/files
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:multipart-form {
+  file: @file()
+  folderId: REPLACE_WITH_FOLDER_ID
+}
+
+docs {
+  # Upload Material File
+  
+  Uploads a file to a specific folder. Max: 50MB.
+  Accepts: PDF, DOC, DOCX, PPT, PPTX, images, and text files.
+}

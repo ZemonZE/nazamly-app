@@ -1,0 +1,29 @@
+meta {
+  name: Create Course
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/admin/courses
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "courseName": "Data Structures",
+    "courseCode": "CS201",
+    "creditHours": 3,
+    "department": "CS"
+  }
+}
+
+docs {
+  # [Admin] Create Course
+  Requires admin role. Creates a new course in the system.
+}

@@ -1,0 +1,20 @@
+meta {
+  name: Get AI Settings
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{base_url}}/admin/ai/settings
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # [Admin] Get AI Settings
+  Requires admin role. Returns current AI configuration settings.
+}

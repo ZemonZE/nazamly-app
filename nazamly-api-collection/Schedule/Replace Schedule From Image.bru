@@ -1,0 +1,27 @@
+meta {
+  name: Replace Schedule From Image
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{base_url}}/schedule/replace-from-image
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:multipart-form {
+  file: @file()
+}
+
+docs {
+  # Replace Schedule From Image
+  
+  Uploads a schedule image → AI extracts → replaces all existing timetable entries.
+  
+  Field name: `file`. Accepts images and PDFs.
+}

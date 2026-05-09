@@ -1,0 +1,26 @@
+meta {
+  name: Reprocess File
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/admin/materials/reprocess/:courseCode/:subFolderType/:fileId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  courseCode: CS316
+  subFolderType: lectures
+  fileId: REPLACE_WITH_FILE_ID
+}
+
+docs {
+  # [Admin] Reprocess Material File
+  Requires admin role. Triggers reprocessing of a specific material file (re-extracts content for AI).
+}

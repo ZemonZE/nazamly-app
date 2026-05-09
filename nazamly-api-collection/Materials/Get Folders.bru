@@ -1,0 +1,25 @@
+meta {
+  name: Get Folders
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/materials/folders/:courseInstanceId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  courseInstanceId: REPLACE_WITH_COURSE_INSTANCE_ID
+}
+
+docs {
+  # Get Material Folders
+  
+  Returns all folders for a specific course instance.
+}

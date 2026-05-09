@@ -1,0 +1,44 @@
+# Dependencies (installed inside the container)
+node_modules
+
+# Environment files (injected at runtime, never baked in)
+.env
+.env.*
+!.env.example
+
+# Firebase credentials (mount at runtime)
+*firebase-adminsdk*.json
+
+# Git
+.git
+.gitignore
+
+# Editor / IDE
+.vscode
+.idea
+.DS_Store
+*.sw?
+
+# Tests & dev tooling
+tests
+test-*.js
+jest.config.*
+
+# Documentation
+*.md
+*.txt
+*.pdf
+
+# Build artifacts
+dist
+build
+
+# Data backups
+data-backup
+data-backup.zip
+
+# Uploads (ephemeral, created at runtime)
+uploads
+
+# Docker files (don't need to be in context recursively)
+.dockerignore

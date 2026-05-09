@@ -1,0 +1,47 @@
+meta {
+  name: Add Timetable Entry
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/schedule/add-entry
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "courseCode": "CS308",
+    "courseName": "Advanced Database",
+    "dayOfWeek": "Sunday",
+    "startTime": "10:00",
+    "endTime": "11:30",
+    "sessionType": "Lecture",
+    "location": "Lab 3",
+    "groupNumber": "2"
+  }
+}
+
+docs {
+  # Add Timetable Entry
+  
+  Adds a single entry to the user's timetable. Auto-creates timetable if none exists.
+  
+  ## Body Parameters
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | timeTableId | string | ❌ | Timetable ObjectId (auto-resolved if omitted) |
+  | courseCode | string | ✅ | Course code |
+  | courseName | string | ❌ | Course name |
+  | dayOfWeek | string/number | ✅ | Day name or number (0=Sat-6=Fri) |
+  | startTime | string | ✅ | "HH:MM" format |
+  | endTime | string | ✅ | "HH:MM" format |
+  | sessionType | string | ✅ | "Lecture", "Section", "Lab" |
+  | location | string | ❌ | Room/Hall |
+  | groupNumber | string | ❌ | Group number |
+}

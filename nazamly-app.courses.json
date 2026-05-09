@@ -1,0 +1,138 @@
+[{
+  "_id": {
+    "$oid": "69d5058e0ea5bfc08ea0cdbd"
+  },
+  "courseCode": "CS317",
+  "courseName": "Distributed System",
+  "level": 3,
+  "creditHours": 3,
+  "difficulty": 3,
+  "department": "General",
+  "departments": [
+    {
+      "$oid": "69d5058e0ea5bfc08ea0cdb8"
+    }
+  ],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-04-07T13:24:30.413Z"
+  },
+  "updatedAt": {
+    "$date": "2026-04-07T13:24:30.413Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69d5058e0ea5bfc08ea0cdbe"
+  },
+  "courseCode": "CS306",
+  "courseName": "Operating Systems",
+  "level": 3,
+  "creditHours": 3,
+  "difficulty": 3.5,
+  "department": "General",
+  "departments": [
+    {
+      "$oid": "69d5058e0ea5bfc08ea0cdb8"
+    }
+  ],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-04-07T13:24:30.413Z"
+  },
+  "updatedAt": {
+    "$date": "2026-04-07T13:24:30.413Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69d5058e0ea5bfc08ea0cdbb"
+  },
+  "courseCode": "CS308",
+  "courseName": "Advanced Database",
+  "level": 3,
+  "creditHours": 3,
+  "difficulty": 3,
+  "department": "General",
+  "departments": [
+    {
+      "$oid": "69d5058e0ea5bfc08ea0cdb8"
+    }
+  ],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-04-07T13:24:30.412Z"
+  },
+  "updatedAt": {
+    "$date": "2026-04-07T13:24:30.412Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69d5058e0ea5bfc08ea0cdba"
+  },
+  "courseCode": "CS303",
+  "courseName": "Software Engineering",
+  "level": 3,
+  "creditHours": 3,
+  "difficulty": 3.5,
+  "department": "General",
+  "departments": [
+    {
+      "$oid": "69d5058e0ea5bfc08ea0cdb8"
+    }
+  ],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-04-07T13:24:30.412Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-08T20:24:55.437Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69d5058e0ea5bfc08ea0cdbf"
+  },
+  "courseCode": "MATH306",
+  "courseName": "Boolean Algebra\n",
+  "level": 3,
+  "creditHours": 3,
+  "difficulty": 1.5,
+  "department": "General",
+  "departments": [
+    {
+      "$oid": "69d5058e0ea5bfc08ea0cdb8"
+    }
+  ],
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-04-07T13:24:30.413Z"
+  },
+  "updatedAt": {
+    "$date": "2026-04-07T13:24:30.413Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "69fe467d937b8da6f75531c0"
+  },
+  "courseCode": "CS316",
+  "courseName": "File Structure",
+  "level": 3,
+  "creditHours": 3,
+  "difficulty": 4.5,
+  "department": "CS",
+  "departments": [
+    "CS\n"
+  ],
+  "isDeleted": false,
+  "deletedAt": null,
+  "createdAt": {
+    "$date": "2026-05-08T20:24:29.346Z"
+  },
+  "updatedAt": {
+    "$date": "2026-05-08T20:24:29.346Z"
+  },
+  "__v": 0
+}]

@@ -1,0 +1,20 @@
+meta {
+  name: Get Course Instances
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/admin/course-instances
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # [Admin] Get Course Instances
+  Requires admin role. Returns course instances for the current semester.
+}

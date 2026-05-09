@@ -1,0 +1,21 @@
+meta {
+  name: List Problems
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/coding/problems
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # List Coding Problems
+  
+  Returns all available coding problems for the student.
+}

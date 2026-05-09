@@ -1,0 +1,27 @@
+meta {
+  name: Update AI Settings
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/admin/ai/settings
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+body:json {
+  {
+    "model": "gemini-1.5-pro",
+    "temperature": 0.7
+  }
+}
+
+docs {
+  # [Admin] Update AI Settings
+  Requires admin role. Updates AI configuration settings.
+}

@@ -1,0 +1,24 @@
+meta {
+  name: Get Files (Admin)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/admin/materials/files/:folderId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  folderId: REPLACE_WITH_FOLDER_ID
+}
+
+docs {
+  # [Admin] Get Files In Folder
+  Requires admin role.
+}

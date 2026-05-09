@@ -1,0 +1,21 @@
+meta {
+  name: Get All Transcripts
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{base_url}}/gpa/transcripts
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Get All Transcripts
+  
+  Returns all transcript histories for the authenticated student.
+}

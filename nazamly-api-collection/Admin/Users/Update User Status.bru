@@ -1,0 +1,30 @@
+meta {
+  name: Update User Status
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{base_url}}/admin/users/:id/status
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  id: REPLACE_WITH_USER_ID
+}
+
+body:json {
+  {
+    "accessStatus": "suspended"
+  }
+}
+
+docs {
+  # [Admin] Update User Status
+  Requires admin role. Toggle user access status (active/pending/suspended).
+}

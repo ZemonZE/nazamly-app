@@ -1,0 +1,26 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/health
+  body: none
+  auth: none
+}
+
+docs {
+  # Health Check
+  
+  No authentication required. Returns server uptime and timestamp.
+  
+  ## Response
+  ```json
+  {
+    "status": "ok",
+    "uptime": 6953,
+    "timestamp": "2026-05-08T22:45:26.573Z"
+  }
+  ```
+}

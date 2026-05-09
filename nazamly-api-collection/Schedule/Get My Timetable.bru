@@ -1,0 +1,22 @@
+meta {
+  name: Get My Timetable
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/schedule/my-timetable
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+docs {
+  # Get My Timetable
+  
+  Returns a flat array of timetable entries for the mobile app display.
+  Each entry includes courseCode, courseName, dayOfWeek, startTime, endTime, sessionType, location, groupNumber.
+}

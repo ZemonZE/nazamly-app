@@ -1,0 +1,25 @@
+meta {
+  name: Delete File
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{base_url}}/materials/files/:fileId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{auth_token}}
+}
+
+params:path {
+  fileId: REPLACE_WITH_FILE_ID
+}
+
+docs {
+  # Delete Material File
+  
+  Deletes a material file by ID.
+}
