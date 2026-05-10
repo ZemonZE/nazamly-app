@@ -31,7 +31,8 @@
       "favicon": "./assets/images/Logo.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true
@@ -42,6 +43,6 @@
         "projectId": "0751fc21-43a6-4eca-92f6-52b57f675b1d"
       }
     },
-    "owner": "zemonze"
+    "owner": "majiko"
   }
 }

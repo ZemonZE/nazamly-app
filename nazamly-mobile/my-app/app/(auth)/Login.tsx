@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   TouchableOpacity,
   ScrollView,
@@ -16,28 +16,30 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
-
-import { Feather } from '@expo/vector-icons';
-import { useAppTheme } from '@/constants/theme';
+import {
+  auth,
+  API_URL,
+} from "@/firebase";
+import { Feather } from "@expo/vector-icons";
+import { useAppTheme } from "@/constants/theme";
 import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signInWithCredential,
   GoogleAuthProvider,
 } from "firebase/auth";
-import { auth, API_URL, GOOGLE_WEB_CLIENT_ID,Google_Android_Id } from "@/firebase";
+
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 
 const getProfile = async (token: string) => {
   const res = await fetch(`${API_URL}/api/auth/get-profile`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();
 };
-import * as Google from "expo-auth-session/providers/google";
-import * as WebBrowser from "expo-web-browser";
-import { makeRedirectUri } from "expo-auth-session";
-
-WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -48,76 +50,84 @@ export default function LoginScreen() {
   const { setBackendUser } = useAuth();
   const { colors } = useAppTheme();
 
-
-  // 🌟 إعداد OAuth للموبايل (Expo Go / React Native)
-  const redirectUri = makeRedirectUri({
-    scheme: "nazamly",
-  });
-
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId:Google_Android_Id,
-    redirectUri,
-  });
-
-  useEffect(() => {
-    if (request) {
-      console.log("[Login] Google OAuth redirectUri:", redirectUri);
-    }
-  }, [request, redirectUri]);
-
   // 🌟 جلب بيانات المستخدم من الباك إند
-  const fetchUserProfile = useCallback(async (user: any) => {
-    try {
-      const token = await user.getIdToken();
-      const response = await getProfile(token);
+  const fetchUserProfile = useCallback(
+    async (user: any) => {
+      try {
+        const token = await user.getIdToken();
+        const response = await getProfile(token);
 
-      if (response.success && response.data) {
-        console.log("[Login] Profile fetched successfully:", response.data);
-        setBackendUser(response.data);
-        return response.data;
-      } else {
-        console.error("[Login] Failed to fetch profile:", response);
+        if (response.success && response.data) {
+          console.log("[Login] Profile fetched successfully:", response.data);
+          setBackendUser(response.data);
+          return response.data;
+        } else {
+          console.error("[Login] Failed to fetch profile:", response);
+        }
+      } catch (error) {
+        console.error("[Login] Error fetching profile:", error);
       }
-    } catch (error) {
-      console.error("[Login] Error fetching profile:", error);
-    }
-  }, [setBackendUser]);
+    },
+    [setBackendUser],
+  );
 
-  // 🌟 معالجة استجابة OAuth للموبايل
-  useEffect(() => {
-    if (response?.type === "success") {
-      const { id_token } = response.params;
-      console.log("[Login] Mobile OAuth - id_token received:", id_token ? "yes" : "no");
-      const credential = GoogleAuthProvider.credential(id_token);
-      setLoading(true);
-      signInWithCredential(auth, credential)
-        .then(async (result) => {
+  // 🌟 دالة تسجيل الدخول عبر Google (النسخة الجديدة)
+  const handleGoogleSignIn = async () => {
+    if (loading) return;
 
-          await fetchUserProfile(result.user);
-          Alert.alert("Success", "Logged in"); // Can omit translations for alerts or add to dict
-          router.replace("/(tabs)/HomePage");
-        })
-        .catch((error: any) => {
-          console.error("[Login] Firebase signIn error:", error.code, error.message);
-          Alert.alert("Error", error.message || "Login failed");
-        })
-        .finally(() => setLoading(false));
+    if (Platform.OS === "web") {
+      await handleGoogleWebLogin();
+      return;
     }
-  }, [response, router, fetchUserProfile]);
+
+    setLoading(true);
+    try {
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+      const signInResult = await GoogleSignin.signIn();
+
+      console.log("[Login] Google Sign-In result:", signInResult);
+
+      let idToken;
+      if ((signInResult as any).data?.idToken) {
+        idToken = (signInResult as any).data.idToken;
+      } else if ((signInResult as any).idToken) {
+        idToken = (signInResult as any).idToken;
+      } else {
+        throw new Error("No ID token found in sign-in result");
+      }
+
+      const googleCredential = GoogleAuthProvider.credential(idToken);
+      const result = await signInWithCredential(auth, googleCredential);
+      await fetchUserProfile(result.user);
+
+      Alert.alert("Success", "Logged in successfully");
+      router.replace("/(tabs)/HomePage");
+    } catch (error: any) {
+      console.error("[Login] Google Sign-In Error:", error);
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log("[Login] User cancelled Google Sign-In");
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        console.log("[Login] Google Sign-In already in progress");
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert("Error", "Google Play Services not available");
+      } else {
+        Alert.alert("Error", error.message || "Failed to sign in with Google");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     setLoading(true);
     try {
       const result = await signInWithEmailAndPassword(auth, email, password);
-
       await fetchUserProfile(result.user);
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error.message || "Login failed",
-      );
+      Alert.alert("Error", error.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -128,14 +138,9 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       const provider = new GoogleAuthProvider();
-      // 🌟 السطر السحري لإجبار جوجل على إظهار شاشة اختيار الحساب في كل مرة
       provider.setCustomParameters({ prompt: "select_account" });
-
-      // الدالة دي هتفتح شاشة منبثقة (Popup) وتمنع الشاشة البيضاء اللي بتعلق
       const result = await signInWithPopup(auth, provider);
-
       await fetchUserProfile(result.user);
-
       router.replace("/(tabs)/HomePage");
     } catch (error: any) {
       console.error("[Login] Google Web Sign-in Error:", error);
@@ -145,23 +150,13 @@ export default function LoginScreen() {
     }
   };
 
-  // 🌟 دالة تسجيل الدخول بجوجل للموبايل (Expo Go / React Native)
-  const handleGoogleMobileLogin = () => {
-    promptAsync();
-  };
-
-  // 🌟 اختيار الدالة المناسبة حسب المنصة
-  const handleGoogleSignIn = Platform.OS === 'web' 
-    ? handleGoogleWebLogin 
-    : handleGoogleMobileLogin;
-
   const notRegistered = () => {
     router.push("/(auth)/Register");
   };
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
-      {Platform.OS === 'web' && (
+      {Platform.OS === "web" && (
         <style type="text/css">{`
           input:-webkit-autofill,
           input:-webkit-autofill:hover, 
@@ -173,35 +168,58 @@ export default function LoginScreen() {
           }
         `}</style>
       )}
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <ScrollView 
-          contentContainerStyle={s.scrollContent} 
+        <ScrollView
+          contentContainerStyle={s.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          
           {/* Hero Section with App Icon */}
           <View style={s.heroSection}>
-            <Image 
-              source={require('@/assets/images/Logo design for a mo.png')} 
-              style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 24 }} 
-              resizeMode="contain" 
+            <Image
+              source={require("@/assets/images/Logo design for a mo.png")}
+              style={{
+                width: 100,
+                height: 100,
+                borderRadius: 24,
+                marginBottom: 24,
+              }}
+              resizeMode="contain"
             />
-            <Text style={[s.welcomeText, { color: colors.textPrimary }]}>Welcome Back</Text>
-            <Text style={[s.subtitleText, { color: colors.textMuted }]}>Log in to continue organizing your academic life</Text>
+            <Text style={[s.welcomeText, { color: colors.textPrimary }]}>
+              Welcome Back
+            </Text>
+            <Text style={[s.subtitleText, { color: colors.textMuted }]}>
+              Log in to continue organizing your academic life
+            </Text>
           </View>
 
           {/* Login Form Card */}
           <View style={[s.formCard, { backgroundColor: colors.card }]}>
-            
             {/* Email Input */}
             <View style={s.inputGroup}>
-              <Text style={[s.label, { color: colors.textSecondary }]}>Email</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
-                <Feather name="mail" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
+              <Text style={[s.label, { color: colors.textSecondary }]}>
+                Email
+              </Text>
+              <View
+                style={[
+                  s.inputContainer,
+                  {
+                    backgroundColor: colors.bg,
+                    borderColor: colors.border,
+                    flexDirection: "row",
+                  },
+                ]}
+              >
+                <Feather
+                  name="mail"
+                  size={20}
+                  color={colors.textMuted}
+                  style={{ marginRight: 12 }}
+                />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
                   placeholder="Email"
@@ -217,9 +235,25 @@ export default function LoginScreen() {
 
             {/* Password Input */}
             <View style={s.inputGroup}>
-              <Text style={[s.label, { color: colors.textSecondary }]}>Password</Text>
-              <View style={[s.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border, flexDirection: 'row' }]}>
-                <Feather name="lock" size={20} color={colors.textMuted} style={{ marginRight: 12 }} />
+              <Text style={[s.label, { color: colors.textSecondary }]}>
+                Password
+              </Text>
+              <View
+                style={[
+                  s.inputContainer,
+                  {
+                    backgroundColor: colors.bg,
+                    borderColor: colors.border,
+                    flexDirection: "row",
+                  },
+                ]}
+              >
+                <Feather
+                  name="lock"
+                  size={20}
+                  color={colors.textMuted}
+                  style={{ marginRight: 12 }}
+                />
                 <TextInput
                   style={[s.textInput, { color: colors.textPrimary }]}
                   placeholder="Password"
@@ -229,14 +263,14 @@ export default function LoginScreen() {
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={s.eyeIcon}
                 >
-                  <Feather 
-                    name={showPassword ? "eye" : "eye-off"} 
-                    size={20} 
-                    color={colors.textMuted} 
+                  <Feather
+                    name={showPassword ? "eye" : "eye-off"}
+                    size={20}
+                    color={colors.textMuted}
                   />
                 </TouchableOpacity>
               </View>
@@ -257,39 +291,45 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             {/* Divider */}
-            <View style={[s.dividerContainer, { flexDirection: 'row' }]}>
-              <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[s.dividerText, { color: colors.textMuted }]}>Or</Text>
-              <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
+            <View style={[s.dividerContainer, { flexDirection: "row" }]}>
+              <View
+                style={[s.dividerLine, { backgroundColor: colors.border }]}
+              />
+              <Text style={[s.dividerText, { color: colors.textMuted }]}>
+                Or
+              </Text>
+              <View
+                style={[s.dividerLine, { backgroundColor: colors.border }]}
+              />
             </View>
 
             {/* Google Sign In Button - Black with Colored Logo */}
             <TouchableOpacity
-              style={[s.googleButton, { flexDirection: 'row' }]}
+              style={[s.googleButton, { flexDirection: "row" }]}
               onPress={handleGoogleSignIn}
               disabled={loading}
               activeOpacity={0.8}
             >
-              <Image 
-                source={require('@/assets/images/google.png')} 
+              <Image
+                source={require("@/assets/images/google.png")}
                 style={s.googleLogo}
                 resizeMode="contain"
               />
               <Text style={s.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
-
           </View>
 
           {/* Footer */}
-          <View style={[s.footer, { flexDirection: 'row' }]}>
+          <View style={[s.footer, { flexDirection: "row" }]}>
             <Text style={[s.footerText, { color: colors.textMuted }]}>
-              Don&apos;t have an account? 
+              Don&apos;t have an account?
             </Text>
             <Pressable onPress={notRegistered}>
-              <Text style={[s.footerLink, { color: colors.indigo }]}>Sign up now</Text>
+              <Text style={[s.footerLink, { color: colors.indigo }]}>
+                Sign up now
+              </Text>
             </Pressable>
           </View>
-
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -307,7 +347,7 @@ const s = StyleSheet.create({
     paddingBottom: 40,
   },
   heroSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 40,
     marginBottom: 40,
   },
@@ -315,10 +355,10 @@ const s = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
@@ -326,19 +366,19 @@ const s = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: "800",
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitleText: {
     fontSize: 16,
-    fontWeight: '400',
-    textAlign: 'center',
+    fontWeight: "400",
+    textAlign: "center",
   },
   formCard: {
     borderRadius: 20,
     padding: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -349,11 +389,11 @@ const s = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
   },
   inputContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1.5,
     borderRadius: 12,
     paddingHorizontal: 16,
@@ -365,7 +405,7 @@ const s = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '400',
+    fontWeight: "400",
   },
   eyeIcon: {
     padding: 4,
@@ -373,23 +413,23 @@ const s = StyleSheet.create({
   loginButton: {
     height: 56,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 8,
-    shadowColor: '#3F51B5',
+    shadowColor: "#3F51B5",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
   loginButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.3,
   },
   dividerContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginVertical: 28,
   },
   dividerLine: {
@@ -398,17 +438,17 @@ const s = StyleSheet.create({
   },
   dividerText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
     marginHorizontal: 16,
   },
   googleButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     height: 56,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
     borderRadius: 12,
     gap: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
@@ -419,21 +459,21 @@ const s = StyleSheet.create({
     height: 24,
   },
   googleButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   footer: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 32,
   },
   footerText: {
     fontSize: 15,
-    fontWeight: '400',
+    fontWeight: "400",
   },
   footerLink: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });

@@ -4,15 +4,15 @@ import { auth, API_URL } from "@/firebase";
 
 const syncUser = async (token: string) => {
   const res = await fetch(`${API_URL}/api/auth/sync`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` }
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();
 };
 
 const getProfile = async (token: string) => {
   const res = await fetch(`${API_URL}/api/auth/get-profile`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();
 };
@@ -81,28 +81,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, {
       next: async (firebaseUser) => {
         setUser(firebaseUser);
-        
+
         if (firebaseUser) {
           await fetchUserProfile(firebaseUser);
         } else {
           setBackendUser(null);
           setError(null);
         }
-        
+
         setIsLoading(false);
       },
       error: (authError) => {
         setError(authError as Error);
         setIsLoading(false);
       },
-      complete: () => {}
+      complete: () => {},
     });
 
     return unsubscribe;
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, backendUser, setBackendUser, isLoading, error, refreshProfile }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        backendUser,
+        setBackendUser,
+        isLoading,
+        error,
+        refreshProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

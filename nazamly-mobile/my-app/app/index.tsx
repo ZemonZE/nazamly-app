@@ -13,7 +13,7 @@ import { API_URL } from "@/firebase";
 
 const getProfile = async (token: string) => {
   const res = await fetch(`${API_URL}/api/auth/get-profile`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();
 };
@@ -25,8 +25,12 @@ export default function Index() {
   useEffect(() => {
     if (error) {
       console.error("Auth check failed:", error);
-      if (Platform.OS === 'android') {
-        ToastAndroid.showWithGravity("Auth check failed", ToastAndroid.LONG, ToastAndroid.BOTTOM);
+      if (Platform.OS === "android") {
+        ToastAndroid.showWithGravity(
+          "Auth check failed",
+          ToastAndroid.LONG,
+          ToastAndroid.BOTTOM,
+        );
       }
     }
   }, [error]);
@@ -45,8 +49,12 @@ export default function Index() {
           }
         } catch (err) {
           console.error("Profile fetch error:", err);
-          if (Platform.OS === 'android') {
-            ToastAndroid.showWithGravity("Failed to load user data", ToastAndroid.SHORT, ToastAndroid.BOTTOM);
+          if (Platform.OS === "android") {
+            ToastAndroid.showWithGravity(
+              "Failed to load user data",
+              ToastAndroid.SHORT,
+              ToastAndroid.BOTTOM,
+            );
           }
         } finally {
           setIsSyncing(false);

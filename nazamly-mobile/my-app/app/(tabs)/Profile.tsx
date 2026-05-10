@@ -22,7 +22,7 @@ import { signOut } from "firebase/auth";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAppTheme } from "@/constants/theme";
 
-const AVATAR_LOCAL_KEY = '@nazamly_avatar_local';
+const AVATAR_LOCAL_KEY = "@nazamly_avatar_local";
 
 const getProfile = async (token: string) => {
   const res = await fetch(`${API_URL}/api/auth/get-profile`, {
@@ -87,7 +87,9 @@ const ProfileScreen = () => {
     backendUser?.cgpa?.toString() || backendUser?.currentCGPA?.toString() || "",
   );
   const [creditsInput, setCreditsInput] = useState(
-    backendUser?.completedHours?.toString() || backendUser?.earnedCreditHours?.toString() || "",
+    backendUser?.completedHours?.toString() ||
+      backendUser?.earnedCreditHours?.toString() ||
+      "",
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -96,7 +98,7 @@ const ProfileScreen = () => {
   const [quizLoading, setQuizLoading] = useState(false);
   const [codingHistory, setCodingHistory] = useState<any[]>([]);
   const [codingLoading, setCodingLoading] = useState(false);
-  const [codingError, setCodingError] = useState('');
+  const [codingError, setCodingError] = useState("");
   const [notifEnabled, setNotifEnabled] = useState(true);
 
   const fetchProfile = useCallback(async () => {
@@ -110,8 +112,16 @@ const ProfileScreen = () => {
       const response = await getProfile(token);
       if (response.success && response.data) {
         setBackendUser(response.data);
-        setCgpaInput(response.data.cgpa?.toString() || response.data.currentCGPA?.toString() || "");
-        setCreditsInput(response.data.completedHours?.toString() || response.data.earnedCreditHours?.toString() || "");
+        setCgpaInput(
+          response.data.cgpa?.toString() ||
+            response.data.currentCGPA?.toString() ||
+            "",
+        );
+        setCreditsInput(
+          response.data.completedHours?.toString() ||
+            response.data.earnedCreditHours?.toString() ||
+            "",
+        );
       }
     } catch (err) {
       console.error("[Profile] fetch error:", err);
@@ -145,7 +155,7 @@ const ProfileScreen = () => {
       const data = await res.json();
       if (res.ok && data.history) setQuizHistory(data.history.slice(0, 4));
     } catch (err) {
-      console.error('[Profile] quiz history error:', err);
+      console.error("[Profile] quiz history error:", err);
     } finally {
       setQuizLoading(false);
     }
@@ -154,7 +164,7 @@ const ProfileScreen = () => {
   const loadCodingHistory = async () => {
     if (!user) return;
     setCodingLoading(true);
-    setCodingError('');
+    setCodingError("");
     try {
       const token = await user.getIdToken();
       const res = await fetch(`${API_URL}/api/coding/history?limit=4`, {
@@ -164,10 +174,12 @@ const ProfileScreen = () => {
       if (res.ok && Array.isArray(data.data)) {
         setCodingHistory(data.data);
       } else if (!res.ok) {
-        setCodingError(data.message || data.error || 'Failed to load coding history');
+        setCodingError(
+          data.message || data.error || "Failed to load coding history",
+        );
       }
     } catch (err: any) {
-      setCodingError(err.message || 'Failed to load coding history');
+      setCodingError(err.message || "Failed to load coding history");
     } finally {
       setCodingLoading(false);
     }
@@ -177,8 +189,16 @@ const ProfileScreen = () => {
   }, [backendUser]);
   useEffect(() => {
     if (backendUser) {
-      setCgpaInput(backendUser.cgpa?.toString() || backendUser.currentCGPA?.toString() || "");
-      setCreditsInput(backendUser.completedHours?.toString() || backendUser.earnedCreditHours?.toString() || "");
+      setCgpaInput(
+        backendUser.cgpa?.toString() ||
+          backendUser.currentCGPA?.toString() ||
+          "",
+      );
+      setCreditsInput(
+        backendUser.completedHours?.toString() ||
+          backendUser.earnedCreditHours?.toString() ||
+          "",
+      );
     }
   }, [backendUser]);
 
@@ -352,7 +372,6 @@ const ProfileScreen = () => {
               </Text>
             </View>
 
-
             {/* Dean's List Badge */}
             {isDeansList && (
               <View
@@ -398,7 +417,11 @@ const ProfileScreen = () => {
                 {
                   icon: "clock",
                   label: "Earned Hrs",
-                  value: (backendUser?.completedHours ?? backendUser?.earnedCreditHours ?? 0).toString(),
+                  value: (
+                    backendUser?.completedHours ??
+                    backendUser?.earnedCreditHours ??
+                    0
+                  ).toString(),
                   color: colors.teal,
                 },
                 {
@@ -464,14 +487,21 @@ const ProfileScreen = () => {
               <ProfileDetail
                 icon="shield"
                 label="Role"
-                value={(backendUser?.role || "student").charAt(0).toUpperCase() + (backendUser?.role || "student").slice(1)}
+                value={
+                  (backendUser?.role || "student").charAt(0).toUpperCase() +
+                  (backendUser?.role || "student").slice(1)
+                }
                 colors={colors}
               />
               <View style={[s.divider, { backgroundColor: colors.divider }]} />
               <ProfileDetail
                 icon="calendar"
                 label="Member Since"
-                value={backendUser?.createdAt ? new Date(backendUser.createdAt).getFullYear().toString() : "—"}
+                value={
+                  backendUser?.createdAt
+                    ? new Date(backendUser.createdAt).getFullYear().toString()
+                    : "—"
+                }
                 colors={colors}
               />
             </View>
@@ -481,20 +511,34 @@ const ProfileScreen = () => {
               <Text style={[s.detailsCardTitle, { color: colors.textMuted }]}>
                 Registered Courses
               </Text>
-              {backendUser?.termCourses && backendUser.termCourses.length > 0 ? (
+              {backendUser?.termCourses &&
+              backendUser.termCourses.length > 0 ? (
                 backendUser.termCourses.map((course: any, idx: number) => (
                   <View key={idx} style={s.courseRow}>
-                    <View style={[s.courseIcon, { backgroundColor: colors.indigoPale }]}>
+                    <View
+                      style={[
+                        s.courseIcon,
+                        { backgroundColor: colors.indigoPale },
+                      ]}
+                    >
                       <Feather name="book" size={14} color={colors.indigo} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.courseTitle, { color: colors.textPrimary }]}>{course.name}</Text>
-                      <Text style={[s.courseMeta, { color: colors.textMuted }]}>{course.courseCode} · {course.creditHours} Credits</Text>
+                      <Text
+                        style={[s.courseTitle, { color: colors.textPrimary }]}
+                      >
+                        {course.name}
+                      </Text>
+                      <Text style={[s.courseMeta, { color: colors.textMuted }]}>
+                        {course.courseCode} · {course.creditHours} Credits
+                      </Text>
                     </View>
                   </View>
                 ))
               ) : (
-                <Text style={{ color: colors.textMuted, fontSize: 13 }}>No courses registered for this term.</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 13 }}>
+                  No courses registered for this term.
+                </Text>
               )}
             </View>
 
@@ -504,20 +548,60 @@ const ProfileScreen = () => {
                 Latest Quiz Results
               </Text>
               {quizLoading ? (
-                <ActivityIndicator size="small" color={colors.indigo} style={{ marginVertical: 16 }} />
+                <ActivityIndicator
+                  size="small"
+                  color={colors.indigo}
+                  style={{ marginVertical: 16 }}
+                />
               ) : quizHistory.length > 0 ? (
                 quizHistory.map((quiz: any, idx: number) => {
-                  const percent = quiz.totalQuestions > 0 ? Math.round((quiz.score / quiz.totalQuestions) * 100) : 0;
+                  const percent =
+                    quiz.totalQuestions > 0
+                      ? Math.round((quiz.score / quiz.totalQuestions) * 100)
+                      : 0;
                   return (
                     <View key={idx} style={s.quizRow}>
                       <View style={{ flex: 1 }}>
-                        <Text style={[s.courseTitle, { color: colors.textPrimary }]}>{quiz.courseId?.courseName || 'Unknown'}</Text>
-                        <Text style={[s.courseMeta, { color: colors.textMuted }]}>
-                          {new Date(quiz.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        <Text
+                          style={[s.courseTitle, { color: colors.textPrimary }]}
+                        >
+                          {quiz.courseId?.courseName || "Unknown"}
+                        </Text>
+                        <Text
+                          style={[s.courseMeta, { color: colors.textMuted }]}
+                        >
+                          {new Date(quiz.createdAt).toLocaleDateString(
+                            "en-US",
+                            { month: "short", day: "numeric", year: "numeric" },
+                          )}
                         </Text>
                       </View>
-                      <View style={[s.quizScoreBadge, { backgroundColor: percent >= 80 ? '#22c55e20' : percent >= 50 ? '#f59e0b20' : '#ef444420' }]}>
-                        <Text style={[s.quizScoreText, { color: percent >= 80 ? '#22c55e' : percent >= 50 ? '#f59e0b' : '#ef4444' }]}>
+                      <View
+                        style={[
+                          s.quizScoreBadge,
+                          {
+                            backgroundColor:
+                              percent >= 80
+                                ? "#22c55e20"
+                                : percent >= 50
+                                  ? "#f59e0b20"
+                                  : "#ef444420",
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            s.quizScoreText,
+                            {
+                              color:
+                                percent >= 80
+                                  ? "#22c55e"
+                                  : percent >= 50
+                                    ? "#f59e0b"
+                                    : "#ef4444",
+                            },
+                          ]}
+                        >
                           {quiz.score}/{quiz.totalQuestions}
                         </Text>
                       </View>
@@ -525,54 +609,96 @@ const ProfileScreen = () => {
                   );
                 })
               ) : (
-                <Text style={{ color: colors.textMuted, fontSize: 13 }}>No quiz activities recorded yet.</Text>
+                <Text style={{ color: colors.textMuted, fontSize: 13 }}>
+                  No quiz activities recorded yet.
+                </Text>
               )}
             </View>
 
             {/* Recent Coding Practice */}
-            <View style={[s.detailsCard, { backgroundColor: colors.card }]}> 
-              <Text style={[s.detailsCardTitle, { color: colors.textMuted }]}> 
+            <View style={[s.detailsCard, { backgroundColor: colors.card }]}>
+              <Text style={[s.detailsCardTitle, { color: colors.textMuted }]}>
                 Recent Coding Practice
               </Text>
               {codingLoading ? (
-                <ActivityIndicator size="small" color={colors.indigo} style={{ marginVertical: 16 }} />
+                <ActivityIndicator
+                  size="small"
+                  color={colors.indigo}
+                  style={{ marginVertical: 16 }}
+                />
               ) : codingHistory.length > 0 ? (
                 codingHistory.map((entry: any, idx: number) => {
-                  const verdict = entry.verdict || 'N/A';
-                  const badgeColor = verdict === 'AC' ? '#22c55e' : verdict === 'WA' ? '#f59e0b' : '#ef4444';
+                  const verdict = entry.verdict || "N/A";
+                  const badgeColor =
+                    verdict === "AC"
+                      ? "#22c55e"
+                      : verdict === "WA"
+                        ? "#f59e0b"
+                        : "#ef4444";
                   const problem = entry.problemId || {};
                   const course = problem.courseId || {};
                   const dateLabel = entry.createdAt
-                    ? new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                    : '';
+                    ? new Date(entry.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : "";
                   return (
                     <View key={entry._id || idx} style={s.codingRow}>
                       <View style={{ flex: 1 }}>
-                        <Text style={[s.courseTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                          {problem.title || 'Coding Problem'}
+                        <Text
+                          style={[s.courseTitle, { color: colors.textPrimary }]}
+                          numberOfLines={1}
+                        >
+                          {problem.title || "Coding Problem"}
                         </Text>
-                        <Text style={[s.courseMeta, { color: colors.textMuted }]} numberOfLines={1}>
-                          {(course.courseName || course.courseCode || 'Unknown Course')} · {(entry.language || '').toUpperCase()} · {dateLabel}
+                        <Text
+                          style={[s.courseMeta, { color: colors.textMuted }]}
+                          numberOfLines={1}
+                        >
+                          {course.courseName ||
+                            course.courseCode ||
+                            "Unknown Course"}{" "}
+                          · {(entry.language || "").toUpperCase()} · {dateLabel}
                         </Text>
                       </View>
-                      <View style={[s.codingBadge, { backgroundColor: badgeColor + '20' }]}> 
-                        <Text style={[s.codingBadgeText, { color: badgeColor }]}>{verdict}</Text>
+                      <View
+                        style={[
+                          s.codingBadge,
+                          { backgroundColor: badgeColor + "20" },
+                        ]}
+                      >
+                        <Text
+                          style={[s.codingBadgeText, { color: badgeColor }]}
+                        >
+                          {verdict}
+                        </Text>
                       </View>
                     </View>
                   );
                 })
               ) : (
                 <Text style={{ color: colors.textMuted, fontSize: 13 }}>
-                  {codingError || 'No coding activity recorded yet.'}
+                  {codingError || "No coding activity recorded yet."}
                 </Text>
               )}
 
               <TouchableOpacity
-                style={[s.sectionButton, { borderColor: colors.indigo, backgroundColor: colors.indigoPale, flexDirection: 'row' }]}
-                onPress={() => router.push('/(tabs)/Coding' as any)}
+                style={[
+                  s.sectionButton,
+                  {
+                    borderColor: colors.indigo,
+                    backgroundColor: colors.indigoPale,
+                    flexDirection: "row",
+                  },
+                ]}
+                onPress={() => router.push("/(tabs)/Coding" as any)}
               >
                 <Feather name="code" size={16} color={colors.indigo} />
-                <Text style={[s.sectionButtonText, { color: colors.indigo }]}>View Coding History</Text>
+                <Text style={[s.sectionButtonText, { color: colors.indigo }]}>
+                  View Coding History
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -665,9 +791,15 @@ const ProfileScreen = () => {
                 },
               ]}
               onPress={() => {
-                setCgpaInput(backendUser?.cgpa?.toString() || backendUser?.currentCGPA?.toString() || "");
+                setCgpaInput(
+                  backendUser?.cgpa?.toString() ||
+                    backendUser?.currentCGPA?.toString() ||
+                    "",
+                );
                 setCreditsInput(
-                  backendUser?.completedHours?.toString() || backendUser?.earnedCreditHours?.toString() || "",
+                  backendUser?.completedHours?.toString() ||
+                    backendUser?.earnedCreditHours?.toString() ||
+                    "",
                 );
                 setEditModalVisible(true);
               }}
