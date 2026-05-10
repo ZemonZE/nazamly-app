@@ -10,8 +10,8 @@
 </p>
 
 <p align="center">
-  <a href="http://13.60.63.216:5000/api/health">🟢 Live API</a> · 
-  <a href="#-live-demo">🌐 Web App</a> · 
+  <a href="https://nazamlyonline.tech/api/health">🟢 Live API</a> · 
+  <a href="https://nazamly.netlify.app/">🌐 Web App</a> · 
   <a href="#-mobile-app">📱 Mobile APK</a> · 
   <a href="#-api-documentation">📚 API Docs</a>
 </p>
@@ -23,7 +23,7 @@
 | Platform                    | Link                                                                    |
 | --------------------------- | ----------------------------------------------------------------------- |
 | **Web App** (Student) | ----                                                                    |
-| **API Health Check**  | [http://13.60.63.216:5000/api/health](http://13.60.63.216:5000/api/health) |
+| **API Health Check**  | [http://13.60.63.216:5000/api/health](https://nazamlyonline.tech/api/health) |
 
 ## 📱 Mobile App
 
