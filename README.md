@@ -13,17 +13,17 @@
   <a href="https://nazamlyonline.tech/api/health">🟢 Live API</a> · 
   <a href="https://nazamly.netlify.app/">🌐 Web App</a> · 
   <a href="#-mobile-app">📱 Mobile APK</a> · 
-  <a href="#-api-documentation">📚 API Docs</a>
+  <a href="https://app.swaggerhub.com/apis-docs/nazamly-4dc/Nazamly/1.0.0?view=uiDocs">📚 API Docs</a>
 </p>
 
 ---
 
 ## 🌐 Live Demo
 
-| Platform                    | Link                                                                    |
-| --------------------------- | ----------------------------------------------------------------------- |
-| **Web App** (Student) | ----                                                                    |
-| **API Health Check**  | [http://13.60.63.216:5000/api/health](https://nazamlyonline.tech/api/health) |
+| Platform                    | Link                                                                     |
+| --------------------------- | -----------------------------------------------------------------------  |
+| **Web App** (Student) | [https://nazamly.netlify.app](https://nazamly.netlify.app) |
+| **API Health Check**  | [https://nazamlyonline.tech/api/health](https://nazamlyonline.tech/api/health) |
 
 ## 📱 Mobile App
 
