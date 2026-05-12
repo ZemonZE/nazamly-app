@@ -1,16 +1,73 @@
-# React + Vite
+# Nazamly Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend application for the Nazamly platform.
 
-Currently, two official plugins are available:
+## Features
+- Student authentication (Firebase)
+- Course materials management
+- AI-powered question generation
+- Coding problems and submissions
+- GPA calculator and planner
+- Schedule generator
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tech Stack
+- React 19
+- Vite
+- Firebase Authentication
+- Tailwind CSS
+- Radix UI Components
+- React Router
 
-## React Compiler
+## Development
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+# Install dependencies
+npm install
 
-## Expanding the ESLint configuration
+# Run development server
+npm run dev
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Run tests
+npm test
+```
+
+## Environment Variables
+
+Create a `.env` file:
+```
+VITE_API_URL=http://localhost:5000
+```
+
+For production, the `.env.production` file is used.
+
+## Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
+
+### Quick Deploy to Vercel
+
+1. Connect your GitHub repo to Vercel
+2. Add environment variable: `VITE_API_URL` with your backend URL
+3. Deploy
+
+## Project Structure
+
+```
+src/
+├── components/     # Reusable UI components
+├── pages/          # Page components
+├── services/       # API service layers
+├── utils/          # Utility functions
+├── hooks/          # Custom React hooks
+└── firebase.js     # Firebase configuration
+```
+
+## License
+
+Private

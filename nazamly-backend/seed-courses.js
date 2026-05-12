@@ -22,7 +22,6 @@ async function seed() {
     await mongoose.connect(MONGO_URI);
     console.log('Connected to MongoDB');
 
-    // Create a default doctor (required by CourseInstance)
     let doctor = await Doctor.findOne({ name: 'TBA' });
     if (!doctor) {
       doctor = await Doctor.create({ name: 'TBA', email: 'tba@university.edu' });
@@ -31,7 +30,6 @@ async function seed() {
       console.log('Using existing doctor:', doctor._id);
     }
 
-    // Create courses
     const createdCourses = [];
     for (const c of courses) {
       let existing = await Course.findOne({ courseCode: c.courseCode });
@@ -44,7 +42,6 @@ async function seed() {
       createdCourses.push(existing);
     }
 
-    // Create course instances for Spring 2025/2026
     for (const course of createdCourses) {
       const exists = await CourseInstance.findOne({
         courseId: course._id,

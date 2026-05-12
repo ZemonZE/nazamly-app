@@ -25,7 +25,7 @@ import {
   signInWithCredential,
   GoogleAuthProvider,
 } from "firebase/auth";
-import { auth, API_URL, GOOGLE_WEB_CLIENT_ID,Google_Android_Id } from "@/firebase";
+import { auth, API_URL, GOOGLE_WEB_CLIENT_ID, Google_Android_Id } from "@/firebase";
 
 const getProfile = async (token: string) => {
   const res = await fetch(`${API_URL}/api/auth/get-profile`, {
@@ -56,7 +56,7 @@ export default function LoginScreen() {
 
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId:Google_Android_Id,
+    androidClientId: Google_Android_Id,
     redirectUri,
   });
 
@@ -151,8 +151,8 @@ export default function LoginScreen() {
   };
 
   // 🌟 اختيار الدالة المناسبة حسب المنصة
-  const handleGoogleSignIn = Platform.OS === 'web' 
-    ? handleGoogleWebLogin 
+  const handleGoogleSignIn = Platform.OS === 'web'
+    ? handleGoogleWebLogin
     : handleGoogleMobileLogin;
 
   const notRegistered = () => {
@@ -173,22 +173,22 @@ export default function LoginScreen() {
           }
         `}</style>
       )}
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView 
-          contentContainerStyle={s.scrollContent} 
+        <ScrollView
+          contentContainerStyle={s.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          
+
           {/* Hero Section with App Icon */}
           <View style={s.heroSection}>
-            <Image 
-              source={require('@/assets/images/Logo design for a mo.png')} 
-              style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 24 }} 
-              resizeMode="contain" 
+            <Image
+              source={require('@/assets/images/Logo design for a mo.png')}
+              style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 24 }}
+              resizeMode="contain"
             />
             <Text style={[s.welcomeText, { color: colors.textPrimary }]}>Welcome Back</Text>
             <Text style={[s.subtitleText, { color: colors.textMuted }]}>Log in to continue organizing your academic life</Text>
@@ -196,7 +196,7 @@ export default function LoginScreen() {
 
           {/* Login Form Card */}
           <View style={[s.formCard, { backgroundColor: colors.card }]}>
-            
+
             {/* Email Input */}
             <View style={s.inputGroup}>
               <Text style={[s.label, { color: colors.textSecondary }]}>Email</Text>
@@ -229,14 +229,14 @@ export default function LoginScreen() {
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
                   style={s.eyeIcon}
                 >
-                  <Feather 
-                    name={showPassword ? "eye" : "eye-off"} 
-                    size={20} 
-                    color={colors.textMuted} 
+                  <Feather
+                    name={showPassword ? "eye" : "eye-off"}
+                    size={20}
+                    color={colors.textMuted}
                   />
                 </TouchableOpacity>
               </View>
@@ -270,8 +270,8 @@ export default function LoginScreen() {
               disabled={loading}
               activeOpacity={0.8}
             >
-              <Image 
-                source={require('@/assets/images/google.png')} 
+              <Image
+                source={require('@/assets/images/google.png')}
                 style={s.googleLogo}
                 resizeMode="contain"
               />
@@ -283,7 +283,7 @@ export default function LoginScreen() {
           {/* Footer */}
           <View style={[s.footer, { flexDirection: 'row' }]}>
             <Text style={[s.footerText, { color: colors.textMuted }]}>
-              Don&apos;t have an account? 
+              Don&apos;t have an account?
             </Text>
             <Pressable onPress={notRegistered}>
               <Text style={[s.footerLink, { color: colors.indigo }]}>Sign up now</Text>

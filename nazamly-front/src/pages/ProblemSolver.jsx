@@ -7,6 +7,7 @@ import "katex/dist/katex.min.css";
 import { auth, API_URL } from "../firebase";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import ThemeToggle from "../components/ThemeToggle";
 /* Legacy ProblemSolver.css removed — Tailwind migration complete */
 
 /* ── Language map for syntax highlighter ── */
@@ -282,6 +283,7 @@ export default function ProblemSolver() {
           >
             {problem.showDifficulty ? "🙈 Hide Difficulty" : "👁 Show Difficulty"}
           </button>
+          <ThemeToggle />
         </div>
       </div>
 

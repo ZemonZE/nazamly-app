@@ -1,6 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap");
 
-/* ── Light Mode Variables (default) ── */
 :root {
   --bg-deep: #eef2f7;
   --blue-700: #1e40af;
@@ -8,7 +7,7 @@
   --blue-400: #4a7cec;
   --blue-300: #2563b8;
   --blue-glow: rgba(37, 99, 235, 0.2);
-  --glass-bg: var(--glass-bg);
+  --glass-bg: rgba(255, 255, 255, 0.7);
   --glass-border: rgba(37, 99, 235, 0.18);
   --glass-strong: rgba(37, 99, 235, 0.06);
   --text-primary: #0f172a;
@@ -19,15 +18,14 @@
   --radius-md: 14px;
   --radius-lg: 22px;
   --transition: cubic-bezier(0.4, 0, 0.2, 1);
-  --input-bg: var(--input-bg);
-  --input-bg-focus: var(--modal-bg);
-  --sidebar-bg: var(--surface-bg);
-  --sidebar-footer-bg: var(--modal-bg);
-  --modal-bg: var(--modal-bg);
-  --surface-bg: var(--surface-bg);
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --input-bg-focus: #ffffff;
+  --sidebar-bg: rgba(255, 255, 255, 0.85);
+  --sidebar-footer-bg: rgba(255, 255, 255, 0.95);
+  --modal-bg: #ffffff;
+  --surface-bg: rgba(255, 255, 255, 0.75);
 }
 
-/* ── Dark Mode Variables ── */
 [data-theme="dark"] {
   --bg-deep: #0f172a;
   --blue-700: #3b82f6;
@@ -60,7 +58,6 @@ html,
 body {
   min-height: 100vh;
   font-family: "Tajawal", sans-serif;
-  /* Smooth theme transition */
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -181,7 +178,6 @@ body {
   100% { transform: rotate(360deg); }
 }
 
-/* ── Toast slide-in animation ── */
 @keyframes slideInToast {
   from {
     opacity: 0;
@@ -193,9 +189,6 @@ body {
   }
 }
 
-/* ── Select option theming (dark mode) ── */
-/* Native <option> elements cannot be styled via CSS vars in all browsers,
-   but these rules help where supported */
 select option {
   background: var(--input-bg-focus);
   color: var(--text-primary);

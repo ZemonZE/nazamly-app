@@ -197,7 +197,6 @@
   color: var(--error);
 }
 
-/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -434,7 +433,6 @@
   border-color: rgba(163, 201, 180, 0.2);
 }
 
-/* Textarea styling */
 .modal-textarea {
   width: 100%;
   padding: 12px 16px;
@@ -456,7 +454,6 @@
   box-shadow: 0 0 20px rgba(37, 99, 235, 0.2);
 }
 
-/* Delete Confirmation Modal */
 .delete-confirm-modal {
   max-width: 450px;
 }

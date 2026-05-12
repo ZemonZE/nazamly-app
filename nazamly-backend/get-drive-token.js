@@ -1,7 +1,3 @@
-// get-drive-token.js — One-time script to get OAuth2 refresh token
-// Run: node get-drive-token.js
-// Then open the URL in your browser, sign in, and paste the code back here.
-
 require('dotenv').config();
 const { google } = require('googleapis');
 const http = require('http');
@@ -24,7 +20,6 @@ console.log('\n🔗 Open this URL in your browser:\n');
 console.log(authUrl);
 console.log('\n⏳ Waiting for you to sign in...\n');
 
-// Start a temporary server to catch the callback
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost:3000');
   const queryParams = Object.fromEntries(url.searchParams);
@@ -36,7 +31,6 @@ const server = http.createServer(async (req, res) => {
       console.log('✅ Authentication successful!\n');
       console.log(`📋 Obtained refresh token: ${tokens.refresh_token}`);
       
-      // Automatically update .env file
       const envPath = path.join(__dirname, '.env');
       if (fs.existsSync(envPath)) {
         let envContent = fs.readFileSync(envPath, 'utf8');

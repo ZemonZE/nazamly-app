@@ -1,9 +1,11 @@
-import { ChevronDown, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export function TopHeader({ user }) {
+  const navigate = useNavigate();
   const name = user?.displayName || user?.fullName || "Student";
   const avatar = (name || "").trim().substring(0, 2).toUpperCase();
 
@@ -44,12 +46,16 @@ export function TopHeader({ user }) {
       )}
 
       {/* User avatar */}
-      <button className="flex items-center gap-2 rounded-full px-2 py-1 text-sm hover:bg-secondary/60">
+      <button
+        type="button"
+        onClick={() => navigate("/dashboard/profile")}
+        className="flex items-center gap-2 rounded-full px-2 py-1 text-sm hover:bg-secondary/60"
+        aria-label="Open profile"
+      >
         <Avatar className="h-9 w-9 ring-2 ring-background">
           <AvatarFallback className="bg-brand-orange text-white text-sm font-semibold">{avatar}</AvatarFallback>
         </Avatar>
         <span className="hidden font-medium md:inline">{name}</span>
-        <ChevronDown className="hidden h-3.5 w-3.5 opacity-60 md:inline" />
       </button>
     </header>
   );

@@ -33,6 +33,9 @@ const FIREBASE_ERROR_MAP = {
 const SYNC_ERROR_HINT = "Server sync failed";
 
 export function getFriendlyAuthError(error) {
+  // Log the actual error for debugging
+  console.error("[Auth Error]", error);
+
   // 1. Firebase errors always have an `error.code` property
   if (error?.code && FIREBASE_ERROR_MAP[error.code]) {
     return FIREBASE_ERROR_MAP[error.code];
@@ -45,9 +48,19 @@ export function getFriendlyAuthError(error) {
 
   // 3. Generic network / fetch failures
   if (error?.message?.toLowerCase().includes("failed to fetch")) {
-    return "Unable to connect to the server. Please try again later.";
+    return "Unable to connect to the server. Please check your internet connection.";
   }
 
-  // 4. Fallback
+  // 4. TypeError from network issues
+  if (error instanceof TypeError) {
+    return "Network error. Please check your connection and try again.";
+  }
+
+  // 5. Return the actual error message if available (for debugging)
+  if (error?.message) {
+    return error.message;
+  }
+
+  // 6. Fallback
   return "An unexpected error occurred. Please try again.";
 }

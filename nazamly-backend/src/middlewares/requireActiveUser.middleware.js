@@ -1,9 +1,5 @@
 const User_Repo = require('../Repos/User_Repo');
 
-/**
- * requireActiveUser — blocks access for users whose accessStatus !== "active".
- * Must be used after authMiddleware (req.user is already set).
- */
 async function requireActiveUser(req, res, next) {
   try {
     const user = await User_Repo.findByFirebaseUid(req.user.uid);

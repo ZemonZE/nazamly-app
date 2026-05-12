@@ -49,16 +49,30 @@ function CourseInstances() {
     setLoading(true);
     try {
       const headers = await authHeaders();
+      console.log('[CourseInstances] Fetching data with headers:', headers);
+      console.log('[CourseInstances] API_URL:', API_URL);
       const [instRes, courseRes, doctorRes] = await Promise.all([
         fetch(`${API_URL}/api/admin/course-instances`, { headers }),
         fetch(`${API_URL}/api/admin/courses`, { headers }),
         fetch(`${API_URL}/api/admin/doctors`, { headers }),
       ]);
-      setInstances(await instRes.json());
-      setCourses(await courseRes.json());
-      setDoctors(await doctorRes.json());
+      console.log('[CourseInstances] Response statuses:', {
+        instances: instRes.status,
+        courses: courseRes.status,
+        doctors: doctorRes.status
+      });
+      const [instData, courseData, doctorData] = await Promise.all([
+        instRes.json(),
+        courseRes.json(),
+        doctorRes.json()
+      ]);
+      console.log('[CourseInstances] Received data:', { instData, courseData, doctorData });
+      setInstances(instData);
+      setCourses(courseData);
+      setDoctors(doctorData);
     } catch (err) {
-      setError('Failed to load data');
+      console.error('[CourseInstances] Failed to load data:', err);
+      setError('Failed to load data: ' + err.message);
     } finally {
       setLoading(false);
     }

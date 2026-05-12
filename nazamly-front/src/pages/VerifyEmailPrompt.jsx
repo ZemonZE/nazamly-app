@@ -72,7 +72,7 @@ function VerifyEmailPrompt({ user, setUser }) {
     } finally {
       setConfirmLoading(false);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const startPolling = useCallback(() => {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);

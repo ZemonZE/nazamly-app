@@ -3,12 +3,10 @@ const app = require("./src/app");
 const connectDB = require("./src/config/db");
 const os = require("os");
 
-// Get local IP address
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
-      // Skip internal and non-IPv4 addresses
       if (iface.family === 'IPv4' && !iface.internal) {
         return iface.address;
       }

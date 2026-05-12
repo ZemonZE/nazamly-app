@@ -22,16 +22,20 @@ const items = [
 ];
 
 export function AppSidebar({ onLogout }) {
-  const { state, toggleSidebar } = useSidebar();
+  const { state, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const pathname = location.pathname;
+
+  const handleNavClick = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       {/* Logo + brand */}
       <SidebarHeader className="py-5">
-        <NavLink to="/dashboard" className="flex items-center gap-2 px-2">
+        <NavLink to="/dashboard" className="flex items-center gap-2 px-2" onClick={handleNavClick}>
           <img src={logo} alt="Nazamly" className="h-9 w-9 rounded-lg object-cover shadow-sm" />
           {!collapsed && (
             <span className="font-display text-lg font-semibold tracking-tight">Nazamly</span>
@@ -50,7 +54,7 @@ export function AppSidebar({ onLogout }) {
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={active} tooltip={item.title}>
-                      <NavLink to={item.url} className="flex items-center gap-3">
+                      <NavLink to={item.url} className="flex items-center gap-3" onClick={handleNavClick}>
                         <item.icon className="h-5 w-5" />
                         {!collapsed && <span>{item.title}</span>}
                       </NavLink>
@@ -83,7 +87,13 @@ export function AppSidebar({ onLogout }) {
 
           {/* Logout */}
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Log out" onClick={onLogout}>
+            <SidebarMenuButton
+              tooltip="Log out"
+              onClick={() => {
+                onLogout();
+                handleNavClick();
+              }}
+            >
               <LogOut className="h-5 w-5" />
               {!collapsed && <span>Log out</span>}
             </SidebarMenuButton>

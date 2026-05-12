@@ -1,5 +1,3 @@
-// Subtle animated mesh-gradient + floating geometric shapes.
-// Pure CSS / SVG. Sits behind app content, respects prefers-reduced-motion.
 export function AnimatedBackground({ variant = "soft" }) {
   const intense = variant === "intense";
   return (
@@ -33,7 +31,6 @@ export function AnimatedBackground({ variant = "soft" }) {
         }}
       />
 
-      {/* Floating geometric shapes */}
       <svg className="absolute top-[12%] left-[8%] float-shape" width="42" height="42" viewBox="0 0 42 42" style={{ animationDelay: "-2s" }}>
         <circle cx="21" cy="21" r="20" fill="var(--brand-orange)" opacity="0.55" />
       </svg>

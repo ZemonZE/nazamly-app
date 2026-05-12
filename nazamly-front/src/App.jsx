@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 /* App.css removed — all styles now in index.css + Tailwind */
-import ThemeToggle from "./components/ThemeToggle";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
 import InfoPanel from "./components/InfoPanel";
@@ -143,6 +142,14 @@ function App() {
     setUser(null);
   };
 
+  const fallbackRoute = !user
+    ? "/login"
+    : user.isProfileComplete !== true
+    ? "/onboarding"
+    : user.accessStatus === "pending"
+    ? "/verify-email-prompt"
+    : "/dashboard";
+
   if (authLoading) {
     return (
       <div
@@ -160,7 +167,6 @@ function App() {
 
   return (
     <>
-      <ThemeToggle />
       <Routes>
         {/* ── Root redirect ── */}
         <Route path="/" element={<Navigate to="/login" replace />} />
@@ -284,7 +290,7 @@ function App() {
         </Route>
 
         {/* ── Catch-all: always send to /login (guards handle the rest) ── */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to={fallbackRoute} replace />} />
       </Routes>
     </>
   );

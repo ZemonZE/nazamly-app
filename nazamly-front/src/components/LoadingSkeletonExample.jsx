@@ -67,13 +67,10 @@ export function LoadingSkeletonExample() {
             <pre className="bg-muted p-4 rounded-md text-sm overflow-x-auto">
 {`import { LoadingSkeleton } from '@/components/LoadingSkeleton';
 
-// Default card skeleton
 <LoadingSkeleton />
 
-// List skeleton with 5 items
 <LoadingSkeleton type="list" count={5} />
 
-// Text skeleton with custom class
 <LoadingSkeleton type="text" count={3} className="max-w-md" />`}
             </pre>
           </div>

@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.env
+.env.*.local
+*.pem
+
+# i want to ignore all .env files
+# but not .env.example or .env.production
+# so i will ignore all .env files except .env.example and .env.production
+.env*
+!.env.example
+!.env.production
+

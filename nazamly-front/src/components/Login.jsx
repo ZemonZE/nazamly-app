@@ -14,20 +14,31 @@ function Login({ onLogin, switchToSignup }) {
   const [authError, setAuthError] = useState(null);
 
   const syncWithBackend = async (user) => {
-    const token = await user.getIdToken(true);
-    const res = await fetch(`${API_URL}/api/auth/sync`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) {
-      await auth.signOut();
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.message || "Server sync failed. Please try again.");
+    try {
+      const token = await user.getIdToken(true);
+      console.log("[Sync] Attempting to sync with backend:", API_URL);
+      
+      const res = await fetch(`${API_URL}/api/auth/sync`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      console.log("[Sync] Response status:", res.status);
+      
+      if (!res.ok) {
+        await auth.signOut();
+        const body = await res.json().catch(() => ({}));
+        console.error("[Sync] Backend error:", body);
+        throw new Error(body.message || "Server sync failed. Please try again.");
+      }
+      return await res.json();
+    } catch (error) {
+      console.error("[Sync] Error:", error);
+      throw error;
     }
-    return await res.json();
   };
 
   const handleEmailLogin = async (e) => {

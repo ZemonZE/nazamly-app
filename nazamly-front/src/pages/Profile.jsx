@@ -84,13 +84,13 @@ function Profile() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       {/* Profile Header */}
-      <div className="flex items-center gap-5 rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
+      <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:gap-5">
         <Avatar className="h-16 w-16 ring-4 ring-background">
           <AvatarFallback className="bg-brand-orange text-white text-xl font-bold">{avatar}</AvatarFallback>
         </Avatar>
-        <div>
+        <div className="min-w-0">
           <h2 className="font-display text-2xl font-semibold">{name}</h2>
-          <p className="text-sm text-muted-foreground">{user.email}</p>
+          <p className="text-sm text-muted-foreground break-all">{user.email}</p>
           <span className="mt-1.5 inline-block rounded-full bg-brand-mint px-3 py-0.5 text-xs font-semibold">
             {user.accessStatus || "Unknown"}
           </span>
@@ -127,7 +127,7 @@ function Profile() {
       {/* GPA Goal Tracker */}
       {user.cgpa != null && (
         <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <Trophy className="h-5 w-5 text-brand-orange" />
               <h3 className="font-display text-lg font-semibold">GPA Goal Tracker</h3>
@@ -139,7 +139,7 @@ function Profile() {
               How to reach this goal?
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 gap-4 mb-4 sm:grid-cols-3">
             <div><span className="text-xs text-muted-foreground">Current GPA</span><p className="font-display text-2xl font-bold">{currentGpa}</p></div>
             <div><span className="text-xs text-muted-foreground">Your Target</span><p className="font-display text-2xl font-bold">{targetGpa.toFixed(2)}</p></div>
             <div><span className="text-xs text-muted-foreground">Remaining</span><p className="font-display text-2xl font-bold text-brand-teal">+{remainingGpa}</p></div>

@@ -1,8 +1,5 @@
 import { auth, API_URL } from "../firebase";
 
-/**
- * Helper — returns an Authorization header with a fresh Firebase ID token.
- */
 async function authHeaders() {
   const user = auth.currentUser;
   if (!user) throw new Error("Not authenticated");
@@ -13,12 +10,6 @@ async function authHeaders() {
   };
 }
 
-/**
- * POST /api/gpa/calculate
- *
- * Body: { courses: [{ courseCode, creditHours, mark (0-100), isRetake? }] }
- * Returns: { success, data: { termGPA, termHoursCalculated, oldCGPA, newCGPA } }
- */
 export async function calculateTermGPA(courses) {
   const res = await fetch(`${API_URL}/api/gpa/calculate`, {
     method: "POST",
@@ -30,12 +21,6 @@ export async function calculateTermGPA(courses) {
   return json.data;
 }
 
-/**
- * POST /api/gpa/target-strategy
- *
- * Body: { targetCGPA, courses: [{ courseCode, creditHours }] }
- * Returns: { success, data: { targetCGPA, requiredTermAverageGPA, plan } }
- */
 export async function generateTargetPlan(targetCGPA, courses) {
   const res = await fetch(`${API_URL}/api/gpa/target-strategy`, {
     method: "POST",
@@ -47,9 +32,6 @@ export async function generateTargetPlan(targetCGPA, courses) {
   return json.data;
 }
 
-/**
- * Update the student's cumulative GPA profile on the server.
- */
 export async function updateGpaProfile(cgpa, completedHours) {
   const res = await fetch(`${API_URL}/api/auth/profile`, {
     method: "PATCH",
@@ -61,28 +43,15 @@ export async function updateGpaProfile(cgpa, completedHours) {
   return json;
 }
 
-/* ═══════════════════════════════════════
-   Term Courses CRUD
-═══════════════════════════════════════ */
-
-/**
- * GET /api/gpa/my-courses
- * Returns the user's saved term courses array.
- */
 export async function getTermCourses() {
   const res = await fetch(`${API_URL}/api/gpa/my-courses`, {
     headers: await authHeaders(),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.message || "Failed to load courses");
-  return json.data; // [{ _id, name, courseCode, creditHours }]
+  return json.data;
 }
 
-/**
- * POST /api/gpa/my-courses
- * Body: { name, courseCode, creditHours }
- * Returns the updated courses array.
- */
 export async function addTermCourse(name, courseCode, creditHours) {
   const res = await fetch(`${API_URL}/api/gpa/my-courses`, {
     method: "POST",
@@ -94,10 +63,6 @@ export async function addTermCourse(name, courseCode, creditHours) {
   return json.data;
 }
 
-/**
- * DELETE /api/gpa/my-courses/:courseId
- * Returns the updated courses array.
- */
 export async function removeTermCourse(courseId) {
   const res = await fetch(`${API_URL}/api/gpa/my-courses/${courseId}`, {
     method: "DELETE",

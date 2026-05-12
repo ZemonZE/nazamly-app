@@ -1,5 +1,4 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-// @ts-ignore: TS doesn't resolve the react-native export condition correctly for getReactNativePersistence
 import { initializeAuth, GoogleAuthProvider, getReactNativePersistence, getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,14 +12,13 @@ const firebaseConfig = {
   appId: "1:229323424819:web:d76eb25051941b42784f46",
   measurementId: "G-JX83Q6LDVD"
 };
-export const Google_Android_Id="638377043762-n5vj87iuahfahdrvpefreaaahj9c9mel.apps.googleusercontent.com";
+export const Google_Android_Id = "638377043762-n5vj87iuahfahdrvpefreaaahj9c9mel.apps.googleusercontent.com";
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Handle hot-reloading in Expo where initializeAuth throws an error if already initialized.
 let authInstance;
 try {
-  authInstance = initializeAuth(app, { 
+  authInstance = initializeAuth(app, {
     persistence: getReactNativePersistence(AsyncStorage as any)
   });
 } catch {
@@ -31,10 +29,7 @@ export const storage = getStorage(app);
 
 export const googleProvider = new GoogleAuthProvider();
 
-
-// 🔥 AWS Production API URL
-// Previously used dynamic local IP detection for dev — now pointing to AWS
-const AWS_API_URL = 'http://13.60.63.216:5000';
+const AWS_API_URL = 'https://nazamlyonline.tech';
 
 function resolveApiUrl(): string {
   return AWS_API_URL;

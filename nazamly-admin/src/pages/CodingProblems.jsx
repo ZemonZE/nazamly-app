@@ -41,11 +41,24 @@ function CodingProblems() {
 
   const fetchCourses = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/admin/courses`, { headers: await authHeaders() });
+      console.log('[CodingProblems] Fetching courses from:', `${API_URL}/api/admin/courses`);
+      const headers = await authHeaders();
+      console.log('[CodingProblems] Request headers:', headers);
+      const res = await fetch(`${API_URL}/api/admin/courses`, { headers });
+      console.log('[CodingProblems] Response status:', res.status);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('[CodingProblems] Error response:', errorText);
+        throw new Error(`HTTP ${res.status}: ${errorText}`);
+      }
       const data = await res.json();
-      setCourses(Array.isArray(data) ? data : data.data || data.courses || []);
-    } catch {
-      setError('Failed to load courses');
+      console.log('[CodingProblems] Received data:', data);
+      const coursesArray = Array.isArray(data) ? data : data.data || data.courses || [];
+      console.log('[CodingProblems] Parsed courses array:', coursesArray);
+      setCourses(coursesArray);
+    } catch (err) {
+      console.error('[CodingProblems] Failed to load courses:', err);
+      setError('Failed to load courses: ' + err.message);
     }
   };
 

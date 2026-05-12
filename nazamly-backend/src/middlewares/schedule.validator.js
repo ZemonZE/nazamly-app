@@ -1,9 +1,5 @@
 const Joi = require('joi');
 
-/**
- * Fix #4: Rewritten to match the ACTUAL POST /entry payload:
- * { timeTableId?, courseId, dayOfWeek (number 0-6), startTime, endTime, sessionType, location?, groupNumber? }
- */
 const entrySchema = Joi.object({
   timeTableId: Joi.string().hex().length(24).optional().allow('', null),
 

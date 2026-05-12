@@ -1,7 +1,3 @@
-/**
- * check-env.js
- * Utility to verify the environment for the Transcript Extraction feature.
- */
 const { execSync } = require('child_process');
 
 console.log("=== Transcript Extraction Environment Checker ===\n");
@@ -17,7 +13,6 @@ function checkPython() {
             pythonFound = true;
             return cmd;
         } catch (e) {
-            // next cmd
         }
     }
     console.log("   ❌ Python not found in system PATH.");
@@ -30,7 +25,6 @@ function checkPythonLibs(pythonCmd) {
     const libs = ['cv2', 'numpy', 'pytesseract', 'pdf2image', 'PIL'];
     for (const lib of libs) {
         try {
-            // Special case for OpenCV (cv2) and PIL (Pillow)
             const importName = lib === 'PIL' ? 'PIL' : lib;
             execSync(`${pythonCmd} -c "import ${importName}"`);
             console.log(`   ✅ Library '${lib}' is installed.`);
@@ -44,7 +38,6 @@ function checkPythonLibs(pythonCmd) {
 function checkSystemBinaries() {
     console.log("\n3. Checking System Binaries...");
     
-    // Tesseract
     try {
         const tesserVersion = execSync('tesseract --version').toString().split('\n')[0];
         console.log(`   ✅ Tesseract-OCR is installed: ${tesserVersion}`);
@@ -53,7 +46,6 @@ function checkSystemBinaries() {
         console.log("      Please install it from: https://github.com/UB-Mannheim/tesseract/wiki");
     }
 
-    // Poppler (pdftocairo or pdftoppm)
     try {
         execSync('pdftocairo -v');
         console.log("   ✅ Poppler (pdftocairo) is installed.");

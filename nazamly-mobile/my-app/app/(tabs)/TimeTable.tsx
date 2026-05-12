@@ -53,18 +53,18 @@ const DAYS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'
 
 const SLOTS: Record<number, { start: string; end: string }[]> = {
   2: [
-    { start: '8:00 AM',  end: '10:00 AM' },
+    { start: '8:00 AM', end: '10:00 AM' },
     { start: '10:00 AM', end: '12:00 PM' },
-    { start: '12:00 PM', end: '2:00 PM'  },
-    { start: '2:00 PM',  end: '4:00 PM'  },
-    { start: '4:00 PM',  end: '6:00 PM'  },
-    { start: '6:00 PM',  end: '8:00 PM'  },
+    { start: '12:00 PM', end: '2:00 PM' },
+    { start: '2:00 PM', end: '4:00 PM' },
+    { start: '4:00 PM', end: '6:00 PM' },
+    { start: '6:00 PM', end: '8:00 PM' },
   ],
   3: [
-    { start: '8:00 AM',  end: '11:00 AM' },
-    { start: '11:00 AM', end: '2:00 PM'  },
-    { start: '2:00 PM',  end: '5:00 PM'  },
-    { start: '5:00 PM',  end: '8:00 PM'  },
+    { start: '8:00 AM', end: '11:00 AM' },
+    { start: '11:00 AM', end: '2:00 PM' },
+    { start: '2:00 PM', end: '5:00 PM' },
+    { start: '5:00 PM', end: '8:00 PM' },
   ],
 };
 
@@ -608,7 +608,7 @@ const TimetableScreen = () => {
       {/* ── Conflict Popup ── */}
       <Modal visible={!!conflict} transparent animationType="fade">
         <TouchableOpacity style={s.conflictOverlay} activeOpacity={1} onPress={() => setConflict(null)}>
-          <TouchableOpacity style={s.conflictPopup} activeOpacity={1} onPress={() => {}}>
+          <TouchableOpacity style={s.conflictPopup} activeOpacity={1} onPress={() => { }}>
             <Text style={s.conflictIcon}>⚠️</Text>
             <Text style={s.conflictTitle}>Schedule Conflict</Text>
             <Text style={s.conflictMsg}>{conflict?.msg}</Text>
@@ -1041,7 +1041,7 @@ const TimetableScreen = () => {
               {/* Duration selector */}
               <Text style={s.label}>Duration</Text>
               <View style={s.durationRow}>
-                {([2, 3] as (2|3)[]).map(d => (
+                {([2, 3] as (2 | 3)[]).map(d => (
                   <TouchableOpacity
                     key={d}
                     style={[s.durationBtn, form.duration === d && s.durationBtnActive]}
@@ -1104,135 +1104,135 @@ const TimetableScreen = () => {
 
 // ─── Styles factory ───────────────────────────────────────────────────────────
 const styles = (colors: any) => StyleSheet.create({
-  container:       { flex: 1, backgroundColor: colors.bg },
-  centered:        { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  container: { flex: 1, backgroundColor: colors.bg },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
 
   // Empty state
   emptyIconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.indigo + '15', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  emptyTitle:      { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 6 },
-  emptyText:       { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
-  emptyActions:    { flexDirection: 'row', gap: 12 },
-  emptyActionBtn:  { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 14, borderWidth: 2, borderColor: colors.indigo },
+  emptyTitle: { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 6 },
+  emptyText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  emptyActions: { flexDirection: 'row', gap: 12 },
+  emptyActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 12, paddingHorizontal: 20, borderRadius: 14, borderWidth: 2, borderColor: colors.indigo },
   emptyActionBtnFilled: { backgroundColor: colors.indigo, borderColor: colors.indigo },
   emptyActionText: { fontSize: 14, fontWeight: '600', color: colors.indigo },
 
   // Header
-  header:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 16 },
-  screenTitle:     { fontSize: 24, fontWeight: 'bold', color: colors.textPrimary },
-  subtitle:        { fontSize: 14, color: colors.textMuted, marginTop: 2 },
-  headerActions:   { flexDirection: 'row', gap: 8 },
-  replaceButton:   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#14b8a6', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, gap: 6 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 16 },
+  screenTitle: { fontSize: 24, fontWeight: 'bold', color: colors.textPrimary },
+  subtitle: { fontSize: 14, color: colors.textMuted, marginTop: 2 },
+  headerActions: { flexDirection: 'row', gap: 8 },
+  replaceButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#14b8a6', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 12, gap: 6 },
   replaceButtonText: { color: '#fff', fontWeight: '600', fontSize: 13 },
 
   // Scanning banner
-  scanningBanner:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, padding: 14, backgroundColor: colors.indigo + '12', borderRadius: 12, marginBottom: 8 },
-  scanningText:    { fontSize: 13, color: colors.indigo, fontWeight: '500' },
+  scanningBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, padding: 14, backgroundColor: colors.indigo + '12', borderRadius: 12, marginBottom: 8 },
+  scanningText: { fontSize: 13, color: colors.indigo, fontWeight: '500' },
   processingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  processingCard:    { width: '100%', maxWidth: 320, backgroundColor: colors.card, borderRadius: 16, padding: 20, alignItems: 'center', gap: 12 },
-  processingText:    { fontSize: 14, color: colors.textPrimary, textAlign: 'center' },
+  processingCard: { width: '100%', maxWidth: 320, backgroundColor: colors.card, borderRadius: 16, padding: 20, alignItems: 'center', gap: 12 },
+  processingText: { fontSize: 14, color: colors.textPrimary, textAlign: 'center' },
 
   // Day card
-  dayCard:         { marginBottom: 16 },
-  dayHeader:       { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, paddingHorizontal: 4 },
-  dayTitle:        { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
-  dayBadge:        { backgroundColor: colors.indigo + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  dayBadgeText:    { fontSize: 11, fontWeight: 'bold', color: colors.indigo },
+  dayCard: { marginBottom: 16 },
+  dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8, paddingHorizontal: 4 },
+  dayTitle: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
+  dayBadge: { backgroundColor: colors.indigo + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  dayBadgeText: { fontSize: 11, fontWeight: 'bold', color: colors.indigo },
 
   // Class card (new design)
-  classCard:       { flexDirection: 'row', backgroundColor: colors.card, borderRadius: 14, marginBottom: 8, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  classAccent:     { width: 4 },
-  classContent:    { flex: 1, padding: 12, paddingLeft: 14 },
-  classTopRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  classActions:    { flexDirection: 'row', gap: 6 },
-  subjectText:     { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
-  classInfoRow:    { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
-  infoItem:        { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  infoText:        { fontSize: 12, color: colors.textMuted },
-  editBtn:         { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
-  deleteBtn:       { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
+  classCard: { flexDirection: 'row', backgroundColor: colors.card, borderRadius: 14, marginBottom: 8, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  classAccent: { width: 4 },
+  classContent: { flex: 1, padding: 12, paddingLeft: 14 },
+  classTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  classActions: { flexDirection: 'row', gap: 6 },
+  subjectText: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
+  classInfoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
+  infoItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  infoText: { fontSize: 12, color: colors.textMuted },
+  editBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
+  deleteBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
 
   // Type badge
-  typeBadge:       { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, borderWidth: 1 },
-  typeBadgeText:   { fontSize: 10, fontWeight: 'bold' },
+  typeBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, borderWidth: 1 },
+  typeBadgeText: { fontSize: 10, fontWeight: 'bold' },
 
   // Conflict popup
   conflictOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 30 },
-  conflictPopup:   { backgroundColor: colors.card, borderRadius: 20, padding: 28, width: '100%', maxWidth: 340, alignItems: 'center', elevation: 10 },
-  conflictIcon:    { fontSize: 40, marginBottom: 12 },
-  conflictTitle:   { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 8 },
-  conflictMsg:     { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: 20 },
-  conflictBtn:     { backgroundColor: colors.indigo, paddingVertical: 12, paddingHorizontal: 32, borderRadius: 12 },
+  conflictPopup: { backgroundColor: colors.card, borderRadius: 20, padding: 28, width: '100%', maxWidth: 340, alignItems: 'center', elevation: 10 },
+  conflictIcon: { fontSize: 40, marginBottom: 12 },
+  conflictTitle: { fontSize: 18, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 8 },
+  conflictMsg: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: 20 },
+  conflictBtn: { backgroundColor: colors.indigo, paddingVertical: 12, paddingHorizontal: 32, borderRadius: 12 },
   conflictBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 
   // Source picker modal
-  sourceOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  sourceSheet:     { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 },
-  sourceHandle:    { width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
-  sourceTitle:     { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 4 },
-  sourceSubtitle:  { fontSize: 13, color: colors.textMuted, marginBottom: 20 },
-  sourceOption:    { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
-  sourceIconCircle:{ width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  sourceOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sourceSheet: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 36 },
+  sourceHandle: { width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  sourceTitle: { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 4 },
+  sourceSubtitle: { fontSize: 13, color: colors.textMuted, marginBottom: 20 },
+  sourceOption: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
+  sourceIconCircle: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
   sourceOptionTitle: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  sourceOptionDesc:  { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  sourceCancelBtn:   { marginTop: 16, paddingVertical: 14, borderRadius: 14, backgroundColor: colors.bg, alignItems: 'center' },
-  sourceCancelText:  { fontSize: 15, fontWeight: '600', color: colors.textMuted },
+  sourceOptionDesc: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  sourceCancelBtn: { marginTop: 16, paddingVertical: 14, borderRadius: 14, backgroundColor: colors.bg, alignItems: 'center' },
+  sourceCancelText: { fontSize: 15, fontWeight: '600', color: colors.textMuted },
 
   // OCR preview modal
   ocrModalContent: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%', padding: 20 },
-  ocrModalHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-  ocrModalTitle:   { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary },
-  ocrModalSubtitle:{ fontSize: 13, color: colors.textMuted, marginTop: 2 },
-  ocrClassCard:    { flexDirection: 'row', backgroundColor: colors.bg, borderRadius: 12, marginBottom: 8, overflow: 'hidden' },
-  ocrAccent:       { width: 4 },
+  ocrModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  ocrModalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary },
+  ocrModalSubtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  ocrClassCard: { flexDirection: 'row', backgroundColor: colors.bg, borderRadius: 12, marginBottom: 8, overflow: 'hidden' },
+  ocrAccent: { width: 4 },
   ocrClassContent: { flex: 1, padding: 12 },
-  ocrClassTopRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  ocrTopActions:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ocrActionBtn:    { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
-  ocrClassName:    { fontSize: 14, fontWeight: '700', color: colors.textPrimary, flex: 1, marginRight: 8 },
+  ocrClassTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  ocrTopActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ocrActionBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
+  ocrClassName: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, flex: 1, marginRight: 8 },
   ocrClassInfoRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  ocrActions:      { flexDirection: 'row', gap: 10, marginTop: 12 },
-  ocrCancelBtn:    { flex: 1, paddingVertical: 14, borderRadius: 14, borderWidth: 2, borderColor: colors.border, alignItems: 'center' },
-  ocrCancelText:   { fontSize: 15, fontWeight: '600', color: colors.textMuted },
-  ocrConfirmBtn:   { flex: 2, flexDirection: 'row', gap: 6, paddingVertical: 14, borderRadius: 14, backgroundColor: colors.indigo, alignItems: 'center', justifyContent: 'center' },
-  ocrConfirmText:  { fontSize: 15, fontWeight: '700', color: '#fff' },
+  ocrActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  ocrCancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 14, borderWidth: 2, borderColor: colors.border, alignItems: 'center' },
+  ocrCancelText: { fontSize: 15, fontWeight: '600', color: colors.textMuted },
+  ocrConfirmBtn: { flex: 2, flexDirection: 'row', gap: 6, paddingVertical: 14, borderRadius: 14, backgroundColor: colors.indigo, alignItems: 'center', justifyContent: 'center' },
+  ocrConfirmText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 
   // Add class modal
-  modalOverlay:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent:    { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '88%', padding: 20 },
-  modalHeader:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  modalTitle:      { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary },
-  label:           { fontSize: 13, fontWeight: '600', color: colors.textMuted, marginTop: 14, marginBottom: 6 },
-  input:           { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, fontSize: 15, color: colors.textPrimary },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '88%', padding: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.textPrimary },
+  label: { fontSize: 13, fontWeight: '600', color: colors.textMuted, marginTop: 14, marginBottom: 6 },
+  input: { backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 12, fontSize: 15, color: colors.textPrimary },
 
   // Type selector
-  typeRow:         { flexDirection: 'row', gap: 10 },
-  typeBtn:         { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.bg },
-  typeBtnCode:     { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
-  typeBtnLabel:    { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  typeRow: { flexDirection: 'row', gap: 10 },
+  typeBtn: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.bg },
+  typeBtnCode: { fontSize: 16, fontWeight: 'bold', color: colors.textPrimary },
+  typeBtnLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
 
   // Day chips
-  chipRow:         { flexDirection: 'row', marginBottom: 4 },
-  chip:            { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, marginRight: 8 },
-  chipActive:      { backgroundColor: colors.indigo, borderColor: colors.indigo },
-  chipText:        { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
-  chipTextActive:  { color: '#fff', fontWeight: '700' },
+  chipRow: { flexDirection: 'row', marginBottom: 4 },
+  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, marginRight: 8 },
+  chipActive: { backgroundColor: colors.indigo, borderColor: colors.indigo },
+  chipText: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
+  chipTextActive: { color: '#fff', fontWeight: '700' },
 
   // Duration buttons
-  durationRow:     { flexDirection: 'row', gap: 10 },
-  durationBtn:     { flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: 'center', backgroundColor: colors.bg },
-  durationBtnActive:     { borderColor: colors.indigo, backgroundColor: colors.indigo + '18' },
-  durationBtnText:       { fontSize: 14, color: colors.textMuted, fontWeight: '500' },
+  durationRow: { flexDirection: 'row', gap: 10 },
+  durationBtn: { flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: 'center', backgroundColor: colors.bg },
+  durationBtnActive: { borderColor: colors.indigo, backgroundColor: colors.indigo + '18' },
+  durationBtnText: { fontSize: 14, color: colors.textMuted, fontWeight: '500' },
   durationBtnTextActive: { color: colors.indigo, fontWeight: '700' },
 
   // Time slot picker
-  slotBtn:         { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 6, backgroundColor: colors.bg },
-  slotBtnActive:   { borderColor: colors.indigo, backgroundColor: colors.indigo + '15' },
-  slotBtnText:     { fontSize: 14, color: colors.textMuted },
+  slotBtn: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 6, backgroundColor: colors.bg },
+  slotBtnActive: { borderColor: colors.indigo, backgroundColor: colors.indigo + '15' },
+  slotBtnText: { fontSize: 14, color: colors.textMuted },
   slotBtnTextActive: { color: colors.indigo, fontWeight: '700' },
 
   // Submit button
-  submitBtn:       { backgroundColor: colors.indigo, paddingVertical: 15, borderRadius: 14, alignItems: 'center', marginTop: 10 },
-  submitBtnText:   { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  submitBtn: { backgroundColor: colors.indigo, paddingVertical: 15, borderRadius: 14, alignItems: 'center', marginTop: 10 },
+  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });
 
 export default TimetableScreen;

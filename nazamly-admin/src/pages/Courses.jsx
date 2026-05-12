@@ -24,11 +24,22 @@ function Courses() {
   const fetchCourses = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/courses`, { headers: await authHeaders() });
+      console.log('[Courses] Fetching from:', `${API_URL}/api/admin/courses`);
+      const headers = await authHeaders();
+      console.log('[Courses] Headers:', headers);
+      const res = await fetch(`${API_URL}/api/admin/courses`, { headers });
+      console.log('[Courses] Response status:', res.status);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('[Courses] Error response:', errorText);
+        throw new Error(`HTTP ${res.status}: ${errorText}`);
+      }
       const data = await res.json();
+      console.log('[Courses] Received data:', data);
       setCourses(data);
     } catch (err) {
-      setError('Failed to load courses');
+      console.error('[Courses] Error:', err);
+      setError('Failed to load courses: ' + err.message);
     } finally {
       setLoading(false);
     }

@@ -22,10 +22,8 @@ function App() {
   const [userData, setUserData] = useState(null);
   const [isSidebarFolded, setIsSidebarFolded] = useState(false);
 
-  // --- Theme State ---
   const [isDark, setIsDark] = useState(() => localStorage.getItem('adminTheme') === 'dark');
 
-  // Apply theme to document root and persist preference
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
     localStorage.setItem('adminTheme', isDark ? 'dark' : 'light');
@@ -34,15 +32,12 @@ function App() {
   const toggleTheme = () => setIsDark(prev => !prev);
 
   useEffect(() => {
-    // Check if user is already logged in
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
-        // Check if user data is stored in localStorage
         const storedData = localStorage.getItem('adminUserData');
         if (storedData) {
           const data = JSON.parse(storedData);
           if (data.user && data.user.admin && data.token) {
-            // Re-verify admin status with backend
             try {
               const response = await fetch(`${API_URL}/api/auth/verify-admin`, {
                 method: 'GET',
@@ -54,7 +49,6 @@ function App() {
 
               if (response.ok) {
                 const { user: dbUser } = await response.json();
-                // Update stored data with fresh backend data
                 const updatedData = {
                   ...data,
                   user: {
@@ -67,7 +61,6 @@ function App() {
                 setUserData(updatedData);
                 localStorage.setItem('adminUserData', JSON.stringify(updatedData));
               } else {
-                // Backend verification failed - clear session
                 console.warn('Admin verification failed, clearing session');
                 localStorage.removeItem('adminUserData');
                 setIsAuthenticated(false);
@@ -75,7 +68,6 @@ function App() {
               }
             } catch (error) {
               console.error('Error verifying admin status:', error);
-              // On network error, allow cached session but log warning
               setIsAuthenticated(true);
               setUserData(data);
             }

@@ -1,6 +1,3 @@
-// ── Dashboard SVG Icons ──
-// Consistent 20×20 stroke-based icons for the sidebar
-
 const iconProps = {
   width: 20,
   height: 20,
@@ -12,7 +9,6 @@ const iconProps = {
   strokeLinejoin: "round",
 };
 
-/* ── Home ── */
 export const IconHome = (props) => (
   <svg {...iconProps} {...props}>
     <path d="M3 10.5L12 3l9 7.5" />
@@ -20,7 +16,6 @@ export const IconHome = (props) => (
   </svg>
 );
 
-/* ── GPA Calculator (bar chart) ── */
 export const IconChart = (props) => (
   <svg {...iconProps} {...props}>
     <rect x="3" y="12" width="4" height="8" rx="1" />
@@ -29,7 +24,6 @@ export const IconChart = (props) => (
   </svg>
 );
 
-/* ── GPA Planner (calendar) ── */
 export const IconCalendar = (props) => (
   <svg {...iconProps} {...props}>
     <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -40,7 +34,6 @@ export const IconCalendar = (props) => (
   </svg>
 );
 
-/* ── Materials (book) ── */
 export const IconBook = (props) => (
   <svg {...iconProps} {...props}>
     <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
@@ -50,7 +43,6 @@ export const IconBook = (props) => (
   </svg>
 );
 
-/* ── Question Bank (circle with question mark) ── */
 export const IconQuestion = (props) => (
   <svg {...iconProps} {...props}>
     <circle cx="12" cy="12" r="10" />
@@ -59,7 +51,6 @@ export const IconQuestion = (props) => (
   </svg>
 );
 
-/* ── Table / Schedule Generator (grid / table) ── */
 export const IconTable = (props) => (
   <svg {...iconProps} {...props}>
     <rect x="3" y="3" width="18" height="18" rx="2" />
@@ -70,7 +61,6 @@ export const IconTable = (props) => (
   </svg>
 );
 
-/* ── Settings (gear) ── */
 export const IconSettings = (props) => (
   <svg {...iconProps} {...props}>
     <circle cx="12" cy="12" r="3" />
@@ -78,7 +68,6 @@ export const IconSettings = (props) => (
   </svg>
 );
 
-/* ── Logout (door / log-out) ── */
 export const IconLogout = (props) => (
   <svg {...iconProps} {...props}>
     <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -87,21 +76,18 @@ export const IconLogout = (props) => (
   </svg>
 );
 
-/* ── Chevron Right (sidebar collapse) ── */
 export const IconChevronRight = (props) => (
   <svg {...iconProps} {...props}>
     <polyline points="9 18 15 12 9 6" />
   </svg>
 );
 
-/* ── Chevron Left (sidebar expand) ── */
 export const IconChevronLeft = (props) => (
   <svg {...iconProps} {...props}>
     <polyline points="15 18 9 12 15 6" />
   </svg>
 );
 
-/* ── Trash / Delete ── */
 export const IconTrash = (props) => (
   <svg {...iconProps} stroke="black" {...props}>
     <polyline points="3 6 5 6 21 6" />
@@ -112,7 +98,6 @@ export const IconTrash = (props) => (
   </svg>
 );
 
-/* ── Coding (code) ── */
 export const IconCode = (props) => (
   <svg {...iconProps} {...props}>
     <polyline points="16 18 22 12 16 6" />
@@ -120,7 +105,6 @@ export const IconCode = (props) => (
   </svg>
 );
 
-/* ── Profile (user) ── */
 export const IconProfile = (props) => (
   <svg {...iconProps} {...props}>
     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />

@@ -1,13 +1,3 @@
-/**
- * Migration Script: Convert fileType from MIME types to simple types
- *
- * Existing documents store fileType as MIME types (e.g., 'image/jpeg', 'application/pdf').
- * The updated schema uses simple types ('pdf', 'image').
- *
- * Run this ONCE before deploying the model schema change:
- *   node scripts/migrate-fileType.js
- */
-
 require('dotenv').config();
 const mongoose = require('mongoose');
 
@@ -21,14 +11,12 @@ async function migrate() {
   const db = mongoose.connection.db;
   const collection = db.collection('transcriptuploads');
 
-  // Convert image MIME types → 'image'
   const imageResult = await collection.updateMany(
     { fileType: { $in: ['image/jpeg', 'image/png', 'image/webp'] } },
     { $set: { fileType: 'image' } }
   );
   console.log(`Updated ${imageResult.modifiedCount} image documents.`);
 
-  // Convert PDF MIME type → 'pdf'
   const pdfResult = await collection.updateMany(
     { fileType: 'application/pdf' },
     { $set: { fileType: 'pdf' } }

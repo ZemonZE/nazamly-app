@@ -53,16 +53,14 @@ function CodingProblems() {
         setCourses(list);
         if (!courseId && list.length > 0)
           setSearchParams({ courseId: list[0]._id }, { replace: true });
-      } catch { /* non-fatal */ }
+      } catch { }
       finally { setCoursesLoading(false); }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (!courseId) return;
     fetchProblems();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId, sort, dir]);
 
   async function fetchProblems() {

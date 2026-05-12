@@ -16,14 +16,11 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-/** Returns a fresh admin token (auto-refreshes if expired) */
 export const getAdminToken = async () => {
   try {
-    // If Firebase Auth has a current user, get a fresh token (auto-refreshes)
     if (auth.currentUser) {
       return await auth.currentUser.getIdToken();
     }
-    // Fallback to localStorage (e.g. before auth state is restored on page load)
     const stored = localStorage.getItem('adminUserData');
     if (!stored) return null;
     return JSON.parse(stored)?.token || null;
@@ -32,7 +29,6 @@ export const getAdminToken = async () => {
   }
 };
 
-/** Returns headers with Authorization bearer token */
 export const authHeaders = async (extra = {}) => {
   const token = await getAdminToken();
   return {

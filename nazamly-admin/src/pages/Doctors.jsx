@@ -35,13 +35,21 @@ function Doctors() {
   const fetchDoctors = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/admin/doctors`, {
-        headers: await authHeaders(),
-      });
-      if (!res.ok) throw new Error('Failed to fetch doctors');
+      console.log('[Doctors] Fetching from:', `${API_URL}/api/admin/doctors`);
+      const headers = await authHeaders();
+      console.log('[Doctors] Headers:', headers);
+      const res = await fetch(`${API_URL}/api/admin/doctors`, { headers });
+      console.log('[Doctors] Response status:', res.status);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('[Doctors] Error response:', errorText);
+        throw new Error('Failed to fetch doctors');
+      }
       const data = await res.json();
+      console.log('[Doctors] Received data:', data);
       setDoctors(data);
     } catch (err) {
+      console.error('[Doctors] Error:', err);
       showToast('error', err.message);
     } finally {
       setLoading(false);

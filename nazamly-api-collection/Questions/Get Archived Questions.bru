@@ -5,9 +5,13 @@ meta {
 }
 
 get {
-  url: {{base_url}}/questions/archive
+  url: {{base_url}}/questions/archive?courseId=69d5058e0ea5bfc08ea0cdba
   body: none
   auth: bearer
+}
+
+params:query {
+  courseId: 69d5058e0ea5bfc08ea0cdba
 }
 
 auth:bearer {

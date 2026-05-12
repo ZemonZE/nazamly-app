@@ -11,7 +11,6 @@
   gap: 24px;
 }
 
-/* ── Header ── */
 .dash-header {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -70,7 +69,6 @@
   white-space: nowrap;
 }
 
-/* ── Section Title ── */
 .dash-section-title {
   font-size: 1.1rem;
   font-weight: 700;
@@ -78,7 +76,6 @@
   margin-bottom: 16px;
 }
 
-/* ── Tools ── */
 .dash-tools {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -161,7 +158,6 @@
   }
 }
 
-/* ── Responsive ── */
 @media (max-width: 992px) {
   .dash-tools {
     grid-template-columns: 1fr 1fr;

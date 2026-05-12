@@ -1,13 +1,6 @@
 const { TimeTableEntry } = require('../models/schedule');
 const User = require('../models/user/user.model');
 
-/**
- * Fix #3: Rewrote conflict.middleware.js to:
- * 1. Use the correct new req.body schema (single entry: dayOfWeek, startTime, endTime)
- * 2. Query the real database for existing entries via Firebase UID → MongoDB userId
- * 3. Detect actual overlapping time slots on the same day
- */
-
 const toMinutes = (timeStr) => {
   const [h, m] = timeStr.split(':').map(Number);
   return h * 60 + m;
@@ -28,7 +21,6 @@ const checkScheduleConflicts = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Get all existing entries for this user on the same day
     const existingEntries = await TimeTableEntry.find({
       userId: user._id,
       dayOfWeek: Number(dayOfWeek),
@@ -38,11 +30,9 @@ const checkScheduleConflicts = async (req, res, next) => {
     const newStart = toMinutes(startTime);
     const newEnd = toMinutes(endTime);
 
-    // Check for overlap: conflict if new entry overlaps any existing entry
     const conflict = existingEntries.find(entry => {
       const existStart = toMinutes(entry.startTime);
       const existEnd = toMinutes(entry.endTime);
-      // Overlap condition: new start < exist end AND new end > exist start
       return newStart < existEnd && newEnd > existStart;
     });
 
