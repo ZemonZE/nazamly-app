@@ -112,6 +112,9 @@ export default function CodingScreen() {
 
   const [submissions, setSubmissions] = useState<CodeSubmission[]>([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verifyFailed, setVerifyFailed] = useState(false);
 
   const [progress, setProgress] = useState<StudentProgress | null>(null);
   const [progressLoading, setProgressLoading] = useState(false);
@@ -130,7 +133,10 @@ export default function CodingScreen() {
         setCourses(list);
         if (!selectedCourseId && list.length > 0)
           setSelectedCourseId(list[0]._id);
-      } catch (err) {
+      } catch (err: any) {
+        if (err.message?.includes("Email verification required")) {
+          setIsLocked(true);
+        }
         console.error("Failed to load courses:", err);
       } finally {
         setCoursesLoading(false);
@@ -155,6 +161,9 @@ export default function CodingScreen() {
       const response = await getCodingHistory(token);
       setSubmissions(response || []);
     } catch (err: any) {
+      if (err.message?.includes("Email verification required")) {
+        setIsLocked(true);
+      }
       console.error("Failed to load submissions:", err);
     } finally {
       setSubmissionsLoading(false);
@@ -169,9 +178,36 @@ export default function CodingScreen() {
       const response = await getProgress(token, selectedCourseId);
       setProgress(response || null);
     } catch (err: any) {
+      if (err.message?.includes("Email verification required")) {
+        setIsLocked(true);
+      }
       console.error("Failed to load progress:", err);
     } finally {
       setProgressLoading(false);
+    }
+  };
+
+  const handleVerifyCheck = async () => {
+    if (!user) return;
+    setIsVerifying(true);
+    setVerifyFailed(false);
+    try {
+      await user.reload(); // Refresh firebase user state
+      const token = await user.getIdToken(true); // Force token refresh
+      
+      const response = await getCodingHistory(token);
+      setSubmissions(response || []);
+      setIsLocked(false); // Success! Unlocked
+      if (activeTab === "progress") loadProgress();
+    } catch (err: any) {
+      if (err.message?.includes("Email verification required")) {
+        setIsLocked(true);
+        setVerifyFailed(true);
+      } else {
+        console.error("Verification check failed:", err);
+      }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -181,6 +217,54 @@ export default function CodingScreen() {
   const attempted = progress?.attemptedCount || 0;
   const total = progress?.totalCount || 0;
   const completionPct = total > 0 ? Math.round((solved / total) * 100) : 0;
+
+  if (isLocked) {
+    return (
+      <SafeAreaView style={[s.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <Feather name="mail" size={64} color={colors.amber} style={{ marginBottom: 24 }} />
+        <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.textPrimary, marginBottom: 12, textAlign: 'center' }}>
+          Email Verification Required
+        </Text>
+        <Text style={{ fontSize: 16, color: colors.textSecondary, textAlign: 'center', marginBottom: 32, lineHeight: 24 }}>
+          Please verify your email address to unlock the Coding platform and view your submissions.
+        </Text>
+        <TouchableOpacity 
+          style={{ 
+            backgroundColor: colors.indigo, 
+            paddingHorizontal: 32, 
+            paddingVertical: 16, 
+            borderRadius: 12, 
+            elevation: 2, 
+            shadowColor: colors.indigo, 
+            shadowOffset: {width: 0, height: 4}, 
+            shadowOpacity: 0.3, 
+            shadowRadius: 8, 
+            flexDirection: 'row', 
+            alignItems: 'center', 
+            minWidth: 200, 
+            justifyContent: 'center' 
+          }}
+          onPress={handleVerifyCheck}
+          disabled={isVerifying}
+        >
+          {isVerifying ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
+              I&apos;ve Verified My Email
+            </Text>
+          )}
+        </TouchableOpacity>
+        {verifyFailed && (
+          <View style={{ marginTop: 16, backgroundColor: 'rgba(33, 150, 243, 0.5)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 }}>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600', textAlign: 'center' }}>
+              Verification failed. Please try again.
+            </Text>
+          </View>
+        )}
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.container}>

@@ -1233,7 +1233,6 @@ const createProfileStyles = (isTablet = false) => {
 });
 };
 
-// Default for ProfileDetail (outside component)
 let s = createProfileStyles(false);
 
 export default ProfileScreen;
