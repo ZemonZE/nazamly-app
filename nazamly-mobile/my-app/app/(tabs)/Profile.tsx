@@ -12,6 +12,7 @@ import {
   TextInput,
   Image,
   Switch,
+  useWindowDimensions,
 } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -23,6 +24,8 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { useAppTheme } from "@/constants/theme";
 
 const AVATAR_LOCAL_KEY = "@nazamly_avatar_local";
+const STUDENT_CARD_FRONT_KEY = '@nazamly_student_card_front';
+const STUDENT_CARD_BACK_KEY = '@nazamly_student_card_back';
 
 const getProfile = async (token: string) => {
   const res = await fetch(`${API_URL}/api/auth/get-profile`, {
@@ -79,6 +82,8 @@ const ProfileScreen = () => {
   const router = useRouter();
   const { colors, isDark, toggleTheme } = useAppTheme();
   const { user, backendUser, setBackendUser, refreshProfile } = useAuth();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [profileLoading, setProfileLoading] = useState(!backendUser);
@@ -100,6 +105,8 @@ const ProfileScreen = () => {
   const [codingLoading, setCodingLoading] = useState(false);
   const [codingError, setCodingError] = useState("");
   const [notifEnabled, setNotifEnabled] = useState(true);
+  const [frontUri, setFrontUri] = useState<string | null>(null);
+  const [backUri, setBackUri] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
     if (!user) {
@@ -136,6 +143,8 @@ const ProfileScreen = () => {
       loadLocalAvatar();
       loadQuizHistory();
       loadCodingHistory();
+      AsyncStorage.getItem(STUDENT_CARD_FRONT_KEY).then(v => setFrontUri(v));
+      AsyncStorage.getItem(STUDENT_CARD_BACK_KEY).then(v => setBackUri(v));
     }, [fetchProfile]),
   );
 
@@ -294,6 +303,8 @@ const ProfileScreen = () => {
   const currentGpa = backendUser?.cgpa ?? backendUser?.currentCGPA ?? 0;
   const isDeansList = currentGpa >= 3.7;
 
+  s = createProfileStyles(isTablet);
+
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.bg }]}>
       <ScrollView
@@ -360,8 +371,7 @@ const ProfileScreen = () => {
                   color={colors.indigo}
                 />
                 <Text style={[s.studentIdText, { color: colors.indigo }]}>
-                  Student ID ·{" "}
-                  {(user?.uid.substring(0, 8) || "N/A").toUpperCase()}
+                  Student Code · {backendUser?.studentCode || "N/A"}
                 </Text>
               </View>
               <Text style={[s.profileName, { color: colors.textPrimary }]}>
@@ -478,13 +488,6 @@ const ProfileScreen = () => {
               />
               <View style={[s.divider, { backgroundColor: colors.divider }]} />
               <ProfileDetail
-                icon="hash"
-                label="User ID"
-                value={(user?.uid.substring(0, 12) || "") + "..."}
-                colors={colors}
-              />
-              <View style={[s.divider, { backgroundColor: colors.divider }]} />
-              <ProfileDetail
                 icon="shield"
                 label="Role"
                 value={
@@ -541,6 +544,29 @@ const ProfileScreen = () => {
                 </Text>
               )}
             </View>
+
+            {/* Student Card Photos */}
+            {(frontUri || backUri) && (
+              <View style={[s.detailsCard, { backgroundColor: colors.card }]}>
+                <Text style={[s.detailsCardTitle, { color: colors.textMuted }]}>
+                  Student Card
+                </Text>
+                
+                {frontUri && (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 8, fontWeight: "500" }}>Front Side</Text>
+                    <Image source={{ uri: frontUri }} style={{ width: '100%', height: 200, borderRadius: 12, backgroundColor: colors.border }} resizeMode="cover" />
+                  </View>
+                )}
+                
+                {backUri && (
+                  <View>
+                    <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 8, fontWeight: "500" }}>Back Side</Text>
+                    <Image source={{ uri: backUri }} style={{ width: '100%', height: 200, borderRadius: 12, backgroundColor: colors.border }} resizeMode="cover" />
+                  </View>
+                )}
+              </View>
+            )}
 
             {/* Latest Quiz Results */}
             <View style={[s.detailsCard, { backgroundColor: colors.card }]}>
@@ -934,9 +960,15 @@ const ProfileDetail = ({ icon, label, value, colors }: ProfileDetailProps) => (
   </View>
 );
 
-const s = StyleSheet.create({
+const createProfileStyles = (isTablet = false) => {
+  const sf = isTablet ? 1.25 : 1;
+  const fs = isTablet ? 1.18 : 1;
+  const r = (v: number) => Math.round(v * sf);
+  const f = (v: number) => Math.round(v * fs);
+
+  return StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110 },
+  scrollContent: { paddingHorizontal: r(20), paddingTop: r(10), paddingBottom: r(110) },
   centered: { alignItems: "center", paddingTop: 60 },
   loadingText: { marginTop: 10, fontSize: 14 },
   avatarSection: { alignItems: "center", paddingVertical: 28 },
@@ -1199,5 +1231,9 @@ const s = StyleSheet.create({
   },
   quizScoreText: { fontSize: 13, fontWeight: "800" },
 });
+};
+
+// Default for ProfileDetail (outside component)
+let s = createProfileStyles(false);
 
 export default ProfileScreen;

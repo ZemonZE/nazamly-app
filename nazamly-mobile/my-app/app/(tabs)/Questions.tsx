@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TextInput,
+  useWindowDimensions,
 } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -186,6 +187,8 @@ interface QuizHistoryItem {
 export default function QuestionsScreen() {
   const { colors } = useAppTheme();
   const { user, backendUser } = useAuth();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   // ── Tab State ──
   const [activeTab, setActiveTab] = useState<
@@ -515,7 +518,7 @@ export default function QuestionsScreen() {
     return {};
   };
 
-  const s = styles(colors);
+  const s = styles(colors, isTablet);
 
   return (
     <SafeAreaView style={s.container}>
@@ -1792,8 +1795,13 @@ export default function QuestionsScreen() {
 }
 
 // ─── Styles ───────────────────────────────────────────────────────
-const styles = (colors: any) =>
-  StyleSheet.create({
+const styles = (colors: any, isTablet = false) => {
+  const sf = isTablet ? 1.25 : 1;
+  const fs = isTablet ? 1.18 : 1;
+  const r = (v: number) => Math.round(v * sf);
+  const f = (v: number) => Math.round(v * fs);
+
+  return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg },
     scrollContent: {
       paddingHorizontal: 20,
@@ -2072,3 +2080,4 @@ const styles = (colors: any) =>
     },
     backBtnText: { fontSize: 14, fontWeight: "600" },
   });
+};

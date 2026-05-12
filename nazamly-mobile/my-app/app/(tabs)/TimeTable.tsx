@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -233,6 +234,8 @@ const initialForm: FormState = {
 const TimetableScreen = () => {
   const { colors } = useAppTheme();
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -728,7 +731,7 @@ const TimetableScreen = () => {
     {} as Record<string, ScheduleEntry[]>,
   );
 
-  const s = styles(colors);
+  const s = styles(colors, isTablet);
 
   return (
     <SafeAreaView style={s.container}>
@@ -1490,8 +1493,13 @@ const TimetableScreen = () => {
 };
 
 // ─── Styles factory ───────────────────────────────────────────────────────────
-const styles = (colors: any) =>
-  StyleSheet.create({
+const styles = (colors: any, isTablet = false) => {
+  const sf = isTablet ? 1.25 : 1;
+  const fs = isTablet ? 1.18 : 1;
+  const r = (v: number) => Math.round(v * sf);
+  const f = (v: number) => Math.round(v * fs);
+
+  return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg },
     centered: {
       flex: 1,
@@ -1975,5 +1983,6 @@ const styles = (colors: any) =>
     },
     submitBtnText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
   });
+};
 
 export default TimetableScreen;

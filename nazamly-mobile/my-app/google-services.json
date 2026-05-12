@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "229323424819-b8vkqtve3g4r06dh9sn6se806b81bnuq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nazamly.myapp",
+            "certificate_hash": "21707e1b1a504149da9cd157c23e0720aae14175"
+          }
+        },
+        {
+          "client_id": "229323424819-kfqup5fd94kmuipgnvtrqejbvikmqdqr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nazamly.myapp",
+            "certificate_hash": "a44c2bb606cfb040eb22403d568d98306fc72881"
+          }
+        },
+        {
           "client_id": "229323424819-bo0tpt18a47ohjo1dba5k8sgo2tbk2nb.apps.googleusercontent.com",
           "client_type": 3
         }

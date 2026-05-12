@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   ScrollView,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -102,6 +103,8 @@ const getStatusIcon = (verdict: string) => {
 export default function CodingScreen() {
   const { colors } = useAppTheme();
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   const [activeTab, setActiveTab] = useState<"submissions" | "progress">(
     "submissions",
@@ -172,7 +175,7 @@ export default function CodingScreen() {
     }
   };
 
-  const s = styles(colors);
+  const s = styles(colors, isTablet);
 
   const solved = progress?.solvedCount || 0;
   const attempted = progress?.attemptedCount || 0;
@@ -467,38 +470,43 @@ export default function CodingScreen() {
   );
 }
 
-const styles = (colors: any) =>
-  StyleSheet.create({
+const styles = (colors: any, isTablet = false) => {
+  const sf = isTablet ? 1.25 : 1; // scale factor
+  const fs = isTablet ? 1.18 : 1; // font scale
+  const r = (v: number) => Math.round(v * sf);
+  const f = (v: number) => Math.round(v * fs);
+
+  return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg },
     scrollContent: {
-      paddingHorizontal: 20,
-      paddingTop: 10,
-      paddingBottom: 110,
+      paddingHorizontal: r(20),
+      paddingTop: r(10),
+      paddingBottom: r(110),
     },
 
     tabBar: {
       flexDirection: "row",
-      marginHorizontal: 20,
-      marginTop: 10,
-      gap: 8,
-      marginBottom: 16,
+      marginHorizontal: r(20),
+      marginTop: r(10),
+      gap: r(8),
+      marginBottom: r(16),
     },
     tabBtn: {
       flex: 1,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      gap: 6,
-      paddingVertical: 12,
-      borderRadius: 14,
+      gap: r(6),
+      paddingVertical: r(12),
+      borderRadius: r(14),
       backgroundColor: colors.card,
     },
-    tabBtnText: { fontSize: 14, fontWeight: "700", color: colors.textMuted },
+    tabBtnText: { fontSize: f(14), fontWeight: "700", color: colors.textMuted },
 
     card: {
-      borderRadius: 20,
-      padding: 20,
-      marginBottom: 16,
+      borderRadius: r(20),
+      padding: r(20),
+      marginBottom: r(16),
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.06,
@@ -508,67 +516,73 @@ const styles = (colors: any) =>
     cardHeaderRow: {
       flexDirection: "row",
       alignItems: "flex-start",
-      marginBottom: 18,
+      marginBottom: r(18),
     },
-    cardTitle: { fontSize: 18, fontWeight: "700" },
-    cardDesc: { fontSize: 13, lineHeight: 19, marginTop: 2 },
+    cardTitle: { fontSize: f(18), fontWeight: "700" },
+    cardDesc: { fontSize: f(13), lineHeight: f(19), marginTop: 2 },
 
-    emptyState: { alignItems: "center", paddingVertical: 30 },
-    emptyTitle: { fontSize: 18, fontWeight: "700", marginTop: 10 },
-    emptyDesc: { fontSize: 13, marginTop: 4, textAlign: "center" },
+    emptyState: { alignItems: "center", paddingVertical: r(30) },
+    emptyTitle: { fontSize: f(18), fontWeight: "700", marginTop: r(10) },
+    emptyDesc: { fontSize: f(13), marginTop: 4, textAlign: "center" },
 
     submissionCard: {
-      borderRadius: 12,
-      padding: 14,
-      marginBottom: 8,
+      borderRadius: r(12),
+      padding: r(14),
+      marginBottom: r(8),
       borderWidth: 1,
     },
     submissionTop: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 6,
+      marginBottom: r(6),
     },
-    submissionTime: { fontSize: 12 },
-    submissionLang: { fontSize: 13, fontWeight: "600", marginBottom: 4 },
-    submissionProblem: { fontSize: 14, fontWeight: "700" },
-    submissionCourse: { fontSize: 12, marginTop: 2 },
+    submissionTime: { fontSize: f(12) },
+    submissionLang: { fontSize: f(13), fontWeight: "600", marginBottom: 4 },
+    submissionProblem: { fontSize: f(14), fontWeight: "700" },
+    submissionCourse: { fontSize: f(12), marginTop: 2 },
 
     statusBadge: {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 8,
+      paddingHorizontal: r(8),
+      paddingVertical: r(2),
+      borderRadius: r(8),
     },
-    statusText: { fontSize: 10, fontWeight: "bold" },
+    statusText: { fontSize: f(10), fontWeight: "bold" },
 
-    courseScroll: { marginBottom: 6 },
+    courseScroll: { marginBottom: r(6) },
     courseChip: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderRadius: 12,
+      paddingHorizontal: r(16),
+      paddingVertical: r(10),
+      borderRadius: r(12),
       borderWidth: 1.5,
       borderColor: colors.border,
-      marginRight: 8,
+      marginRight: r(8),
       backgroundColor: colors.bg,
     },
     courseChipText: {
-      fontSize: 13,
+      fontSize: f(13),
       fontWeight: "700",
       color: colors.textPrimary,
     },
 
-    progressStats: { gap: 20 },
-    statGrid: { flexDirection: "row", gap: 12 },
-    statCard: { flex: 1, alignItems: "center", padding: 16, borderRadius: 12 },
-    statNumber: { fontSize: 24, fontWeight: "900", marginBottom: 4 },
-    statLabel: { fontSize: 12, textAlign: "center" },
+    progressStats: { gap: r(20) },
+    statGrid: { flexDirection: "row", gap: r(12) },
+    statCard: {
+      flex: 1,
+      alignItems: "center",
+      padding: r(16),
+      borderRadius: r(12),
+    },
+    statNumber: { fontSize: f(24), fontWeight: "900", marginBottom: 4 },
+    statLabel: { fontSize: f(12), textAlign: "center" },
 
-    progressTrack: { height: 8, borderRadius: 4, overflow: "hidden" },
+    progressTrack: { height: r(8), borderRadius: 4, overflow: "hidden" },
     progressFill: { height: "100%", borderRadius: 4 },
-    progressMeta: { fontSize: 12, marginTop: 6 },
+    progressMeta: { fontSize: f(12), marginTop: r(6) },
 
-    sectionTitle: { fontSize: 14, fontWeight: "700", marginBottom: 10 },
+    sectionTitle: { fontSize: f(14), fontWeight: "700", marginBottom: r(10) },
   });
+};

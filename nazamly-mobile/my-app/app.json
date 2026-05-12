@@ -1,15 +1,15 @@
 {
   "expo": {
     "name": "Nazamly",
-    "slug": "my-app",
+    "slug": "nazamly-app",
     "scheme": "nazamly",
-    "version": "1.0.0",
+    "version": "1.0.4",
     "orientation": "portrait",
-    "icon": "./assets/images/Logo.png",
+    "icon": "./assets/images/Logodesignforamo.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/Logodesignforamo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -19,10 +19,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/Logo.png",
+        "foregroundImage": "./assets/images/Logodesignforamo.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.nazamly.myapp",
+      "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true
     },
     "web": {
@@ -30,19 +31,16 @@
       "output": "static",
       "favicon": "./assets/images/Logo.png"
     },
-    "plugins": [
-      "expo-router",
-      "@react-native-google-signin/google-signin"
-    ],
+    "plugins": ["expo-router", "@react-native-google-signin/google-signin"],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "0751fc21-43a6-4eca-92f6-52b57f675b1d"
+        "projectId": "6983afbc-fe56-4ded-9bb3-f98bc8c39568"
       }
     },
-    "owner": "majiko"
+    "owner": "majiko_3883"
   }
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView,
-  Image, Alert, Platform, ToastAndroid,
+  Image, Alert, Platform, ToastAndroid, useWindowDimensions,
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -16,6 +16,8 @@ const STUDENT_CARD_BACK_KEY = '@nazamly_student_card_back';
 export default function StudentCardScreen() {
   const { colors } = useAppTheme();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isTablet = width >= 768;
 
   const [frontUri, setFrontUri] = useState<string | null>(null);
   const [backUri, setBackUri] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export default function StudentCardScreen() {
     router.back();
   };
 
-  const s = styles(colors);
+  const s = styles(colors, isTablet);
 
   return (
     <SafeAreaView style={s.container}>
@@ -169,46 +171,53 @@ export default function StudentCardScreen() {
   );
 }
 
-const styles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110 },
+const styles = (colors: any, isTablet = false) => {
+  const sf = isTablet ? 1.25 : 1;
+  const fs = isTablet ? 1.18 : 1;
+  const r = (v: number) => Math.round(v * sf);
+  const f = (v: number) => Math.round(v * fs);
 
-  header: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20 },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 22, fontWeight: '800', color: colors.textPrimary },
-  subtitle: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  scrollContent: { paddingHorizontal: r(20), paddingTop: r(10), paddingBottom: r(110) },
+
+  header: { flexDirection: 'row', alignItems: 'center', gap: r(14), marginBottom: r(20) },
+  backBtn: { width: r(40), height: r(40), borderRadius: r(12), backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: f(22), fontWeight: '800', color: colors.textPrimary },
+  subtitle: { fontSize: f(13), color: colors.textMuted, marginTop: 2 },
 
   privacyBanner: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 4,
-    backgroundColor: colors.tealLight, borderRadius: 16, padding: 16, marginBottom: 24,
+    flexDirection: 'row', alignItems: 'flex-start', gap: r(4),
+    backgroundColor: colors.tealLight, borderRadius: r(16), padding: r(16), marginBottom: r(24),
     borderWidth: 1, borderColor: colors.teal + '30',
   },
-  privacyTitle: { fontSize: 14, fontWeight: '700', color: colors.teal, marginBottom: 2 },
-  privacyText: { fontSize: 12, color: colors.teal + 'CC', lineHeight: 18 },
+  privacyTitle: { fontSize: f(14), fontWeight: '700', color: colors.teal, marginBottom: 2 },
+  privacyText: { fontSize: f(12), color: colors.teal + 'CC', lineHeight: f(18) },
 
-  sideLabel: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 10 },
+  sideLabel: { fontSize: f(15), fontWeight: '700', color: colors.textPrimary, marginBottom: r(10) },
 
   uploadBox: {
-    backgroundColor: colors.card, borderRadius: 16, borderWidth: 2, borderColor: colors.border,
-    borderStyle: 'dashed', padding: 32, alignItems: 'center', gap: 8,
+    backgroundColor: colors.card, borderRadius: r(16), borderWidth: 2, borderColor: colors.border,
+    borderStyle: 'dashed', padding: r(32), alignItems: 'center', gap: r(8),
   },
   uploadIconCircle: {
-    width: 60, height: 60, borderRadius: 30, backgroundColor: colors.indigoPale,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+    width: r(60), height: r(60), borderRadius: r(30), backgroundColor: colors.indigoPale,
+    alignItems: 'center', justifyContent: 'center', marginBottom: r(8),
   },
-  uploadTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
-  uploadHint: { fontSize: 13, color: colors.textMuted },
+  uploadTitle: { fontSize: f(16), fontWeight: '700', color: colors.textPrimary },
+  uploadHint: { fontSize: f(13), color: colors.textMuted },
 
-  cardPreview: { backgroundColor: colors.card, borderRadius: 16, overflow: 'hidden', elevation: 3, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  cardImage: { width: '100%', height: 200, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  cardActions: { flexDirection: 'row', gap: 10, padding: 12 },
-  cardActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12 },
-  cardActionText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  cardPreview: { backgroundColor: colors.card, borderRadius: r(16), overflow: 'hidden', elevation: 3, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+  cardImage: { width: '100%', height: r(200), borderTopLeftRadius: r(16), borderTopRightRadius: r(16) },
+  cardActions: { flexDirection: 'row', gap: r(10), padding: r(12) },
+  cardActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: r(6), paddingVertical: r(10), borderRadius: r(12) },
+  cardActionText: { fontSize: f(13), fontWeight: '700', color: '#fff' },
 
   doneBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: colors.indigo, paddingVertical: 16, borderRadius: 16, marginTop: 28,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: r(8),
+    backgroundColor: colors.indigo, paddingVertical: r(16), borderRadius: r(16), marginTop: r(28),
     shadowColor: colors.indigo, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
   },
-  doneBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  doneBtnText: { color: '#fff', fontSize: f(16), fontWeight: '700' },
 });
+};
