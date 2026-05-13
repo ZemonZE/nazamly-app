@@ -60,6 +60,13 @@ exports.generateExamSSE = async (req, res) => {
     const { courseId, examType = 'Quiz' } = req.query;
     const questionCount = parseInt(req.query.questionCount, 10) || 10;
 
+    // Question type distribution from frontend
+    const questionDistribution = {
+      mcq: parseInt(req.query.mcq, 10) || 0,
+      tf: parseInt(req.query.tf, 10) || 0,
+      essay: parseInt(req.query.essay, 10) || 0,
+    };
+
     // materialFileIds arrives as a comma-separated string from the query string
     // e.g., "64a1b2c3d4e5f6,64a1b2c3d4e5f7" -> ["64a1b2c3d4e5f6", "64a1b2c3d4e5f7"]
     const materialFileIds = req.query.materialFileIds
@@ -100,7 +107,7 @@ exports.generateExamSSE = async (req, res) => {
     }
 
     // Generate the exam asynchronously using the resolved Object IDs
-    const questions = await generateAndSaveCustomExam(courseId, resolvedIds, examType, questionCount);
+    const questions = await generateAndSaveCustomExam(courseId, resolvedIds, examType, questionCount, questionDistribution);
 
     // Send the completed exam to the client
     res.write(`data: ${JSON.stringify({ status: 'ready', questions })}\n\n`);

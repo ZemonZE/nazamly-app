@@ -4,7 +4,8 @@ const admin = require("../config/firebase");
 const authMiddleware = async (req, res, next) => {
     // 🛡️ Firebase Authentication
     try {
-        const token = req.headers.authorization?.split("Bearer ")[1];
+        // Support token from Authorization header (standard) OR query param (SSE/EventSource fallback)
+        const token = req.headers.authorization?.split("Bearer ")[1] || req.query?.token;
         if (!token) return res.status(401).json({ message: "Unauthorized" });
 
         // Firebase Admin must be initialized — refuse to serve otherwise

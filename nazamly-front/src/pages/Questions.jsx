@@ -30,19 +30,30 @@ const getDifficultyClass = (level) => {
 //  EXAM STRUCTURE CONFIG
 // ══════════════════════════════════════════════
 const EXAM_CONFIG = {
-  Quiz:    { total: 10, mcq: 5,  tf: 5  },
-  Midterm: { total: 20, mcq: 10, tf: 10 },
-  Final:   { total: 60, mcq: 30, tf: 30 },
+  Quiz:    { total: 10, mcq: 4,  tf: 4,  essay: 2  },
+  Midterm: { total: 20, mcq: 8,  tf: 8,  essay: 4  },
+  Final:   { total: 60, mcq: 25, tf: 25, essay: 10 },
 };
 
 const getQuestionType = (q) => {
+  const optCount = (q.options && Array.isArray(q.options)) ? q.options.length : 0;
+
+  // Rule 1: 0 or 1 options can NEVER be MCQ/TF — always essay
+  if (optCount <= 1) return "essay";
+
+  // Rule 2: Exactly 2 options with True/False → T/F
+  if (optCount === 2 && q.options.some(opt => typeof opt === 'string' && (opt.toLowerCase() === "true" || opt.toLowerCase() === "false"))) return "tf";
+
+  // Rule 3: If AI provided a type field AND options are valid for that type, trust it
   if (q.type) {
     const t = q.type.toLowerCase();
-    if (t === "t/f" || t === "true/false") return "tf";
-    return t;
+    if ((t === "t/f" || t === "true/false" || t === "tf") && optCount === 2) return "tf";
+    if (t === "essay" || t === "short-answer" || t === "short_answer") return "essay";
+    if ((t === "mcq" || t === "multiple_choice") && optCount >= 2) return "mcq";
   }
-  if (q.options && q.options.length === 2 && q.options.some(opt => opt.toLowerCase() === "true" || opt.toLowerCase() === "false")) return "tf";
-  if (q.options && q.options.length > 2) return "mcq";
+
+  // Rule 4: Fallback heuristic based on option count
+  if (optCount > 2) return "mcq";
   return "essay";
 };
 
@@ -281,7 +292,7 @@ function Questions() {
   };
 
   // ── SSE Generator Function ──
-  const generateExam = useCallback((courseId, examTypeVal, count, materialFileIds) => {
+  const generateExam = useCallback(async (courseId, examTypeVal, count, materialFileIds) => {
     setAiLoading(true);
     setAiQuestions([]);
     setAiStatusMessage("Starting connection...");
@@ -289,37 +300,46 @@ function Questions() {
     setAiUserAnswers({});
     setAiSubmitted(false);
 
-    const url = `${API_URL}/api/questions/generate-stream?courseId=${courseId}&examType=${examTypeVal}&questionCount=${count}&materialFileIds=${materialFileIds.join(",")}`;
-    const eventSource = new EventSource(url);
+    try {
+      // EventSource API cannot send custom headers (Authorization),
+      // so we pass the Firebase token as a query parameter instead.
+      const token = await auth.currentUser.getIdToken();
+      const url = `${API_URL}/api/questions/generate-stream?courseId=${courseId}&examType=${examTypeVal}&questionCount=${count}&materialFileIds=${materialFileIds.join(",")}&mcq=${currentConfig.mcq}&tf=${currentConfig.tf}&essay=${currentConfig.essay || 0}&token=${encodeURIComponent(token)}`;
+      const eventSource = new EventSource(url);
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.status === "generating") {
-          setAiStatusMessage(data.message || "Generating questions...");
-        } else if (data.status === "ready") {
-          setAiQuestions(sortQuestionsByType(data.questions || []));
-          setAiLoading(false);
-          setAiStatusMessage("");
-          eventSource.close();
-        } else if (data.status === "error" || data.success === false) {
-          setAiError(data.message || "An unexpected error occurred.");
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.status === "generating") {
+            setAiStatusMessage(data.message || "Generating questions...");
+          } else if (data.status === "ready") {
+            setAiQuestions(sortQuestionsByType(data.questions || []));
+            setAiLoading(false);
+            setAiStatusMessage("");
+            eventSource.close();
+          } else if (data.status === "error" || data.success === false) {
+            setAiError(data.message || "An unexpected error occurred.");
+            setAiLoading(false);
+            eventSource.close();
+          }
+        } catch (parseErr) {
+          console.error("Failed to parse SSE message:", parseErr);
+          setAiError("Received an invalid response from the server.");
           setAiLoading(false);
           eventSource.close();
         }
-      } catch (parseErr) {
-        console.error("Failed to parse SSE message:", parseErr);
-        setAiError("Received an invalid response from the server.");
+      };
+
+      eventSource.onerror = () => {
+        setAiError("Connection lost. Please try again.");
         setAiLoading(false);
         eventSource.close();
-      }
-    };
-
-    eventSource.onerror = () => {
-      setAiError("Connection lost. Please try again.");
+      };
+    } catch (tokenErr) {
+      console.error("Failed to get auth token:", tokenErr);
+      setAiError("Authentication failed. Please log in again.");
       setAiLoading(false);
-      eventSource.close();
-    };
+    }
   }, []);
 
   const handleGenerateAiExam = () => {
@@ -371,20 +391,29 @@ function Questions() {
   const handleAiSubmitExam = async () => {
     if (Object.keys(aiUserAnswers).length === 0) return;
     setAiLoading(true);
-    setAiStatusMessage("Grading your exam via AI...");
+
+    // Check if there are essay questions that need AI grading
+    const hasEssays = aiQuestions.some(q => getQuestionType(q) === "essay");
+    setAiStatusMessage(hasEssays 
+      ? "Grading your exam... Essay answers are being evaluated by AI (this may take 10-30 seconds)." 
+      : "Grading your exam...");
 
     const questionsSnapshot = aiQuestions.map((q, idx) => {
       const studentAnswer = aiUserAnswers[idx] || "";
-      const isCorrect = studentAnswer === q.correctAnswer;
+      const qType = getQuestionType(q);
+      const isEssay = qType === "essay";
+      // For essays, we don't do string matching — the backend AI grader handles it
+      const isCorrect = isEssay ? false : (studentAnswer === q.correctAnswer);
       return {
         questionText: q.questionText,
-        options: q.options || [],
+        options: isEssay ? [] : (q.options || []),
         correctAnswer: q.correctAnswer,
         studentAnswer,
         isCorrect,
         explanation: "",
         difficulty: q.difficulty || null,
-        derivedFromConcept: q.derivedFromConcept || null
+        derivedFromConcept: q.derivedFromConcept || null,
+        type: isEssay ? "ESSAY" : (qType === "tf" ? "TF" : "MCQ")
       };
     });
 
@@ -680,8 +709,8 @@ function Questions() {
                                 {t === "Quiz" ? <QuizIcon size={16} /> : t === "Midterm" ? <MidtermIcon size={16} /> : <FinalIcon size={16} />}
                               </span>
                               <span className="nse-pill-label">{t}</span>
-                              <span className="nse-pill-meta">
-                                {cfg.total}Q · {cfg.mcq} MCQ + {cfg.tf} T/F
+                      <span className="nse-pill-meta">
+                                {cfg.total}Q · {cfg.mcq} MCQ + {cfg.tf} T/F + {cfg.essay} Essay
                               </span>
                             </button>
                           );
@@ -706,6 +735,11 @@ function Questions() {
                       <div className="nse-info-item">
                         <span className="nse-info-icon">{<CheckCircleIcon size={16} />}</span>
                         <span>{currentConfig.tf} True/False</span>
+                      </div>
+                      <div className="nse-info-divider" />
+                      <div className="nse-info-item">
+                        <span className="nse-info-icon">{<TypeIcon size={16} />}</span>
+                        <span>{currentConfig.essay} Essay</span>
                       </div>
                     </div>
 
@@ -918,8 +952,10 @@ function Questions() {
               )}
 
               <div className="qb-questions-list nse-questions-spaced">
-                {aiQuestions.map((q, idx) => {
-                  const isTF = q.type === "tf";
+              {aiQuestions.map((q, idx) => {
+                  const qType = getQuestionType(q);
+                  const isTF = qType === "tf";
+                  const isEssay = qType === "essay";
                   const isUnanswered = !aiSubmitted && aiUserAnswers[idx] === undefined;
 
                   return (
@@ -936,8 +972,8 @@ function Questions() {
                             {q.aiConfidenceScore}% conf.
                           </span>
                         )}
-                        <span className={`nse-qtype-badge ${isTF ? "nse-qtype-tf" : "nse-qtype-mcq"}`}>
-                          {isTF ? "True / False" : "MCQ"}
+                        <span className={`nse-qtype-badge ${isEssay ? "nse-qtype-essay" : isTF ? "nse-qtype-tf" : "nse-qtype-mcq"}`}>
+                          {isEssay ? "Essay" : isTF ? "True / False" : "MCQ"}
                         </span>
                       </div>
 
@@ -948,7 +984,39 @@ function Questions() {
 
                       <h3 className="qb-question-title">{q.questionText}</h3>
 
-                      {q.options && q.options.length > 0 ? (
+                      {/* Essay questions always get a textarea, regardless of options */}
+                      {isEssay ? (
+                        <div style={{ marginTop: '15px' }}>
+                          <textarea
+                            style={{
+                              width: '100%',
+                              minHeight: '150px',
+                              padding: '15px',
+                              color: 'hsl(var(--foreground))',
+                              backgroundColor: 'hsl(var(--secondary) / 0.3)',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '10px',
+                              resize: 'vertical',
+                              fontFamily: 'inherit',
+                              fontSize: '0.9rem',
+                              lineHeight: 1.6,
+                              outline: 'none',
+                              transition: 'border-color 0.15s',
+                            }}
+                            placeholder="Write your answer here... Be thorough and explain your reasoning."
+                            value={aiUserAnswers[idx] || ""}
+                            onChange={(e) => handleAiSelectAnswer(idx, e.target.value)}
+                            disabled={aiSubmitted}
+                            onFocus={(e) => e.target.style.borderColor = 'hsl(var(--ring))'}
+                            onBlur={(e) => e.target.style.borderColor = 'hsl(var(--border))'}
+                          />
+                          {!aiSubmitted && (
+                            <p style={{ fontSize: '0.75rem', color: 'hsl(var(--muted-foreground))', marginTop: '6px' }}>
+                              💡 Tip: Include key concepts and definitions in your answer for better AI grading.
+                            </p>
+                          )}
+                        </div>
+                      ) : q.options && q.options.length > 0 ? (
                         <div className={`qb-options-grid nse-options-fullwidth ${isTF ? "nse-tf-grid" : ""}`}>
                           {q.options.map((option, optIdx) => (
                             <button
@@ -968,9 +1036,21 @@ function Questions() {
                       ) : (
                         <div style={{ marginTop: '15px' }}>
                           <textarea
-                            className="qb-pill-input"
-                            style={{ width: '100%', minHeight: '120px', padding: '15px', color: 'var(--text-primary)', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-color)', borderRadius: '8px', resize: 'vertical', fontFamily: 'inherit' }}
-                            placeholder="Type your answer here..."
+                            style={{
+                              width: '100%',
+                              minHeight: '150px',
+                              padding: '15px',
+                              color: 'hsl(var(--foreground))',
+                              backgroundColor: 'hsl(var(--secondary) / 0.3)',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '10px',
+                              resize: 'vertical',
+                              fontFamily: 'inherit',
+                              fontSize: '0.9rem',
+                              lineHeight: 1.6,
+                              outline: 'none',
+                            }}
+                            placeholder="Write your answer here..."
                             value={aiUserAnswers[idx] || ""}
                             onChange={(e) => handleAiSelectAnswer(idx, e.target.value)}
                             disabled={aiSubmitted}
@@ -982,9 +1062,9 @@ function Questions() {
                         <div className="nse-explanation-box" style={{marginTop: '18px'}}>
                           <div className="nse-explanation-header">
                             <span className="nse-explanation-icon">{<LightbulbIcon size={18} />}</span>
-                            <strong>Explanation</strong>
+                            <strong>{isEssay ? "AI Feedback" : "Explanation"}</strong>
                           </div>
-                          {q.options && q.options.length > 0 ? (
+                          {!isEssay ? (
                             <>
                               {q.explanation && (
                                 <p className="nse-explanation-text">{q.explanation}</p>
@@ -994,18 +1074,18 @@ function Questions() {
                               </div>
                             </>
                           ) : (
-                            <div style={{ marginTop: '10px', padding: '15px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', borderLeft: `4px solid ${q.isCorrect ? 'var(--success)' : 'var(--error)'}` }}>
+                            <div style={{ marginTop: '10px', padding: '15px', backgroundColor: 'hsl(var(--secondary) / 0.5)', borderRadius: '8px', borderLeft: `4px solid ${q.isCorrect ? '#16a34a' : '#dc2626'}` }}>
                               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                                 <span style={{ fontSize: '18px', marginRight: '8px' }}>{q.isCorrect ? '✅' : '❌'}</span>
-                                <strong style={{ color: q.isCorrect ? 'var(--success)' : 'var(--error)' }}>AI Feedback</strong>
+                                <strong style={{ color: q.isCorrect ? '#16a34a' : '#dc2626' }}>{q.isCorrect ? 'Correct' : 'Needs Improvement'}</strong>
                               </div>
-                              <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                              <p style={{ margin: 0, lineHeight: 1.6, color: 'hsl(var(--foreground))', fontSize: '0.85rem', overflowWrap: 'break-word' }}>
                                 {q.explanation || (q.isCorrect ? "Correct answer." : "Incorrect. Core concepts were missing.")}
                               </p>
                               {q.correctAnswer && (
-                                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--border-color)' }}>
-                                  <strong style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Required Concepts:</strong>
-                                  <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>{q.correctAnswer}</p>
+                                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px dashed hsl(var(--border))' }}>
+                                  <strong style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'hsl(var(--muted-foreground))' }}>Required Concepts:</strong>
+                                  <p style={{ margin: '5px 0 0 0', fontSize: '0.85rem', lineHeight: 1.6 }}>{q.correctAnswer}</p>
                                 </div>
                               )}
                             </div>
@@ -1489,33 +1569,41 @@ function Questions() {
                    </div>
                  ) : (
                     <div style={{ marginTop: '15px' }}>
-                      <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>Your Answer:</p>
-                      <div className="qb-pill-input" style={{ width: '100%', padding: '15px', color: 'var(--text-primary)', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', cursor: 'default' }}>
+                      <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 600 }}>Your Answer:</p>
+                      <div style={{ width: '100%', padding: '15px', color: 'hsl(var(--foreground))', backgroundColor: 'hsl(var(--secondary))', border: '1px solid hsl(var(--border))', borderRadius: '8px', cursor: 'default', lineHeight: 1.6, fontSize: '0.85rem', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                          {q.studentAnswer || <span style={{ fontStyle: 'italic', opacity: 0.5 }}>No answer provided</span>}
                       </div>
                     </div>
                  )}
-                 <div className="qb-detail" style={{ marginTop: '15px' }}>
-                   <div className="qb-answer-box">
+                 <div style={{ marginTop: '18px', overflow: 'visible' }}>
+                   <div style={{ overflow: 'visible' }}>
                       {q.options && q.options.length > 0 && (
-                        <>
-                          <strong>Correct Answer:</strong>
-                          <p>{q.correctAnswer}</p>
-                        </>
+                        <div className="nse-explanation-box" style={{ marginTop: 0 }}>
+                          <div className="nse-explanation-header">
+                            <span className="nse-explanation-icon"><LightbulbIcon size={18} /></span>
+                            <strong>Explanation</strong>
+                          </div>
+                          {q.explanation && (
+                            <p className="nse-explanation-text" style={{ lineHeight: 1.6 }}>{q.explanation}</p>
+                          )}
+                          <div className="nse-explanation-answer" style={{ marginTop: '8px' }}>
+                            <span>Correct Answer:</span> <strong>{q.correctAnswer}</strong>
+                          </div>
+                        </div>
                       )}
                       {(!q.options || q.options.length === 0) && (
-                         <div style={{ marginTop: '10px', padding: '15px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', borderLeft: `4px solid ${q.isCorrect ? 'var(--success)' : 'var(--error)'}` }}>
-                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                         <div style={{ padding: '18px', backgroundColor: 'hsl(var(--secondary) / 0.5)', borderRadius: '10px', borderLeft: `4px solid ${q.isCorrect ? '#16a34a' : '#dc2626'}` }}>
+                            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
                                 <span style={{ fontSize: '18px', marginRight: '8px' }}>{q.isCorrect ? '✅' : '❌'}</span>
-                                <strong style={{ color: q.isCorrect ? 'var(--success)' : 'var(--error)' }}>AI Feedback</strong>
+                                <strong style={{ color: q.isCorrect ? '#16a34a' : '#dc2626', fontSize: '0.9rem' }}>AI Feedback</strong>
                             </div>
-                            <p style={{ margin: 0, lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+                            <p style={{ margin: 0, lineHeight: 1.7, color: 'hsl(var(--foreground))', fontSize: '0.85rem', overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                               {q.explanation || "No explanation provided by AI."}
                             </p>
                             {q.correctAnswer && (
-                              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--border-color)' }}>
-                                <strong style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Required Concepts:</strong>
-                                <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>{q.correctAnswer}</p>
+                              <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px dashed hsl(var(--border))' }}>
+                                <strong style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'hsl(var(--muted-foreground))' }}>Required Concepts:</strong>
+                                <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', lineHeight: 1.6, overflowWrap: 'break-word', wordBreak: 'break-word' }}>{q.correctAnswer}</p>
                               </div>
                             )}
                          </div>

@@ -93,6 +93,10 @@ exports.submitQuiz = async (req, res) => {
     if (essayBatch.length > 0) {
       try {
         console.log(`[Quiz Controller] Dispatching ${essayBatch.length} essays to AI Grader...`);
+        
+        // Brief delay to avoid Gemini rate limits right after exam generation
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
         const gradedResults = await aiService.evaluateEssayAnswers(essayBatch);
         
         gradedResults.forEach(res => {

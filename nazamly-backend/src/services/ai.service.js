@@ -347,8 +347,18 @@ const extractScheduleTableFromImages = async (files) => {
  * @param {Number} questionCount - Exact number of questions to generate.
  * @returns {Array<{ questionText: string, options: string[], correctAnswer: string, difficulty: number, aiConfidenceScore: number, derivedFromConcept: string }>}
  */
-const generateCustomExamWithRAG = async (aggregatedConcepts, professorProfile, examType, questionCount) => {
-    const prompt = 'You are an expert exam creator. Generate a "' + examType + '" exam with exactly ' + questionCount + ' questions. Distribute the questions comprehensively across these aggregated course concepts: ' + JSON.stringify(aggregatedConcepts) + '. CRITICAL: You must strictly emulate this professor\'s testing style and exam structure: ' + JSON.stringify(professorProfile) + '. Ensure the ratio of question types (MCQ, True/False, etc.) and difficulties matches the profile. Return ONLY a valid JSON array of objects. Each object MUST strictly match: { "questionText": "...", "options": ["..."], "correctAnswer": "...", "difficulty": (1-5), "aiConfidenceScore": (0-100), "derivedFromConcept": "brief concept reference" }. Do not include markdown formatting.';
+const generateCustomExamWithRAG = async (aggregatedConcepts, professorProfile, examType, questionCount, questionDistribution = null) => {
+    // Build distribution instructions if provided
+    let distributionInstructions = '';
+    if (questionDistribution) {
+        const parts = [];
+        if (questionDistribution.mcq > 0) parts.push(`${questionDistribution.mcq} MCQ questions (with 4 options each)`);
+        if (questionDistribution.tf > 0) parts.push(`${questionDistribution.tf} True/False questions (with options ["True", "False"])`);
+        if (questionDistribution.essay > 0) parts.push(`${questionDistribution.essay} Short-Answer/Essay questions (with EMPTY options array [])`);
+        distributionInstructions = ' EXACT DISTRIBUTION REQUIRED: Generate exactly ' + parts.join(', ') + '.';
+    }
+
+    const prompt = 'You are an expert exam creator. Generate a "' + examType + '" exam with exactly ' + questionCount + ' questions.' + distributionInstructions + ' Distribute the questions comprehensively across these aggregated course concepts: ' + JSON.stringify(aggregatedConcepts) + '. CRITICAL: You must strictly emulate this professor\'s testing style and exam structure: ' + JSON.stringify(professorProfile) + '. Ensure the ratio of question types and difficulties matches the profile. IMPORTANT RULES FOR QUESTION TYPES: 1) For MCQ questions: "type" must be "mcq" and "options" must be an array of 4 strings. 2) For True/False questions: "type" must be "tf" and "options" must be ["True", "False"]. 3) For Essay/Short-Answer questions: "type" must be "essay", "options" MUST be an empty array [], and "correctAnswer" should contain the key concepts expected in the answer. Return ONLY a valid JSON array of objects. Each object MUST strictly match: { "type": "mcq|tf|essay", "questionText": "...", "options": ["..."] or [], "correctAnswer": "...", "difficulty": (1-5), "aiConfidenceScore": (0-100), "derivedFromConcept": "brief concept reference" }. Do not include markdown formatting.';
 
     try {
         console.log(`[AI Service] Generating ${examType} exam with ${questionCount} questions using RAG...`);
@@ -406,27 +416,52 @@ Input Batch:
 ${JSON.stringify(essayBatch, null, 2)}
 `;
 
-    try {
-        console.log(`[AI Service] Evaluating ${essayBatch.length} essay answers...`);
-        const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-        const geminiModel = genAI.getGenerativeModel({ model: modelName });
-        
-        const result = await geminiModel.generateContent(prompt);
-        const responseText = result.response.text();
-        
-        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-        if (!jsonMatch) {
-            throw new Error("Gemini did not return a valid JSON array.");
+    const MAX_RETRIES = 4;
+    let lastError = null;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+            if (attempt > 0) {
+                const delayMs = Math.pow(2, attempt) * 3000; // 6s, 12s, 24s
+                console.log(`[AI Service] Essay eval retry #${attempt + 1} after ${delayMs / 1000}s...`);
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+
+            console.log(`[AI Service] Evaluating ${essayBatch.length} essay answers (attempt ${attempt + 1}/${MAX_RETRIES})...`);
+            const modelName = activeGeminiModelCache || process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+            const geminiModel = genAI.getGenerativeModel({ model: modelName });
+            
+            const result = await geminiModel.generateContent(prompt);
+            const responseText = result.response.text();
+            
+            const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+            if (!jsonMatch) {
+                throw new Error("Gemini did not return a valid JSON array.");
+            }
+
+            const parsed = JSON.parse(jsonMatch[0].trim());
+            console.log(`[AI Service] Essay evaluation completed gracefully.`);
+            return parsed;
+
+        } catch (error) {
+            lastError = error;
+            console.error(`[AI Service] Essay eval attempt ${attempt + 1} failed: ${error.message}`);
+            
+            // Only retry on rate limits (429) or transient server errors (500/503)
+            const isRetryable = error.message.includes('429') || 
+                                error.message.includes('503') || 
+                                error.message.includes('500') ||
+                                error.message.includes('RESOURCE_EXHAUSTED') ||
+                                error.message.includes('overloaded') ||
+                                error.message.includes('Too Many Requests');
+            
+            if (!isRetryable || attempt === MAX_RETRIES - 1) {
+                break;
+            }
         }
-
-        const parsed = JSON.parse(jsonMatch[0].trim());
-        console.log(`[AI Service] Essay evaluation completed gracefully.`);
-        return parsed;
-
-    } catch (error) {
-        console.error(`[AI Service] Essay Evaluation Failed: ${error.message}`);
-        throw new Error(`AI Grader Failed: ${error.message}`);
     }
+
+    throw new Error(`AI Grader Failed after ${MAX_RETRIES} attempts: ${lastError?.message}`);
 };
 
 /**

@@ -31,7 +31,7 @@ const DEFAULT_PROFESSOR_PROFILE = {
  * @param {Number} questionCount - Number of questions to generate.
  * @returns {Array} The array of saved QuestionBank documents.
  */
-async function generateAndSaveCustomExam(courseId, materialFileIdsArray, examType, questionCount) {
+async function generateAndSaveCustomExam(courseId, materialFileIdsArray, examType, questionCount, questionDistribution = null) {
   console.log(`[ExamGenerator] Starting custom ${examType} generation for courseId=${courseId}, ${materialFileIdsArray.length} lectures, ${questionCount} questions.`);
 
   try {
@@ -89,7 +89,8 @@ async function generateAndSaveCustomExam(courseId, materialFileIdsArray, examTyp
       aggregatedConcepts,
       professorProfile,
       examType,
-      questionCount
+      questionCount,
+      questionDistribution
     );
 
     // ─── Step 5: Prepare and bulk-save all questions to QuestionBank ───
