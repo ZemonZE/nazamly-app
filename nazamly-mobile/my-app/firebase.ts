@@ -1,47 +1,50 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { initializeAuth, GoogleAuthProvider, getReactNativePersistence, getAuth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getStorage } from "firebase/storage";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from 'react-native';
-const firebaseConfig = {
-  apiKey: "AIzaSyDTCKBYh4EipHXCHOg5RTYuBCwTJFiP-84",
-  authDomain: "nazamly-c242c.firebaseapp.com",
-  projectId: "nazamly-c242c",
-  storageBucket: "nazamly-c242c.firebasestorage.app",
-  messagingSenderId: "229323424819",
-  appId: "1:229323424819:web:d76eb25051941b42784f46",
-  measurementId: "G-JX83Q6LDVD"
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+const getEnv = (key: string, fallback = ""): string => {
+  const value = process.env[key];
+  if (!value) {
+    console.warn(`[config] Missing ${key}.`);
+    return fallback;
+  }
+  return value;
 };
-export const Google_Android_Id = "638377043762-n5vj87iuahfahdrvpefreaaahj9c9mel.apps.googleusercontent.com";
+
+const firebaseConfig = {
+  apiKey: getEnv("EXPO_PUBLIC_FIREBASE_API_KEY"),
+  authDomain: getEnv("EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN"),
+  projectId: getEnv("EXPO_PUBLIC_FIREBASE_PROJECT_ID"),
+  storageBucket: getEnv("EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET"),
+  messagingSenderId: getEnv("EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID"),
+  appId: getEnv("EXPO_PUBLIC_FIREBASE_APP_ID"),
+  measurementId: getEnv("EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID")
+};
+
+export const GOOGLE_WEB_CLIENT_ID = getEnv("EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID");
+
+// Configure Google Sign In
+GoogleSignin.configure({
+  webClientId: GOOGLE_WEB_CLIENT_ID,
+  offlineAccess: true,
+  forceCodeForRefreshToken: true,
+});
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-let authInstance;
-try {
-  authInstance = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage as any)
-  });
-} catch {
-  authInstance = getAuth(app);
-}
-export const auth = authInstance;
-export const storage = getStorage(app);
+const auth = getAuth(app);
+const storage = getStorage(app);
+const googleProvider = new GoogleAuthProvider();
 
-export const googleProvider = new GoogleAuthProvider();
+const AWS_API_URL = getEnv("EXPO_PUBLIC_API_URL", "https://nazamlyonline.tech");
 
-const AWS_API_URL = 'https://nazamlyonline.tech';
+export { auth, storage, googleProvider };
 
-function resolveApiUrl(): string {
-  return AWS_API_URL;
-}
-
-export const API_URL = resolveApiUrl();
+export const API_URL = AWS_API_URL;
 
 console.log("=".repeat(60));
 console.log("🔧 API Configuration");
 console.log("=".repeat(60));
 console.log("📍 API_URL:", API_URL);
 console.log("=".repeat(60));
-
-export const GOOGLE_WEB_CLIENT_ID =
-  "638377043762-pqf4qj29sa2jo502f09pipc0g5e9km3g.apps.googleusercontent.com";

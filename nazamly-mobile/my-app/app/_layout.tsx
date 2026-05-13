@@ -16,19 +16,26 @@ export const unstable_settings = {
 
 function RootLayoutNav() {
   const { isDark } = useThemeMode();
-  const { user, isLoading } = useAuth();
+  const { user, backendUser, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
     if (isLoading) return;
+    
     const inAuthGroup = segments[0] === "(auth)";
+    const inOnboarding = (segments as string[])[1] === "Onboarding";
+    
     if (!user && !inAuthGroup) {
       router.replace("/(auth)/Login");
-    } else if (user && inAuthGroup) {
-      router.replace("/(tabs)/HomePage");
+    } else if (user) {
+      if (backendUser && !backendUser.isProfileComplete && !inOnboarding) {
+        router.replace("/(auth)/Onboarding");
+      } else if (backendUser && backendUser.isProfileComplete && inAuthGroup) {
+        router.replace("/(tabs)/HomePage");
+      }
     }
-  }, [user, isLoading, segments, router]);
+  }, [user, backendUser, isLoading, segments, router]);
 
   if (isLoading) {
     return (
